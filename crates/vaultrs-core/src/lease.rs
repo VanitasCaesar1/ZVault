@@ -187,10 +187,10 @@ impl LeaseManager {
         for key in &keys {
             match self.barrier.get(key).await {
                 Ok(Some(data)) => {
-                    if let Ok(lease) = serde_json::from_slice::<Lease>(&data)
-                        && lease.is_expired()
-                    {
-                        expired.push(lease);
+                    if let Ok(lease) = serde_json::from_slice::<Lease>(&data) {
+                        if lease.is_expired() {
+                            expired.push(lease);
+                        }
                     }
                 }
                 Ok(None) => {}
@@ -215,12 +215,13 @@ impl LeaseManager {
         let mut count = 0u64;
 
         for key in &keys {
-            if let Ok(Some(data)) = self.barrier.get(key).await
-                && let Ok(lease) = serde_json::from_slice::<Lease>(&data)
-                && lease.engine_path.starts_with(engine_path_prefix)
-            {
-                self.barrier.delete(key).await?;
-                count = count.saturating_add(1);
+            if let Ok(Some(data)) = self.barrier.get(key).await {
+                if let Ok(lease) = serde_json::from_slice::<Lease>(&data) {
+                    if lease.engine_path.starts_with(engine_path_prefix) {
+                        self.barrier.delete(key).await?;
+                        count = count.saturating_add(1);
+                    }
+                }
             }
         }
 

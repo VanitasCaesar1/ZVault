@@ -157,12 +157,12 @@ impl TokenStore {
         })?;
 
         // Check expiry.
-        if let Some(expires_at) = entry.expires_at
-            && Utc::now() > expires_at
-        {
-            return Err(TokenError::Expired {
-                expired_at: expires_at.to_rfc3339(),
-            });
+        if let Some(expires_at) = entry.expires_at {
+            if Utc::now() > expires_at {
+                return Err(TokenError::Expired {
+                    expired_at: expires_at.to_rfc3339(),
+                });
+            }
         }
 
         Ok(entry)
