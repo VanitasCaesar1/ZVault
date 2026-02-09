@@ -1,0 +1,23 @@
+[package]
+name = "vaultrs-storage"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Storage backend abstraction for VaultRS"
+
+[lints]
+workspace = true
+
+[features]
+default = ["rocksdb-backend"]
+rocksdb-backend = ["dep:rocksdb"]
+redb-backend = ["dep:redb"]
+
+[dependencies]
+async-trait.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+rocksdb = { version = "0.22", optional = true }
+redb = { version = "2", optional = true }

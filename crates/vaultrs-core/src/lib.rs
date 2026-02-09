@@ -1,0 +1,19 @@
+//! Core library for `VaultRS`.
+//!
+//! Contains the encryption barrier, cryptographic primitives, seal/unseal
+//! logic, token store, policy engine, audit system, mount table, and lease
+//! manager. This crate depends on `vaultrs-storage` for the storage backend
+//! trait and knows nothing about specific secrets engines or auth methods.
+
+pub mod audit;
+pub mod audit_file;
+pub mod barrier;
+pub mod crypto;
+pub mod engine;
+pub mod error;
+pub mod lease;
+pub mod mount;
+pub mod policy;
+pub mod seal;
+pub mod token;
+pub mod transit;

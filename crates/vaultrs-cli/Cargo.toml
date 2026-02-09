@@ -1,0 +1,21 @@
+[package]
+name = "vaultrs-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "VaultRS CLI — command-line client for the VaultRS secrets manager"
+
+[[bin]]
+name = "vaultrs"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+clap = { version = "4", features = ["derive", "env"] }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+serde.workspace = true
+serde_json.workspace = true
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+anyhow.workspace = true
