@@ -4,4 +4,4 @@ buildCommand = "cargo build --release --package vaultrs-server"
 
 [deploy]
 aptPackages = ["ca-certificates"]
-startCommand = "./target/release/vaultrs-server"
+startCommand = "./bin/vaultrs-server"

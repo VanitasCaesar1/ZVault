@@ -2,7 +2,7 @@
 builder = "railpack"
 
 [deploy]
-startCommand = "./target/release/vaultrs-server"
+startCommand = "./bin/vaultrs-server"
 healthcheckPath = "/v1/sys/health"
 healthcheckTimeout = 10
 restartPolicyType = "ON_FAILURE"
