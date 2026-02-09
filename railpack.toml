@@ -1,6 +1,6 @@
 [build]
 buildAptPackages = ["libclang-dev", "clang", "pkg-config"]
-buildCommand = "cargo build --release --package vaultrs-server && mkdir -p bin && cp target/release/vaultrs-server bin/vaultrs-server"
+buildCommand = "cargo install --path crates/vaultrs-server --root ."
 
 [deploy]
 aptPackages = ["ca-certificates"]
