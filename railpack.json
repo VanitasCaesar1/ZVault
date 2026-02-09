@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "provider": "rust",
+  "buildAptPackages": ["libclang-dev", "clang", "pkg-config"],
+  "steps": {
+    "build": {
+      "commands": [
+        "...",
+        "cargo build --release --package vaultrs-server",
+        "mkdir -p /app/bin",
+        "cp /app/target/release/vaultrs-server /app/bin/vaultrs-server"
+      ],
+      "deployOutputs": ["/app/bin"]
+    }
+  },
+  "deploy": {
+    "aptPackages": ["ca-certificates"],
+    "startCommand": "./bin/vaultrs-server"
+  }
+}
