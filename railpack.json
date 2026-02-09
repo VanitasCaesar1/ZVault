@@ -8,13 +8,13 @@
         "...",
         "cargo build --release --package vaultrs-server",
         "mkdir -p /app/bin",
-        "cp /app/target/release/vaultrs-server /app/bin/vaultrs-server"
+        "cp target/release/vaultrs-server /app/bin/vaultrs-server"
       ],
       "deployOutputs": ["/app/bin"]
     }
   },
   "deploy": {
     "aptPackages": ["ca-certificates"],
-    "startCommand": "./bin/vaultrs-server"
+    "startCommand": "/app/bin/vaultrs-server"
   }
 }
