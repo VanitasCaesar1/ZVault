@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::routing::{delete, get, post};
+use axum::routing::get;
 use axum::{Extension, Json, Router};
 use serde::Serialize;
 
@@ -20,18 +20,16 @@ use vaultrs_core::policy::Capability;
 /// Build the `/v1/secret` router for the default KV mount.
 ///
 /// Paths:
-/// - `GET  /v1/secret/data/{path}` — read
-/// - `POST /v1/secret/data/{path}` — write
-/// - `DELETE /v1/secret/data/{path}` — delete
-/// - `GET  /v1/secret/metadata/{path}` — metadata
-/// - `GET  /v1/secret/list/{path}` — list keys
+/// - `GET    /v1/secret/data/{*path}` — read
+/// - `POST   /v1/secret/data/{*path}` — write
+/// - `DELETE  /v1/secret/data/{*path}` — delete
+/// - `GET    /v1/secret/metadata/{*path}` — metadata
+/// - `GET    /v1/secret/list/{*path}` — list keys
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/data/*path", get(read_secret))
-        .route("/data/*path", post(write_secret))
-        .route("/data/*path", delete(delete_secret))
-        .route("/metadata/*path", get(get_metadata))
-        .route("/list/*path", get(list_secrets))
+        .route("/data/{*path}", get(read_secret).post(write_secret).delete(delete_secret))
+        .route("/metadata/{*path}", get(get_metadata))
+        .route("/list/{*path}", get(list_secrets))
 }
 
 // ── Response types ───────────────────────────────────────────────────
