@@ -8,23 +8,37 @@ export function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const springAuthUrl = (window as unknown as Record<string, unknown>).__SPRING_AUTH_URL__ as string | undefined;
+  const [springAuthUrl, setSpringAuthUrl] = useState<string | null>(null);
 
-  // Handle OIDC callback: the server redirects here with ?oidc_token=...
+  // Discover Spring OAuth URL from the server's OIDC config endpoint.
+  useEffect(() => {
+    const apiBase = import.meta.env.VITE_API_URL ?? "";
+    fetch(`${apiBase}/v1/auth/oidc/config`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.enabled && data?.login_url) {
+          // login_url is relative to the API server
+          setSpringAuthUrl(`${apiBase}${data.login_url}`);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Handle OAuth callback: server redirects to /?token=... or /login?error=...
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const oidcToken = params.get("oidc_token");
-    const oidcError = params.get("error");
+    const callbackToken = params.get("token") ?? params.get("oidc_token");
+    const callbackError = params.get("error");
 
-    if (oidcError) {
-      setError(decodeURIComponent(oidcError));
-      window.history.replaceState({}, "", "/app/login");
+    if (callbackError) {
+      setError(decodeURIComponent(callbackError));
+      window.history.replaceState({}, "", "/login");
       return;
     }
 
-    if (oidcToken) {
-      setToken(oidcToken);
-      window.history.replaceState({}, "", "/app/login");
+    if (callbackToken) {
+      setToken(callbackToken);
+      window.history.replaceState({}, "", "/");
       navigate("/", { replace: true });
     }
   }, [navigate]);
@@ -38,7 +52,8 @@ export function LoginPage() {
     }
     setLoading(true);
     try {
-      const res = await fetch("/v1/auth/token/lookup-self", {
+      const apiBase = import.meta.env.VITE_API_URL ?? "";
+      const res = await fetch(`${apiBase}/v1/auth/token/lookup-self`, {
         method: "POST",
         headers: { "X-Vault-Token": trimmed, "Content-Type": "application/json" },
         body: "{}",
@@ -137,7 +152,7 @@ export function LoginPage() {
 
         <p className="text-center mt-5 text-[13px] text-stone-400">
           Don't have a token?{" "}
-          <a href="/app/init" className="text-amber-500 font-semibold hover:underline">
+          <a href="/init" className="text-amber-500 font-semibold hover:underline">
             Initialize the vault
           </a>
         </p>

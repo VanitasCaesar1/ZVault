@@ -1,12 +1,10 @@
 //! Landing page and web UI routes.
 //!
-//! Serves the marketing landing page at `/` as server-rendered HTML.
-//! The dashboard SPA at `/app/*` is served from `dashboard/dist/` when
-//! available (production), or falls back to inline HTML (legacy).
-//! The `/auth/callback` route handles Spring OAuth code exchange.
+//! Serves a minimal landing page at `/` and handles the Spring OAuth
+//! callback at `/auth/callback`. The dashboard SPA is deployed as a
+//! separate service and talks to this server via `VITE_API_URL`.
 
 use axum::extract::{Query, State};
-use axum::http::{header, StatusCode, Uri};
 use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::get;
 use axum::Router;
@@ -14,118 +12,12 @@ use std::sync::Arc;
 
 use crate::state::AppState;
 
-/// Path to the built SPA assets (relative to working directory).
-const SPA_DIST: &str = "dashboard/dist";
-
 /// Build the UI router.
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/", get(landing_page))
         .route("/auth/callback", get(spring_oauth_callback))
-        // SPA catch-all: serves static files or falls back to index.html
-        .route("/app/{*path}", get(spa_handler))
-        .route("/app", get(spa_handler))
 }
-
-// ── SPA handler ──────────────────────────────────────────────────────
-
-/// Serve the Vite SPA. Tries to serve a static file from `dashboard/dist/`,
-/// and falls back to `index.html` for client-side routing.
-///
-/// For `index.html`, injects `window.__SPRING_AUTH_URL__` so the SPA knows
-/// where to redirect for Spring OAuth login.
-async fn spa_handler(State(state): State<Arc<AppState>>, uri: Uri) -> Response {
-    // Strip the `/app` prefix to get the file path within dist/
-    let path = uri.path().strip_prefix("/app").unwrap_or("/");
-    let path = if path.is_empty() { "/" } else { path };
-
-    // Try to serve the exact file first (JS, CSS, assets)
-    if path != "/" && !path.ends_with('/') {
-        let file_path = format!("{}{}", SPA_DIST, path);
-        if let Ok(contents) = tokio::fs::read(&file_path).await {
-            let mime = mime_from_path(&file_path);
-            return (
-                StatusCode::OK,
-                [(header::CONTENT_TYPE, mime)],
-                contents,
-            )
-                .into_response();
-        }
-    }
-
-    // Fall back to index.html for client-side routing
-    let index_path = format!("{}/index.html", SPA_DIST);
-    match tokio::fs::read_to_string(&index_path).await {
-        Ok(html) => {
-            // Inject Spring OAuth URL into the HTML so the SPA can use it.
-            let injected = inject_spring_config(&state, &html);
-            (
-                StatusCode::OK,
-                [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
-                injected,
-            )
-                .into_response()
-        }
-        Err(_) => {
-            // SPA not built yet — return a helpful message
-            Html(SPA_NOT_BUILT_HTML.to_owned()).into_response()
-        }
-    }
-}
-
-/// Inject runtime configuration into the SPA's `index.html`.
-///
-/// Inserts a `<script>` tag before `</head>` that sets `window.__SPRING_AUTH_URL__`
-/// so the React app can build the OAuth redirect URL.
-fn inject_spring_config(state: &AppState, html: &str) -> String {
-    let script = if let Some(ref oauth) = state.spring_oauth {
-        let redirect_uri = oauth
-            .redirect_uri
-            .clone()
-            .unwrap_or_else(|| "/auth/callback".to_owned());
-        let auth_url = format!(
-            "{}/authorize?client_id={}&redirect_uri={}&response_type=code&scope=openid+profile+email",
-            oauth.auth_url,
-            urlencoding::encode(&oauth.client_id),
-            urlencoding::encode(&redirect_uri),
-        );
-        format!(
-            r#"<script>window.__SPRING_AUTH_URL__="{}";</script>"#,
-            auth_url.replace('"', r#"\""#)
-        )
-    } else {
-        String::new()
-    };
-
-    html.replace("</head>", &format!("{script}</head>"))
-}
-
-/// Guess MIME type from file extension.
-fn mime_from_path(path: &str) -> &'static str {
-    match path.rsplit('.').next() {
-        Some("js") => "application/javascript; charset=utf-8",
-        Some("css") => "text/css; charset=utf-8",
-        Some("html") => "text/html; charset=utf-8",
-        Some("json") => "application/json",
-        Some("svg") => "image/svg+xml",
-        Some("png") => "image/png",
-        Some("ico") => "image/x-icon",
-        Some("woff2") => "font/woff2",
-        Some("woff") => "font/woff",
-        Some("map") => "application/json",
-        _ => "application/octet-stream",
-    }
-}
-
-/// Shown when `dashboard/dist/` doesn't exist (dev hasn't built the SPA).
-const SPA_NOT_BUILT_HTML: &str = r#"<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"/><title>ZVault — Dashboard Not Built</title>
-<style>body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#1E1610;color:#F5E6B8;text-align:center}
-code{background:rgba(245,200,66,.15);padding:2px 8px;border-radius:6px;color:#F5C842}</style></head>
-<body><div><h1>Dashboard not built yet</h1>
-<p>Run <code>cd dashboard && npm install && npm run build</code> to build the SPA.</p>
-<p>Or run <code>npm run dev</code> in the dashboard directory for development.</p>
-</div></body></html>"#;
 
 // ── Spring OAuth callback ────────────────────────────────────────────
 
@@ -157,25 +49,28 @@ struct SpringUserInfo {
 /// Handle the OAuth callback from Spring.
 ///
 /// Exchanges the authorization code for tokens, fetches user info,
-/// creates a vault token with appropriate policies, sets a cookie,
-/// and redirects to the dashboard.
+/// creates a vault token with appropriate policies, and redirects
+/// to the dashboard service with the token as a query parameter.
 async fn spring_oauth_callback(
     State(state): State<Arc<AppState>>,
     Query(params): Query<OAuthCallbackParams>,
 ) -> Response {
+    let dashboard_url = std::env::var("DASHBOARD_URL")
+        .unwrap_or_else(|_| "http://localhost:5173".to_owned());
+
     // If Spring returned an error, redirect to login with message.
     if let Some(err) = params.error {
-        return Redirect::to(&format!("/app/login?error={}", err)).into_response();
+        return Redirect::to(&format!("{}/login?error={}", dashboard_url, err)).into_response();
     }
 
     let code = match params.code {
         Some(c) => c,
-        None => return Redirect::to("/app/login?error=missing_code").into_response(),
+        None => return Redirect::to(&format!("{}/login?error=missing_code", dashboard_url)).into_response(),
     };
 
     let oauth_config = match &state.spring_oauth {
         Some(cfg) => cfg,
-        None => return Redirect::to("/app/login?error=oauth_not_configured").into_response(),
+        None => return Redirect::to(&format!("{}/login?error=oauth_not_configured", dashboard_url)).into_response(),
     };
 
     // Build redirect URI — use configured value or derive from callback.
@@ -189,7 +84,7 @@ async fn spring_oauth_callback(
         Ok(resp) => resp,
         Err(e) => {
             tracing::warn!(error = %e, "Spring token exchange failed");
-            return Redirect::to("/app/login?error=token_exchange_failed").into_response();
+            return Redirect::to(&format!("{}/login?error=token_exchange_failed", dashboard_url)).into_response();
         }
     };
 
@@ -198,7 +93,7 @@ async fn spring_oauth_callback(
         Ok(info) => info,
         Err(e) => {
             tracing::warn!(error = %e, "Spring userinfo fetch failed");
-            return Redirect::to("/app/login?error=userinfo_failed").into_response();
+            return Redirect::to(&format!("{}/login?error=userinfo_failed", dashboard_url)).into_response();
         }
     };
 
@@ -232,24 +127,12 @@ async fn spring_oauth_callback(
         Ok(token) => token,
         Err(e) => {
             tracing::warn!(error = %e, "failed to create vault token for Spring user");
-            return Redirect::to("/app/login?error=vault_token_failed").into_response();
+            return Redirect::to(&format!("{}/login?error=vault_token_failed", dashboard_url)).into_response();
         }
     };
 
-    // Set the token as a cookie and redirect to dashboard.
-    let cookie = format!(
-        "zvault-token={}; Path=/; Max-Age=86400; SameSite=Strict; HttpOnly",
-        vault_token
-    );
-
-    (
-        StatusCode::FOUND,
-        [
-            (header::SET_COOKIE, cookie),
-            (header::LOCATION, "/app".to_owned()),
-        ],
-    )
-        .into_response()
+    // Redirect to dashboard with token as query param (dashboard stores it).
+    Redirect::to(&format!("{}/?token={}", dashboard_url, vault_token)).into_response()
 }
 
 /// Exchange an authorization code for tokens at Spring's `/token` endpoint.
@@ -314,9 +197,18 @@ async fn fetch_userinfo(
 // ── Landing page ─────────────────────────────────────────────────────
 
 async fn landing_page() -> Html<String> {
+    let dashboard_url = std::env::var("DASHBOARD_URL")
+        .unwrap_or_else(|_| "http://localhost:5173".to_owned());
+    let docs_url = std::env::var("DOCS_URL")
+        .unwrap_or_else(|_| "https://docs.zvault.cloud".to_owned());
+
     let mut html = String::with_capacity(32768);
     html.push_str(LANDING_CSS);
-    html.push_str(LANDING_BODY);
+    // Replace placeholder URLs in the body.
+    let body = LANDING_BODY
+        .replace("{{DASHBOARD_URL}}", &dashboard_url)
+        .replace("{{DOCS_URL}}", &docs_url);
+    html.push_str(&body);
     Html(html)
 }
 
@@ -373,18 +265,18 @@ const LANDING_BODY: &str = r##"<body>
     ZVault
   </div>
   <div class="nav-links">
-    <a href="/app">Dashboard</a>
-    <a href="/docs">Docs</a>
-    <a href="https://github.com/zvault/zvault">GitHub</a>
-    <a href="/app/init" class="nav-pill">Get Started</a>
+    <a href="{{DASHBOARD_URL}}">Dashboard</a>
+    <a href="{{DOCS_URL}}">Docs</a>
+    <a href="https://github.com/VanitasCaesar1/ZVault">GitHub</a>
+    <a href="{{DASHBOARD_URL}}/init" class="nav-pill">Get Started</a>
   </div>
 </nav>
 <section class="hero">
   <h1>Your secrets deserve<br/>a <span>proper vault</span></h1>
   <p>A secure, high-performance secrets manager built entirely in Rust. AES-256-GCM encryption, Shamir unseal, zero unsafe crypto.</p>
   <div class="hero-actions">
-    <a href="/app/init" class="btn btn-primary">Initialize Vault</a>
-    <a href="https://github.com/zvault/zvault" class="btn btn-outline">View Source</a>
+    <a href="{{DASHBOARD_URL}}/init" class="btn btn-primary">Initialize Vault</a>
+    <a href="https://github.com/VanitasCaesar1/ZVault" class="btn btn-outline">View Source</a>
   </div>
 </section>
 <section class="features">
@@ -398,7 +290,7 @@ const LANDING_BODY: &str = r##"<body>
 <section class="cta">
   <h2>Ready to lock down your secrets?</h2>
   <p>Initialize your vault in under a minute. No external dependencies required.</p>
-  <a href="/app/init" class="btn btn-primary">Initialize Vault</a>
+  <a href="{{DASHBOARD_URL}}/init" class="btn btn-primary">Initialize Vault</a>
 </section>
 <footer class="footer">
   <span>ZVault v0.1.0 &mdash; MIT / Apache-2.0</span>

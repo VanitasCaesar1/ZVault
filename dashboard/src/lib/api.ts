@@ -1,3 +1,6 @@
+/** Base URL for the ZVault API server. */
+const API_BASE = import.meta.env.VITE_API_URL ?? "";
+
 /** Get the vault token from cookies. */
 export function getToken(): string | null {
   const match = document.cookie.match(/(?:^|; )zvault-token=([^;]*)/);
@@ -26,7 +29,7 @@ export async function vaultFetch<T = unknown>(
   };
   if (token) headers["X-Vault-Token"] = token;
 
-  const res = await fetch(path, { ...options, headers });
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     throw new ApiError(res.status, body?.message ?? res.statusText);

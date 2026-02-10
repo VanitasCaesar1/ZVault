@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router";
-import { getToken, getSealStatus, type SealStatus } from "../lib/api";
+import { getToken, setToken, getSealStatus, type SealStatus } from "../lib/api";
 import { Sidebar } from "../components/Sidebar";
 import { Topbar } from "../components/Topbar";
 
@@ -10,13 +10,22 @@ export function DashboardLayout() {
   const [sealStatus, setSealStatus] = useState<SealStatus | null>(null);
 
   useEffect(() => {
-    const token = getToken();
+    // Capture token from OAuth callback redirect (/?token=...)
+    const params = new URLSearchParams(window.location.search);
+    const callbackToken = params.get("token");
+    if (callbackToken) {
+      setToken(callbackToken);
+      window.history.replaceState({}, "", location.pathname);
+    }
+
+    const token = callbackToken || getToken();
     if (!token) {
       navigate("/login", { replace: true });
       return;
     }
     // Validate token
-    fetch("/v1/auth/token/lookup-self", {
+    const apiBase = import.meta.env.VITE_API_URL ?? "";
+    fetch(`${apiBase}/v1/auth/token/lookup-self`, {
       method: "POST",
       headers: {
         "X-Vault-Token": token,

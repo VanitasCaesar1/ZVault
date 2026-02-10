@@ -36,7 +36,7 @@ export function Topbar({ title, sealStatus }: TopbarProps) {
         <button
           onClick={() => {
             clearToken();
-            window.location.href = "/app/login";
+            window.location.href = "/login";
           }}
           className="px-3.5 py-[7px] text-xs font-semibold text-white bg-red-500 hover:bg-red-600 rounded-full transition-colors cursor-pointer"
         >

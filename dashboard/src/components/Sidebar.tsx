@@ -115,14 +115,14 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="px-6 py-4.5 text-[11px] text-stone-500 border-t border-white/6">
-        <a href="/docs" className="block text-xs text-sidebar-text hover:text-sidebar-active transition-colors mb-1.5">
+        <a href="https://docs.zvault.cloud" target="_blank" rel="noopener noreferrer" className="block text-xs text-sidebar-text hover:text-sidebar-active transition-colors mb-1.5">
           Documentation
         </a>
-        <a href="/app/login" className="block text-xs text-red-400 hover:text-red-300 transition-colors mb-1.5"
+        <a href="/login" className="block text-xs text-red-400 hover:text-red-300 transition-colors mb-1.5"
           onClick={(e) => {
             e.preventDefault();
             document.cookie = "zvault-token=;path=/;max-age=0";
-            window.location.href = "/app/login";
+            window.location.href = "/login";
           }}
         >
           Sign Out

@@ -153,8 +153,11 @@ async fn oidc_callback(
     if let Some(err) = &query.error {
         let desc = query.error_description.as_deref().unwrap_or("unknown error");
         warn!(error = %err, description = %desc, "OIDC provider returned error");
+        let dashboard_url = std::env::var("DASHBOARD_URL")
+            .unwrap_or_else(|_| "http://localhost:5173".to_owned());
         let redirect_url = format!(
-            "/app/login?error={}",
+            "{}/login?error={}",
+            dashboard_url,
             urlencoding::encode(&format!("{err}: {desc}"))
         );
         return Ok(Redirect::temporary(&redirect_url).into_response());
@@ -210,8 +213,11 @@ async fn oidc_callback(
         let status = token_resp.status();
         let body = token_resp.text().await.unwrap_or_default();
         warn!(status = %status, body = %body, "OIDC token exchange failed");
+        let dashboard_url = std::env::var("DASHBOARD_URL")
+            .unwrap_or_else(|_| "http://localhost:5173".to_owned());
         let redirect_url = format!(
-            "/app/login?error={}",
+            "{}/login?error={}",
+            dashboard_url,
             urlencoding::encode("Authentication failed")
         );
         return Ok(Redirect::temporary(&redirect_url).into_response());
@@ -292,10 +298,12 @@ async fn oidc_callback(
 
     // Redirect to dashboard with the token as a query parameter.
     // The dashboard JS will store it in a cookie and redirect to /.
+    let dashboard_url = std::env::var("DASHBOARD_URL")
+        .unwrap_or_else(|_| "http://localhost:5173".to_owned());
     let redirect_url = format!(
-        "/app/login?oidc_token={}&display_name={}",
+        "{}/?token={}",
+        dashboard_url,
         urlencoding::encode(&vault_token),
-        urlencoding::encode(&display_name),
     );
 
     Ok(Redirect::temporary(&redirect_url).into_response())
