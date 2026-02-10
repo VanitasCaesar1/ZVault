@@ -17,6 +17,43 @@ use crate::state::AppState;
 use vaultrs_core::engine::{EngineRequest, Operation};
 use vaultrs_core::policy::Capability;
 
+/// Validate a secret path against security rules.
+///
+/// - Only alphanumeric, `_`, `-`, `/` characters allowed.
+/// - No `..` path traversal.
+/// - No null bytes.
+/// - Maximum 10 path segments.
+/// - Path must not be empty.
+fn validate_secret_path(path: &str) -> Result<(), AppError> {
+    if path.is_empty() {
+        return Err(AppError::BadRequest("secret path must not be empty".to_owned()));
+    }
+
+    if path.contains("..") {
+        return Err(AppError::BadRequest("path traversal (..) is not allowed".to_owned()));
+    }
+
+    if path.contains('\0') {
+        return Err(AppError::BadRequest("null bytes are not allowed in paths".to_owned()));
+    }
+
+    // Only allow safe characters.
+    if !path.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-' || b == b'/') {
+        return Err(AppError::BadRequest(
+            "secret path may only contain alphanumeric characters, '_', '-', and '/'".to_owned(),
+        ));
+    }
+
+    let segment_count = path.split('/').filter(|s| !s.is_empty()).count();
+    if segment_count > 10 {
+        return Err(AppError::BadRequest(
+            "secret path exceeds maximum depth of 10 segments".to_owned(),
+        ));
+    }
+
+    Ok(())
+}
+
 /// Build the `/v1/secret` router for the default KV mount.
 ///
 /// Paths:
@@ -64,6 +101,7 @@ async fn read_secret(
     Extension(auth): Extension<AuthContext>,
     Path(path): Path<String>,
 ) -> Result<Json<SecretResponse>, AppError> {
+    validate_secret_path(&path)?;
     let mount_path = resolve_mount(&path);
 
     state
@@ -100,6 +138,7 @@ async fn write_secret(
     Path(path): Path<String>,
     Json(body): Json<serde_json::Value>,
 ) -> Result<(StatusCode, Json<SecretResponse>), AppError> {
+    validate_secret_path(&path)?;
     let mount_path = resolve_mount(&path);
 
     state
@@ -138,6 +177,7 @@ async fn delete_secret(
     Extension(auth): Extension<AuthContext>,
     Path(path): Path<String>,
 ) -> Result<StatusCode, AppError> {
+    validate_secret_path(&path)?;
     let mount_path = resolve_mount(&path);
 
     state
@@ -168,6 +208,7 @@ async fn get_metadata(
     Extension(auth): Extension<AuthContext>,
     Path(path): Path<String>,
 ) -> Result<Json<MetadataResponse>, AppError> {
+    validate_secret_path(&path)?;
     let mount_path = resolve_mount(&path);
 
     state
@@ -198,6 +239,7 @@ async fn list_secrets(
     Extension(auth): Extension<AuthContext>,
     Path(path): Path<String>,
 ) -> Result<Json<SecretResponse>, AppError> {
+    validate_secret_path(&path)?;
     let mount_path = resolve_mount(&path);
 
     state

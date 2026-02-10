@@ -31,5 +31,24 @@ Thumbs.db
 core
 core.*
 
+# Dashboard SPA
+dashboard/node_modules/
+dashboard/dist/
+
+# Docs site
+docs-site/node_modules/
+docs-site/dist/
+docs-site/.astro/
+
+# Website
+website/node_modules/
+website/dist/
+website/.astro/
+
+# npm wrapper
+npm/node_modules/
+npm/bin/zvault
+!npm/bin/zvault
+
 # Kiro
 .kiro/

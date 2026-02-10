@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::routing::post;
+use axum::routing::{get, post};
 use axum::{Extension, Json, Router};
 use serde::{Deserialize, Serialize};
 
@@ -18,6 +18,7 @@ use vaultrs_core::policy::Capability;
 /// Build the `/v1/sys/leases` router.
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
+        .route("/", get(list_leases))
         .route("/lookup", post(lookup_lease))
         .route("/renew", post(renew_lease))
         .route("/revoke", post(revoke_lease))
@@ -51,7 +52,44 @@ pub struct LeaseRevokeRequest {
     pub lease_id: String,
 }
 
+/// Response body for `GET /v1/sys/leases`.
+#[derive(Debug, Serialize)]
+pub struct LeaseListResponse {
+    pub leases: Vec<LeaseResponse>,
+    pub total: usize,
+}
+
 // ── Handlers ─────────────────────────────────────────────────────────
+
+/// List all leases.
+async fn list_leases(
+    State(state): State<Arc<AppState>>,
+    Extension(auth): Extension<AuthContext>,
+) -> Result<Json<LeaseListResponse>, AppError> {
+    state
+        .policy_store
+        .check(&auth.policies, "sys/leases", &Capability::Read)
+        .await?;
+
+    let all = state.lease_manager.list_all().await?;
+    let leases: Vec<LeaseResponse> = all
+        .iter()
+        .map(|lease| {
+            let expired = lease.is_expired();
+            LeaseResponse {
+                lease_id: lease.id.clone(),
+                engine_path: lease.engine_path.clone(),
+                issued_at: lease.issued_at.to_rfc3339(),
+                ttl_secs: lease.ttl_secs,
+                renewable: lease.renewable,
+                expired,
+            }
+        })
+        .collect();
+    let total = leases.len();
+
+    Ok(Json(LeaseListResponse { leases, total }))
+}
 
 /// Look up a lease by ID.
 async fn lookup_lease(

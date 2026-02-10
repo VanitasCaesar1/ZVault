@@ -1,0 +1,77 @@
+name: Update Homebrew Formula
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  update-formula:
+    name: Update SHA256 hashes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Download checksums from release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download ${{ github.event.release.tag_name }} \
+            --pattern 'checksums-sha256.txt' \
+            --dir /tmp
+
+      - name: Update formula
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          VERSION="${TAG#v}"
+
+          # Extract SHA256 for each platform
+          DARWIN_ARM64=$(grep "darwin-aarch64" /tmp/checksums-sha256.txt | awk '{print $1}')
+          DARWIN_X86=$(grep "darwin-x86_64" /tmp/checksums-sha256.txt | awk '{print $1}')
+          LINUX_ARM64=$(grep "linux-aarch64" /tmp/checksums-sha256.txt | awk '{print $1}')
+          LINUX_X86=$(grep "linux-x86_64" /tmp/checksums-sha256.txt | awk '{print $1}')
+
+          echo "darwin-aarch64: $DARWIN_ARM64"
+          echo "darwin-x86_64:  $DARWIN_X86"
+          echo "linux-aarch64:  $LINUX_ARM64"
+          echo "linux-x86_64:   $LINUX_X86"
+
+          # Update version
+          sed -i "s/version \".*\"/version \"${VERSION}\"/" Formula/zvault.rb
+
+          # Update SHA256 hashes (match the REPLACE_WITH or existing hash)
+          # darwin-aarch64 is the first sha256 in on_macos/on_arm
+          python3 - <<'EOF'
+          import re
+
+          with open("Formula/zvault.rb", "r") as f:
+              content = f.read()
+
+          shas = {
+              "darwin-aarch64": "$DARWIN_ARM64",
+              "darwin-x86_64": "$DARWIN_X86",
+              "linux-aarch64": "$LINUX_ARM64",
+              "linux-x86_64": "$LINUX_X86",
+          }
+
+          # Replace each sha256 line that follows a url containing the platform
+          for platform, sha in shas.items():
+              pattern = rf'(url ".*{platform}.*"\n\s+sha256 ")[a-fA-F0-9_]+(")'
+              replacement = rf'\g<1>{sha}\2'
+              content = re.sub(pattern, replacement, content)
+
+          with open("Formula/zvault.rb", "w") as f:
+              f.write(content)
+          EOF
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/zvault.rb
+          git diff --cached --quiet || git commit -m "chore: update Homebrew formula for ${{ github.event.release.tag_name }}"
+          git push

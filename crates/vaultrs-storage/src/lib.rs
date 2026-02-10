@@ -15,11 +15,15 @@ mod error;
 mod memory;
 #[cfg(feature = "redb-backend")]
 mod redb_backend;
+#[cfg(feature = "postgres-backend")]
+mod postgres_backend;
 #[cfg(feature = "rocksdb-backend")]
 mod rocksdb_backend;
 
 pub use error::StorageError;
 pub use memory::MemoryBackend;
+#[cfg(feature = "postgres-backend")]
+pub use postgres_backend::PostgresBackend;
 #[cfg(feature = "redb-backend")]
 pub use redb_backend::RedbBackend;
 #[cfg(feature = "rocksdb-backend")]

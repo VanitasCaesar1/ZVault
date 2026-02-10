@@ -12,6 +12,7 @@ workspace = true
 default = ["rocksdb-backend"]
 rocksdb-backend = ["dep:rocksdb"]
 redb-backend = ["dep:redb"]
+postgres-backend = ["dep:sqlx"]
 
 [dependencies]
 async-trait.workspace = true
@@ -21,3 +22,4 @@ tracing.workspace = true
 
 rocksdb = { version = "0.22", optional = true }
 redb = { version = "2", optional = true }
+sqlx = { workspace = true, optional = true }

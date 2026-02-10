@@ -1,0 +1,38 @@
+{
+  "name": "zvault",
+  "version": "0.1.0",
+  "description": "ZVault CLI — stop leaking secrets to LLMs. The AI-native secrets manager.",
+  "homepage": "https://zvault.cloud",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zvault/zvault"
+  },
+  "license": "MIT OR Apache-2.0",
+  "keywords": [
+    "secrets",
+    "vault",
+    "env",
+    "dotenv",
+    "security",
+    "ai",
+    "llm",
+    "mcp",
+    "cursor",
+    "copilot",
+    "kiro"
+  ],
+  "bin": {
+    "zvault": "bin/zvault"
+  },
+  "scripts": {
+    "postinstall": "node install.js"
+  },
+  "files": [
+    "bin/",
+    "install.js",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=16"
+  }
+}

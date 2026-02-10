@@ -1,0 +1,135 @@
+---
+export const prerender = false;
+
+// This page redirects to Polar's Customer Portal for subscription management.
+// In the future, this could be a full dashboard with license info, usage stats, etc.
+// For now, keep it simple — show quick links and redirect to portal.
+---
+
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard — ZVault</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0b;
+      --bg-card: #111113;
+      --bg-card-hover: #18181b;
+      --border: #27272a;
+      --text: #fafafa;
+      --text-muted: #a1a1aa;
+      --text-dim: #71717a;
+      --accent: #22d3ee;
+      --accent-dim: rgba(34, 211, 238, 0.1);
+      --green: #4ade80;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'SF Mono', monospace;
+    }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    nav { border-bottom: 1px solid var(--border); }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; max-width: 900px; margin: 0 auto; padding: 0 24px; }
+    .nav-logo { font-weight: 700; font-size: 1.25rem; color: var(--text); display: flex; align-items: center; gap: 8px; }
+    .nav-logo span { color: var(--accent); }
+    .nav-links { display: flex; gap: 24px; }
+    .nav-links a { color: var(--text-muted); font-size: 0.875rem; font-weight: 500; }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+    .container { max-width: 900px; margin: 0 auto; padding: 48px 24px; }
+    h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 8px; }
+    .subtitle { color: var(--text-muted); font-size: 1rem; margin-bottom: 40px; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 40px; }
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; transition: border-color 0.15s; }
+    .card:hover { border-color: var(--accent); }
+    .card-icon { font-size: 1.5rem; margin-bottom: 12px; }
+    .card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 6px; }
+    .card p { color: var(--text-muted); font-size: 0.85rem; line-height: 1.5; margin-bottom: 16px; }
+    .card-link { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 600; color: var(--accent); }
+
+    .section-title { font-size: 0.8rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; }
+
+    .quick-start { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+    .quick-start h3 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; }
+    .step { display: flex; gap: 12px; padding: 10px 0; }
+    .step + .step { border-top: 1px solid var(--border); }
+    .step-num { flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: var(--accent-dim); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; }
+    .step-text { font-size: 0.875rem; color: var(--text-muted); }
+    .step-text code { font-family: var(--mono); background: rgba(34, 211, 238, 0.08); color: var(--accent); padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">⟐ <span>ZVault</span></a>
+    <div class="nav-links">
+      <a href="https://docs.zvault.cloud">Docs</a>
+      <a href="/api/portal">Manage Subscription</a>
+      <a href="/">Home</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <h1>Dashboard</h1>
+  <p class="subtitle">Manage your ZVault license and get started with AI Mode.</p>
+
+  <div class="section-title">Quick Actions</div>
+  <div class="grid">
+    <div class="card">
+      <div class="card-icon">🔑</div>
+      <h3>License & Billing</h3>
+      <p>View your license key, update payment method, or change your plan.</p>
+      <a href="/api/portal" class="card-link">Open Customer Portal →</a>
+    </div>
+    <div class="card">
+      <div class="card-icon">🤖</div>
+      <h3>Setup AI Mode</h3>
+      <p>Connect ZVault to Cursor, Kiro, or Continue with one command.</p>
+      <a href="https://docs.zvault.cloud/ai-mode/mcp-server" class="card-link">Setup Guide →</a>
+    </div>
+    <div class="card">
+      <div class="card-icon">📖</div>
+      <h3>Documentation</h3>
+      <p>Full CLI reference, architecture docs, and security model.</p>
+      <a href="https://docs.zvault.cloud" class="card-link">Read Docs →</a>
+    </div>
+  </div>
+
+  <div class="section-title">Quick Start</div>
+  <div class="quick-start">
+    <h3>Get running in 60 seconds</h3>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text">Install: <code>curl -fsSL https://zvault.cloud/install.sh | sh</code></div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text">Activate your license: <code>zvault activate &lt;your-key&gt;</code></div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text">Import secrets: <code>zvault import .env</code></div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-text">Setup your IDE: <code>zvault setup cursor</code> or <code>zvault setup kiro</code></div>
+    </div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-text">Run your app: <code>zvault run -- npm run dev</code></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

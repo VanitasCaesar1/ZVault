@@ -1,36 +1,317 @@
 //! Landing page and web UI routes.
 //!
-//! Serves the marketing landing page at `/` and the application dashboard
-//! at `/app/*`. Both are server-rendered HTML with inline CSS — no JS
-//! framework required. Themed with a warm amber Crextio-inspired aesthetic
-//! using Plus Jakarta Sans — glassmorphism cards, bento grid, pill nav.
+//! Serves the marketing landing page at `/` as server-rendered HTML.
+//! The dashboard SPA at `/app/*` is served from `dashboard/dist/` when
+//! available (production), or falls back to inline HTML (legacy).
+//! The `/auth/callback` route handles Spring OAuth code exchange.
 
-use axum::response::Html;
+use axum::extract::{Query, State};
+use axum::http::{header, StatusCode, Uri};
+use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::get;
 use axum::Router;
 use std::sync::Arc;
 
-use super::dashboard::{
-    AUDIT_CONTENT, AUTH_CONTENT, DASHBOARD_CONTENT, INIT_CONTENT, LEASES_CONTENT,
-    LOGIN_CONTENT, POLICIES_CONTENT, SECRETS_CONTENT, SIDEBAR_SCRIPT, UNSEAL_CONTENT,
-};
 use crate::state::AppState;
+
+/// Path to the built SPA assets (relative to working directory).
+const SPA_DIST: &str = "dashboard/dist";
 
 /// Build the UI router.
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/", get(landing_page))
-        .route("/app/login", get(login_page))
-        .route("/app/logout", get(logout_page))
-        .route("/app", get(dashboard_page))
-        .route("/app/init", get(init_page))
-        .route("/app/unseal", get(unseal_page))
-        .route("/app/secrets", get(secrets_page))
-        .route("/app/policies", get(policies_page))
-        .route("/app/audit", get(audit_page))
-        .route("/app/leases", get(leases_page))
-        .route("/app/auth", get(auth_page))
+        .route("/auth/callback", get(spring_oauth_callback))
+        // SPA catch-all: serves static files or falls back to index.html
+        .route("/app/{*path}", get(spa_handler))
+        .route("/app", get(spa_handler))
 }
+
+// ── SPA handler ──────────────────────────────────────────────────────
+
+/// Serve the Vite SPA. Tries to serve a static file from `dashboard/dist/`,
+/// and falls back to `index.html` for client-side routing.
+///
+/// For `index.html`, injects `window.__SPRING_AUTH_URL__` so the SPA knows
+/// where to redirect for Spring OAuth login.
+async fn spa_handler(State(state): State<Arc<AppState>>, uri: Uri) -> Response {
+    // Strip the `/app` prefix to get the file path within dist/
+    let path = uri.path().strip_prefix("/app").unwrap_or("/");
+    let path = if path.is_empty() { "/" } else { path };
+
+    // Try to serve the exact file first (JS, CSS, assets)
+    if path != "/" && !path.ends_with('/') {
+        let file_path = format!("{}{}", SPA_DIST, path);
+        if let Ok(contents) = tokio::fs::read(&file_path).await {
+            let mime = mime_from_path(&file_path);
+            return (
+                StatusCode::OK,
+                [(header::CONTENT_TYPE, mime)],
+                contents,
+            )
+                .into_response();
+        }
+    }
+
+    // Fall back to index.html for client-side routing
+    let index_path = format!("{}/index.html", SPA_DIST);
+    match tokio::fs::read_to_string(&index_path).await {
+        Ok(html) => {
+            // Inject Spring OAuth URL into the HTML so the SPA can use it.
+            let injected = inject_spring_config(&state, &html);
+            (
+                StatusCode::OK,
+                [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
+                injected,
+            )
+                .into_response()
+        }
+        Err(_) => {
+            // SPA not built yet — return a helpful message
+            Html(SPA_NOT_BUILT_HTML.to_owned()).into_response()
+        }
+    }
+}
+
+/// Inject runtime configuration into the SPA's `index.html`.
+///
+/// Inserts a `<script>` tag before `</head>` that sets `window.__SPRING_AUTH_URL__`
+/// so the React app can build the OAuth redirect URL.
+fn inject_spring_config(state: &AppState, html: &str) -> String {
+    let script = if let Some(ref oauth) = state.spring_oauth {
+        let redirect_uri = oauth
+            .redirect_uri
+            .clone()
+            .unwrap_or_else(|| "/auth/callback".to_owned());
+        let auth_url = format!(
+            "{}/authorize?client_id={}&redirect_uri={}&response_type=code&scope=openid+profile+email",
+            oauth.auth_url,
+            urlencoding::encode(&oauth.client_id),
+            urlencoding::encode(&redirect_uri),
+        );
+        format!(
+            r#"<script>window.__SPRING_AUTH_URL__="{}";</script>"#,
+            auth_url.replace('"', r#"\""#)
+        )
+    } else {
+        String::new()
+    };
+
+    html.replace("</head>", &format!("{script}</head>"))
+}
+
+/// Guess MIME type from file extension.
+fn mime_from_path(path: &str) -> &'static str {
+    match path.rsplit('.').next() {
+        Some("js") => "application/javascript; charset=utf-8",
+        Some("css") => "text/css; charset=utf-8",
+        Some("html") => "text/html; charset=utf-8",
+        Some("json") => "application/json",
+        Some("svg") => "image/svg+xml",
+        Some("png") => "image/png",
+        Some("ico") => "image/x-icon",
+        Some("woff2") => "font/woff2",
+        Some("woff") => "font/woff",
+        Some("map") => "application/json",
+        _ => "application/octet-stream",
+    }
+}
+
+/// Shown when `dashboard/dist/` doesn't exist (dev hasn't built the SPA).
+const SPA_NOT_BUILT_HTML: &str = r#"<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/><title>ZVault — Dashboard Not Built</title>
+<style>body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#1E1610;color:#F5E6B8;text-align:center}
+code{background:rgba(245,200,66,.15);padding:2px 8px;border-radius:6px;color:#F5C842}</style></head>
+<body><div><h1>Dashboard not built yet</h1>
+<p>Run <code>cd dashboard && npm install && npm run build</code> to build the SPA.</p>
+<p>Or run <code>npm run dev</code> in the dashboard directory for development.</p>
+</div></body></html>"#;
+
+// ── Spring OAuth callback ────────────────────────────────────────────
+
+/// Query parameters from Spring's OAuth redirect.
+#[derive(serde::Deserialize)]
+struct OAuthCallbackParams {
+    code: Option<String>,
+    error: Option<String>,
+}
+
+/// Spring token endpoint response.
+#[derive(serde::Deserialize)]
+struct SpringTokenResponse {
+    access_token: String,
+    #[allow(dead_code)]
+    token_type: Option<String>,
+    #[allow(dead_code)]
+    expires_in: Option<u64>,
+}
+
+/// Spring userinfo endpoint response.
+#[derive(serde::Deserialize)]
+struct SpringUserInfo {
+    sub: String,
+    name: Option<String>,
+    email: Option<String>,
+}
+
+/// Handle the OAuth callback from Spring.
+///
+/// Exchanges the authorization code for tokens, fetches user info,
+/// creates a vault token with appropriate policies, sets a cookie,
+/// and redirects to the dashboard.
+async fn spring_oauth_callback(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<OAuthCallbackParams>,
+) -> Response {
+    // If Spring returned an error, redirect to login with message.
+    if let Some(err) = params.error {
+        return Redirect::to(&format!("/app/login?error={}", err)).into_response();
+    }
+
+    let code = match params.code {
+        Some(c) => c,
+        None => return Redirect::to("/app/login?error=missing_code").into_response(),
+    };
+
+    let oauth_config = match &state.spring_oauth {
+        Some(cfg) => cfg,
+        None => return Redirect::to("/app/login?error=oauth_not_configured").into_response(),
+    };
+
+    // Build redirect URI — use configured value or derive from callback.
+    let redirect_uri = oauth_config
+        .redirect_uri
+        .clone()
+        .unwrap_or_else(|| format!("{}/auth/callback", "http://localhost:8200"));
+
+    // Exchange authorization code for tokens.
+    let token_response = match exchange_code(oauth_config, &code, &redirect_uri).await {
+        Ok(resp) => resp,
+        Err(e) => {
+            tracing::warn!(error = %e, "Spring token exchange failed");
+            return Redirect::to("/app/login?error=token_exchange_failed").into_response();
+        }
+    };
+
+    // Fetch user info from Spring.
+    let user_info = match fetch_userinfo(oauth_config, &token_response.access_token).await {
+        Ok(info) => info,
+        Err(e) => {
+            tracing::warn!(error = %e, "Spring userinfo fetch failed");
+            return Redirect::to("/app/login?error=userinfo_failed").into_response();
+        }
+    };
+
+    // Determine vault policy based on user.
+    let policy = oauth_config.default_policy.clone();
+
+    // Create a vault token for this user.
+    let display_name = user_info
+        .name
+        .unwrap_or_else(|| user_info.sub.clone());
+
+    let mut metadata = std::collections::HashMap::new();
+    metadata.insert("spring_sub".to_owned(), user_info.sub);
+    if let Some(email) = user_info.email {
+        metadata.insert("email".to_owned(), email);
+    }
+
+    let vault_token = match state
+        .token_store
+        .create(vaultrs_core::token::CreateTokenParams {
+            policies: vec![policy],
+            ttl: Some(chrono::Duration::hours(24)),
+            max_ttl: None,
+            renewable: true,
+            parent_hash: None,
+            metadata,
+            display_name,
+        })
+        .await
+    {
+        Ok(token) => token,
+        Err(e) => {
+            tracing::warn!(error = %e, "failed to create vault token for Spring user");
+            return Redirect::to("/app/login?error=vault_token_failed").into_response();
+        }
+    };
+
+    // Set the token as a cookie and redirect to dashboard.
+    let cookie = format!(
+        "zvault-token={}; Path=/; Max-Age=86400; SameSite=Strict; HttpOnly",
+        vault_token
+    );
+
+    (
+        StatusCode::FOUND,
+        [
+            (header::SET_COOKIE, cookie),
+            (header::LOCATION, "/app".to_owned()),
+        ],
+    )
+        .into_response()
+}
+
+/// Exchange an authorization code for tokens at Spring's `/token` endpoint.
+async fn exchange_code(
+    config: &crate::config::SpringOAuthConfig,
+    code: &str,
+    redirect_uri: &str,
+) -> Result<SpringTokenResponse, String> {
+    let client = reqwest::Client::new();
+    let token_url = format!("{}/token", config.auth_url);
+
+    let resp = client
+        .post(&token_url)
+        .form(&[
+            ("grant_type", "authorization_code"),
+            ("code", code),
+            ("redirect_uri", redirect_uri),
+            ("client_id", &config.client_id),
+            ("client_secret", &config.client_secret),
+        ])
+        .send()
+        .await
+        .map_err(|e| format!("HTTP error: {e}"))?;
+
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        return Err(format!("Spring token endpoint returned {status}: {body}"));
+    }
+
+    resp.json::<SpringTokenResponse>()
+        .await
+        .map_err(|e| format!("failed to parse token response: {e}"))
+}
+
+/// Fetch user info from Spring's `/userinfo` endpoint.
+async fn fetch_userinfo(
+    config: &crate::config::SpringOAuthConfig,
+    access_token: &str,
+) -> Result<SpringUserInfo, String> {
+    let client = reqwest::Client::new();
+    let userinfo_url = format!("{}/userinfo", config.auth_url);
+
+    let resp = client
+        .get(&userinfo_url)
+        .bearer_auth(access_token)
+        .send()
+        .await
+        .map_err(|e| format!("HTTP error: {e}"))?;
+
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        return Err(format!("Spring userinfo endpoint returned {status}: {body}"));
+    }
+
+    resp.json::<SpringUserInfo>()
+        .await
+        .map_err(|e| format!("failed to parse userinfo response: {e}"))
+}
+
+// ── Landing page ─────────────────────────────────────────────────────
 
 async fn landing_page() -> Html<String> {
     let mut html = String::with_capacity(32768);
@@ -38,263 +319,6 @@ async fn landing_page() -> Html<String> {
     html.push_str(LANDING_BODY);
     Html(html)
 }
-
-async fn login_page() -> Html<String> {
-    Html(login_shell(LOGIN_CONTENT))
-}
-
-async fn logout_page() -> Html<String> {
-    Html(login_shell(LOGOUT_SCRIPT))
-}
-
-async fn dashboard_page() -> Html<String> {
-    Html(app_shell("Dashboard", "dashboard", DASHBOARD_CONTENT))
-}
-
-async fn init_page() -> Html<String> {
-    Html(app_shell("Initialize Vault", "init", INIT_CONTENT))
-}
-
-async fn unseal_page() -> Html<String> {
-    Html(app_shell("Unseal Vault", "unseal", UNSEAL_CONTENT))
-}
-
-async fn secrets_page() -> Html<String> {
-    Html(app_shell("Secrets", "secrets", SECRETS_CONTENT))
-}
-
-async fn policies_page() -> Html<String> {
-    Html(app_shell("Policies", "policies", POLICIES_CONTENT))
-}
-
-async fn audit_page() -> Html<String> {
-    Html(app_shell("Audit Log", "audit", AUDIT_CONTENT))
-}
-
-async fn leases_page() -> Html<String> {
-    Html(app_shell("Leases", "leases", LEASES_CONTENT))
-}
-
-async fn auth_page() -> Html<String> {
-    Html(app_shell("Auth Methods", "auth", AUTH_CONTENT))
-}
-
-/// Script that clears the token cookie and redirects to login.
-const LOGOUT_SCRIPT: &str = r##"
-<script>
-document.cookie='zvault-token=;path=/;max-age=0';
-window.location.href='/app/login';
-</script>
-"##;
-
-/// Auth gate script injected into every `/app/*` page (except login).
-/// Checks for the `zvault-token` cookie and validates it against the API.
-/// Redirects to `/app/login` if missing or invalid.
-const AUTH_GATE_SCRIPT: &str = r##"
-<script>
-(function(){
-  function getCookie(n){var m=document.cookie.match(new RegExp('(?:^|; )'+n+'=([^;]*)'));return m?decodeURIComponent(m[1]):null}
-  var token=getCookie('zvault-token');
-  if(!token){window.location.href='/app/login';return}
-  fetch('/v1/auth/token/lookup-self',{method:'POST',headers:{'X-Vault-Token':token,'Content-Type':'application/json'},body:'{}'})
-    .then(function(r){if(!r.ok)throw new Error('invalid');return r.json()})
-    .catch(function(){document.cookie='zvault-token=;path=/;max-age=0';window.location.href='/app/login'});
-})();
-</script>
-"##;
-
-/// Render the login page shell (no sidebar, standalone page).
-fn login_shell(content: &str) -> String {
-    let mut html = String::with_capacity(8192);
-    html.push_str(APP_CSS);
-    html.push_str("<body style=\"display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg)\">\n");
-    html.push_str(content);
-    html.push_str("\n</body>\n</html>");
-    html
-}
-
-/// Render the app shell with sidebar, topbar, and page content.
-fn app_shell(title: &str, active: &str, content: &str) -> String {
-    let nav_item = |href: &str, id: &str, icon: &str, label: &str| -> String {
-        let class = if active == id {
-            "sidebar-link active"
-        } else {
-            "sidebar-link"
-        };
-        let mut s = String::with_capacity(256);
-        s.push_str("<a href=\"");
-        s.push_str(href);
-        s.push_str("\" class=\"");
-        s.push_str(class);
-        s.push_str("\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\">");
-        s.push_str(icon);
-        s.push_str("</svg>");
-        s.push_str(label);
-        s.push_str("</a>");
-        s
-    };
-
-    let mut html = String::with_capacity(16384);
-    html.push_str(APP_CSS);
-    html.push_str("<body>\n");
-
-    // Sidebar
-    html.push_str(r##"<aside class="sidebar"><div class="sidebar-logo"><svg viewBox="0 0 32 32" fill="none"><defs><linearGradient id="zg" x1="0" y1="0" x2="32" y2="32"><stop offset="0%" stop-color="#F5C842"/><stop offset="100%" stop-color="#E8A817"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#zg)"/><path d="M9 11h14l-14 10h14" stroke="#2D1F0E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>ZVault</div><nav class="sidebar-nav">"##);
-    html.push_str(r##"<div class="sidebar-section"><div class="sidebar-section-label">System</div>"##);
-    html.push_str(&nav_item("/app","dashboard",r##"<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>"##,"Dashboard"));
-    html.push_str(&nav_item("/app/init","init",r##"<path d="M12 2v4m0 12v4M2 12h4m12 0h4"/><circle cx="12" cy="12" r="3"/>"##,"Initialize"));
-    html.push_str(&nav_item("/app/unseal","unseal",r##"<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>"##,"Unseal"));
-    html.push_str("</div>");
-    html.push_str(r##"<div class="sidebar-section"><div class="sidebar-section-label">Manage</div>"##);
-    html.push_str(&nav_item("/app/secrets","secrets",r##"<path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>"##,"Secrets"));
-    html.push_str(&nav_item("/app/policies","policies",r##"<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>"##,"Policies"));
-    html.push_str(&nav_item("/app/leases","leases",r##"<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>"##,"Leases"));
-    html.push_str(&nav_item("/app/audit","audit",r##"<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8m8 4H8m2-8H8"/>"##,"Audit Log"));
-    html.push_str(&nav_item("/app/auth","auth",r##"<path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>"##,"Auth Methods"));
-    html.push_str("</div>");
-    html.push_str(r##"</nav><div class="sidebar-footer"><a href="/docs" class="sidebar-docs-link">Documentation</a><a href="/app/logout" class="sidebar-docs-link" style="color:#E74C3C">Sign Out</a>ZVault v0.1.0</div></aside>"##);
-
-    // Main content area
-    html.push_str(r##"<div class="main"><header class="topbar"><div class="topbar-title">"##);
-    html.push_str(title);
-    html.push_str(r##"</div><div class="topbar-actions"><div class="topbar-status"><span class="status-dot sealed" id="seal-dot"></span><span id="seal-text">Sealed</span></div><a href="/app/logout" class="btn btn-danger btn-sm">Sign Out</a><a href="/" class="btn btn-secondary btn-sm">Back to Site</a></div></header><div class="content">"##);
-    html.push_str(content);
-    html.push_str("</div></div>\n");
-    html.push_str(SIDEBAR_SCRIPT);
-    html.push_str(AUTH_GATE_SCRIPT);
-    html.push_str("\n</body>\n</html>");
-    html
-}
-
-/// CSS for the dashboard app shell — Crextio-inspired warm amber glassmorphism.
-const APP_CSS: &str = r##"<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>ZVault</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:linear-gradient(145deg,#FEF3D0 0%,#FAEAB5 30%,#F5DFA0 60%,#EDD48C 100%);
-  --bg-flat:#FBF0C8;
-  --surface:rgba(255,255,253,.72);
-  --surface-solid:#FFFDF7;
-  --surface-warm:rgba(255,248,231,.8);
-  --glass:rgba(255,255,255,.45);
-  --glass-border:rgba(255,255,255,.6);
-  --glass-shadow:0 8px 32px rgba(180,140,50,.1);
-  --border:rgba(212,168,67,.2);
-  --border-light:rgba(212,168,67,.12);
-  --text:#2D1F0E;
-  --text-muted:#7A6543;
-  --text-light:#A69274;
-  --primary:#E8A817;
-  --primary-hover:#D49A0F;
-  --primary-light:#FFF0C2;
-  --primary-glow:rgba(232,168,23,.12);
-  --sidebar-bg:#1E1610;
-  --sidebar-text:#A69274;
-  --sidebar-active:#F5E6B8;
-  --sidebar-active-bg:rgba(232,168,23,.18);
-  --success:#4CAF50;
-  --success-light:rgba(76,175,80,.12);
-  --warning:#F5A623;
-  --warning-light:rgba(245,166,35,.12);
-  --danger:#E74C3C;
-  --danger-light:rgba(231,76,60,.1);
-  --info:#5B9BD5;
-  --info-light:rgba(91,155,213,.1);
-  --accent:#D4A843;
-  --dark-card:#1E1610;
-  --dark-card-text:#F5E6B8;
-  --radius:16px;
-  --radius-sm:10px;
-  --radius-lg:20px;
-  --radius-pill:50px;
-  --shadow-sm:0 2px 8px rgba(45,31,14,.06);
-  --shadow:0 4px 16px rgba(45,31,14,.08);
-  --shadow-lg:0 12px 40px rgba(45,31,14,.12);
-  --mono:'JetBrains Mono','SF Mono',Monaco,Consolas,monospace;
-  --font:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
-}
-body{font-family:var(--font);background:var(--bg);background-attachment:fixed;color:var(--text);display:flex;min-height:100vh;line-height:1.6;-webkit-font-smoothing:antialiased}
-.sidebar{width:260px;background:var(--sidebar-bg);color:var(--sidebar-text);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto}
-.sidebar-logo{display:flex;align-items:center;gap:12px;padding:28px 24px 32px;font-size:20px;font-weight:800;color:#F5E6B8;letter-spacing:-.3px}
-.sidebar-logo svg{width:32px;height:32px;flex-shrink:0}
-.sidebar-nav{flex:1;padding:0 14px}
-.sidebar-section{margin-bottom:28px}
-.sidebar-section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:#5A4A36;padding:0 12px;margin-bottom:8px}
-.sidebar-link{display:flex;align-items:center;gap:11px;padding:10px 14px;border-radius:var(--radius-sm);color:var(--sidebar-text);text-decoration:none;font-size:13.5px;font-weight:500;transition:all .2s}
-.sidebar-link:hover{color:#D4C4A8;background:rgba(255,255,255,.05)}
-.sidebar-link.active{color:var(--sidebar-active);background:var(--sidebar-active-bg);font-weight:600}
-.sidebar-link svg{width:18px;height:18px;flex-shrink:0;opacity:.6}
-.sidebar-link.active svg{opacity:1}
-.sidebar-footer{padding:18px 24px;font-size:11px;color:#5A4A36;border-top:1px solid rgba(255,255,255,.06)}
-.sidebar-docs-link{color:#A69274;text-decoration:none;font-size:12px;display:block;margin-bottom:6px;transition:color .15s}
-.sidebar-docs-link:hover{color:#F5E6B8}
-.main{margin-left:260px;flex:1;min-height:100vh}
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:20px 36px;background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--glass-border)}
-.topbar-title{font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.4px}
-.topbar-actions{display:flex;align-items:center;gap:14px}
-.topbar-status{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--text-muted);font-weight:600;background:var(--surface);padding:6px 14px;border-radius:var(--radius-pill);border:1px solid var(--border-light)}
-.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
-.status-dot.sealed{background:var(--warning)}.status-dot.unsealed{background:var(--success)}.status-dot.uninitialized{background:var(--danger)}
-.content{padding:32px 36px}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 20px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;font-family:var(--font);text-decoration:none;border:none;cursor:pointer;transition:all .2s}
-.btn-primary{background:var(--primary);color:#2D1F0E;border-radius:var(--radius-pill)}.btn-primary:hover{background:var(--primary-hover);box-shadow:0 4px 20px rgba(232,168,23,.3);transform:translateY(-1px)}
-.btn-secondary{background:var(--glass);backdrop-filter:blur(10px);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-pill)}.btn-secondary:hover{background:var(--surface);border-color:var(--primary)}
-.btn-danger{background:var(--danger);color:#fff;border-radius:var(--radius-pill)}.btn-danger:hover{background:#D04030}
-.btn-sm{padding:7px 14px;font-size:12px}
-.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;margin-bottom:32px}
-.stat-card{background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--glass-border);border-radius:var(--radius-lg);padding:24px;box-shadow:var(--glass-shadow);transition:all .25s}
-.stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
-.stat-card-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text-muted);margin-bottom:10px}
-.stat-card-value{font-size:34px;font-weight:800;color:var(--text);line-height:1.1;letter-spacing:-.5px}
-.stat-card-value.primary{color:var(--primary)}.stat-card-value.accent{color:var(--accent)}.stat-card-value.warning{color:var(--warning)}.stat-card-value.danger{color:var(--danger)}.stat-card-value.success{color:var(--success)}
-.stat-card-sub{font-size:12px;color:var(--text-light);margin-top:8px}
-.stat-card.dark{background:var(--dark-card);border-color:rgba(255,255,255,.06);color:var(--dark-card-text)}
-.stat-card.dark .stat-card-label{color:#8B7355}
-.stat-card.dark .stat-card-value{color:#F5E6B8}
-.stat-card.dark .stat-card-sub{color:#7A6543}
-.card{background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--glass-border);border-radius:var(--radius-lg);box-shadow:var(--glass-shadow);margin-bottom:22px;overflow:hidden}
-.card.dark{background:var(--dark-card);border-color:rgba(255,255,255,.06)}
-.card-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border-light);background:rgba(255,255,255,.25)}
-.card.dark .card-header{background:rgba(255,255,255,.04);border-bottom-color:rgba(255,255,255,.06)}
-.card-title{font-size:15px;font-weight:700;color:var(--text)}
-.card.dark .card-title{color:#F5E6B8}
-.card-body{padding:22px}
-.table{width:100%;border-collapse:collapse;font-size:13px}
-.table th{text-align:left;font-weight:700;color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.7px;padding:11px 18px;border-bottom:1px solid var(--border-light);background:rgba(255,255,255,.2)}
-.card.dark .table th{color:#8B7355;background:rgba(255,255,255,.03);border-bottom-color:rgba(255,255,255,.06)}
-.table td{padding:13px 18px;border-bottom:1px solid var(--border-light);color:var(--text)}
-.card.dark .table td{color:#D4C4A8;border-bottom-color:rgba(255,255,255,.04)}
-.table tr:last-child td{border-bottom:none}
-.table tr:hover{background:var(--primary-glow)}
-.card.dark .table tr:hover{background:rgba(232,168,23,.06)}
-.badge{display:inline-block;padding:4px 12px;border-radius:var(--radius-pill);font-size:11px;font-weight:700;letter-spacing:.2px}
-.badge-success{background:var(--success-light);color:#2E7D32}
-.badge-warning{background:var(--warning-light);color:#E65100}
-.badge-danger{background:var(--danger-light);color:#C62828}
-.badge-info{background:var(--info-light);color:#1565C0}
-.badge-primary{background:var(--primary-glow);color:#B8860B}
-.badge-muted{background:rgba(0,0,0,.06);color:var(--text-muted)}
-.form-group{margin-bottom:20px}
-.form-label{display:block;font-size:13px;font-weight:700;margin-bottom:7px;color:var(--text)}
-.form-input{width:100%;padding:11px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font);background:var(--glass);backdrop-filter:blur(8px);color:var(--text);transition:all .2s}
-.form-input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-glow);background:rgba(255,255,255,.7)}
-.form-input.mono{font-family:var(--mono);font-size:12px}
-.form-hint{font-size:12px;color:var(--text-light);margin-top:6px}
-.code-block{background:var(--dark-card);color:#E8D5A3;padding:18px;border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;overflow-x:auto;line-height:1.7;white-space:pre-wrap;word-break:break-all;margin-bottom:8px}
-.code-block .accent{color:#F5C842}.code-block .key{color:#4CAF50}
-.wizard{max-width:640px}
-.wizard-step{background:var(--glass);backdrop-filter:blur(16px);border:1px solid var(--glass-border);border-radius:var(--radius-lg);padding:30px;margin-bottom:22px;box-shadow:var(--glass-shadow)}
-.wizard-step h3{font-size:18px;font-weight:800;margin-bottom:8px;letter-spacing:-.2px}
-.wizard-step p{font-size:14px;color:var(--text-muted);line-height:1.7;margin-bottom:18px}
-.wizard-step-num{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#F5C842,#E8A817);color:#2D1F0E;font-size:14px;font-weight:800;margin-bottom:16px;box-shadow:0 4px 12px rgba(232,168,23,.25)}
-code{font-family:var(--mono);font-size:12px;background:var(--primary-glow);color:#B8860B;padding:2px 7px;border-radius:6px}
-@media(max-width:900px){.main{margin-left:0}.sidebar{display:none}}
-</style></head>
-"##;
 
 /// CSS and HTML head for the marketing landing page at `/`.
 const LANDING_CSS: &str = r##"<!DOCTYPE html>
@@ -305,33 +329,20 @@ const LANDING_CSS: &str = r##"<!DOCTYPE html>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#1E1610;
-  --surface:rgba(255,253,247,.06);
-  --glass:rgba(255,255,255,.04);
-  --glass-border:rgba(255,255,255,.08);
-  --text:#F5E6B8;
-  --text-muted:#A69274;
-  --primary:#F5C842;
-  --primary-hover:#E8B830;
-  --accent:#D4A843;
-  --mono:'JetBrains Mono','SF Mono',Monaco,Consolas,monospace;
-  --font:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
-}
+:root{--bg:#1E1610;--text:#F5E6B8;--text-muted:#A69274;--primary:#F5C842;--glass:rgba(255,255,255,.04);--glass-border:rgba(255,255,255,.08);--font:'Plus Jakarta Sans',-apple-system,sans-serif}
 body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 a{color:inherit;text-decoration:none}
 .nav{display:flex;align-items:center;justify-content:space-between;max-width:1100px;margin:0 auto;padding:24px}
-.nav-logo{display:flex;align-items:center;gap:12px;font-size:20px;font-weight:800;letter-spacing:-.3px;color:#F5E6B8}
+.nav-logo{display:flex;align-items:center;gap:12px;font-size:20px;font-weight:800;color:#F5E6B8}
 .nav-logo svg{width:32px;height:32px}
 .nav-links{display:flex;align-items:center;gap:8px}
 .nav-links a{color:#A69274;transition:all .2s;font-size:14px;font-weight:600;padding:8px 16px;border-radius:50px}
 .nav-links a:hover{color:#F5E6B8;background:rgba(255,255,255,.05)}
 .nav-links .nav-pill{background:rgba(245,200,66,.12);color:#F5C842;border:1px solid rgba(245,200,66,.2)}
-.nav-links .nav-pill:hover{background:rgba(245,200,66,.2);border-color:rgba(245,200,66,.35)}
+.nav-links .nav-pill:hover{background:rgba(245,200,66,.2)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 28px;border-radius:50px;font-size:14px;font-weight:700;font-family:var(--font);border:none;cursor:pointer;transition:all .25s}
 .btn-primary{background:linear-gradient(135deg,#F5C842,#E8A817);color:#2D1F0E;box-shadow:0 4px 20px rgba(245,200,66,.2)}.btn-primary:hover{box-shadow:0 8px 32px rgba(245,200,66,.35);transform:translateY(-2px)}
-.btn-outline{background:transparent;color:#F5E6B8;border:1.5px solid rgba(245,230,184,.2);border-radius:50px}.btn-outline:hover{border-color:rgba(245,230,184,.4);background:rgba(245,230,184,.05)}
-.btn-sm{padding:9px 18px;font-size:13px}
+.btn-outline{background:transparent;color:#F5E6B8;border:1.5px solid rgba(245,230,184,.2)}.btn-outline:hover{border-color:rgba(245,230,184,.4);background:rgba(245,230,184,.05)}
 .hero{text-align:center;max-width:800px;margin:0 auto;padding:120px 24px 80px;position:relative}
 .hero::before{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:600px;height:600px;background:radial-gradient(circle,rgba(245,200,66,.08) 0%,transparent 70%);pointer-events:none}
 .hero h1{font-size:60px;font-weight:800;line-height:1.06;letter-spacing:-2.5px;margin-bottom:24px;color:#FFFDF7;position:relative}
@@ -340,7 +351,7 @@ a{color:inherit;text-decoration:none}
 .hero-actions{display:flex;gap:14px;justify-content:center;position:relative}
 .features{max-width:1100px;margin:0 auto;padding:40px 24px 80px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
 .feature{background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;padding:32px;transition:all .25s;backdrop-filter:blur(8px)}
-.feature:hover{background:rgba(255,255,255,.07);border-color:rgba(245,200,66,.15);box-shadow:0 8px 32px rgba(245,200,66,.06);transform:translateY(-2px)}
+.feature:hover{background:rgba(255,255,255,.07);border-color:rgba(245,200,66,.15);transform:translateY(-2px)}
 .feature-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:20px;background:rgba(245,200,66,.1)}
 .feature-icon svg{width:24px;height:24px;stroke:#F5C842}
 .feature h3{font-size:16px;font-weight:700;margin-bottom:8px;color:#F5E6B8}
@@ -368,55 +379,27 @@ const LANDING_BODY: &str = r##"<body>
     <a href="/app/init" class="nav-pill">Get Started</a>
   </div>
 </nav>
-
 <section class="hero">
   <h1>Your secrets deserve<br/>a <span>proper vault</span></h1>
-  <p>A secure, high-performance secrets manager built entirely in Rust. AES-256-GCM encryption, Shamir unseal, zero unsafe crypto. Your treasure, locked tight.</p>
+  <p>A secure, high-performance secrets manager built entirely in Rust. AES-256-GCM encryption, Shamir unseal, zero unsafe crypto.</p>
   <div class="hero-actions">
     <a href="/app/init" class="btn btn-primary">Initialize Vault</a>
     <a href="https://github.com/zvault/zvault" class="btn btn-outline">View Source</a>
   </div>
 </section>
-
 <section class="features">
-  <div class="feature">
-    <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
-    <h3>Shamir Unseal</h3>
-    <p>Split the root key into shares using Shamir's Secret Sharing. No single operator can unseal alone.</p>
-  </div>
-  <div class="feature">
-    <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-    <h3>Encryption Barrier</h3>
-    <p>All data at rest is AES-256-GCM encrypted. Storage backends never see plaintext. Fresh nonces on every write.</p>
-  </div>
-  <div class="feature">
-    <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8m8 4H8m2-8H8"/></svg></div>
-    <h3>Audit Logging</h3>
-    <p>Every operation is logged before the response is sent. Fail-closed design. Sensitive fields are HMAC'd.</p>
-  </div>
-  <div class="feature">
-    <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div>
-    <h3>Dynamic Secrets</h3>
-    <p>Generate short-lived credentials on demand. Automatic lease tracking and revocation when TTL expires.</p>
-  </div>
-  <div class="feature">
-    <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
-    <h3>Lease Management</h3>
-    <p>Every secret has a TTL. Leases are tracked, renewable, and automatically revoked on expiry.</p>
-  </div>
-  <div class="feature">
-    <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
-    <h3>Pluggable Engines</h3>
-    <p>KV, Transit, PKI, Database. Mount engines at any path. Add custom engines via the trait interface.</p>
-  </div>
+  <div class="feature"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div><h3>Shamir Unseal</h3><p>Split the root key into shares. No single operator can unseal alone.</p></div>
+  <div class="feature"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><h3>Encryption Barrier</h3><p>All data at rest is AES-256-GCM encrypted. Fresh nonces on every write.</p></div>
+  <div class="feature"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8m8 4H8m2-8H8"/></svg></div><h3>Audit Logging</h3><p>Every operation logged before response. Fail-closed. Sensitive fields HMAC'd.</p></div>
+  <div class="feature"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div><h3>Dynamic Secrets</h3><p>Short-lived credentials on demand. Automatic lease tracking and revocation.</p></div>
+  <div class="feature"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><h3>Lease Management</h3><p>Every secret has a TTL. Leases tracked, renewable, auto-revoked on expiry.</p></div>
+  <div class="feature"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div><h3>Pluggable Engines</h3><p>KV, Transit, PKI, Database. Mount at any path. Custom engines via traits.</p></div>
 </section>
-
 <section class="cta">
   <h2>Ready to lock down your secrets?</h2>
   <p>Initialize your vault in under a minute. No external dependencies required.</p>
   <a href="/app/init" class="btn btn-primary">Initialize Vault</a>
 </section>
-
 <footer class="footer">
   <span>ZVault v0.1.0 &mdash; MIT / Apache-2.0</span>
   <span>Built with Rust, Axum &amp; RustCrypto</span>

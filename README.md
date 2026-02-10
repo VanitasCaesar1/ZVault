@@ -4,30 +4,105 @@
   <img src="https://img.shields.io/badge/license-MIT%20%2F%20Apache--2.0-B8860B?style=flat-square" alt="License"/>
 </p>
 
-<h1 align="center">ZVault</h1>
+<h1 align="center">⟐ ZVault</h1>
 <p align="center">
-  A secrets management platform written entirely in Rust.<br/>
-  Takes the security architecture of HashiCorp Vault and ships it as a single static binary.
+  <strong>Stop leaking secrets to LLMs.</strong><br/>
+  The AI-native secrets manager. Let Cursor, Copilot, and Kiro build your app without seeing your API keys.
+</p>
+
+<p align="center">
+  <a href="https://zvault.cloud">Website</a> ·
+  <a href="https://docs.zvault.cloud">Docs</a> ·
+  <a href="https://zvault.cloud/#pricing">Pricing</a> ·
+  <a href="https://docs.zvault.cloud/getting-started/quickstart">Quick Start</a>
 </p>
 
 ---
 
-## What is ZVault?
+## The Problem
 
-ZVault is an in-house secrets manager that encrypts everything at rest using AES-256-GCM, protects the root key with Shamir's Secret Sharing, and serves a full HTTP API + web dashboard — all from one binary with zero external dependencies.
+Every AI coding tool reads your `.env` file. That means your `STRIPE_SECRET_KEY`, `DATABASE_URL`, and `AWS_ACCESS_KEY` are sitting in someone else's context window.
 
-**Key properties:**
-- Every byte in storage is encrypted (barrier pattern)
-- Root key never touches disk in plaintext
-- Shamir unseal with configurable threshold
-- Pure Rust crypto (RustCrypto ecosystem, no OpenSSL)
-- Embedded storage (RocksDB or redb)
-- Built-in web UI with warm amber glassmorphism theme
+ZVault fixes this. Your AI sees `zvault://payments/stripe-key` — a reference, not the value. At runtime, ZVault injects the real secrets. Nothing leaked.
+
+## Install
+
+```bash
+curl -fsSL https://zvault.cloud/install.sh | sh
+```
+
+Or build from source:
+
+```bash
+cargo install --git https://github.com/zvault/zvault vaultrs-cli
+```
+
+## How It Works
+
+```bash
+# 1. Import your .env (secrets encrypted, references generated)
+zvault import .env
+# ✓ Imported 12 secrets into vault
+# ✓ Created .env.zvault (safe for git)
+# ✓ Added .env to .gitignore
+
+# 2. Your AI now sees references, not values
+cat .env.zvault
+# STRIPE_KEY=zvault://env/myapp/STRIPE_KEY
+# DATABASE_URL=zvault://env/myapp/DATABASE_URL
+
+# 3. Run your app — secrets injected at runtime
+zvault run -- npm run dev
+# ✓ 12 secrets resolved · ▶ npm run dev
+```
+
+## AI Mode (Pro)
+
+The killer feature. Connect your IDE's AI to ZVault via MCP — it can query what secrets exist without ever seeing values.
+
+```bash
+# Setup for your IDE (one command)
+zvault setup cursor    # or: kiro, continue, generic
+
+# Starts an MCP server with 7 tools:
+# - zvault_list_secrets     (names only, never values)
+# - zvault_describe_secret  (metadata, type, last rotated)
+# - zvault_check_env        (verify all required secrets exist)
+# - zvault_generate_env     (generate .env.example from vault)
+# - zvault_secret_stats     (count, engines, health)
+# - zvault_search_secrets   (fuzzy search by name)
+# - zvault_run_command      (execute with secrets injected)
+```
+
+## Features
+
+| Feature | Free | Pro ($8/mo) |
+|---------|------|-------------|
+| Local encrypted vault | ✅ | ✅ |
+| CLI (init, import, run) | ✅ | ✅ |
+| .env import/export | ✅ | ✅ |
+| Web dashboard | ✅ | ✅ |
+| KV, Transit, PKI engines | ✅ | ✅ |
+| AI Mode (MCP server) | — | ✅ |
+| zvault:// references | — | ✅ |
+| IDE setup (Cursor, Kiro, Continue) | — | ✅ |
+| llms.txt generation | — | ✅ |
+
+
+## Security Model
+
+- **AES-256-GCM** encryption at rest (barrier pattern — storage never sees plaintext)
+- **Shamir's Secret Sharing** for root key protection
+- **Key zeroization** via `Zeroize` + `ZeroizeOnDrop` on all key material
+- **Constant-time comparison** for token verification (`subtle::ConstantTimeEq`)
+- **Fail-closed audit** — if audit logging fails, the request is denied
+- **Pure Rust crypto** — RustCrypto ecosystem, no OpenSSL, no C dependencies
+- **Core dump prevention** — `RLIMIT_CORE` set to 0, memory locked with `mlock`
 
 ## Architecture
 
 ```
-Clients (CLI, SDK, Web UI, K8s Operator)
+Clients (CLI, Web UI, MCP Server)
          │
          ▼
    ┌─────────────┐
@@ -38,46 +113,81 @@ Clients (CLI, SDK, Web UI, K8s Operator)
    ┌──────▼──────┐
    │   Barrier   │  AES-256-GCM encrypt/decrypt
    └──────┬──────┘
-          │  ciphertext only below
+          │  ciphertext only below this line
    ┌──────▼──────┐
    │   Storage   │  RocksDB (default) or redb
    └─────────────┘
 ```
 
-## Quick Start
+## CLI Reference
 
 ```bash
-# Build
-cargo build --release --package vaultrs-server
+zvault status                          # Vault health + seal status
+zvault init --shares 5 --threshold 3   # Initialize with Shamir
+zvault unseal --share <key>            # Submit unseal share
+zvault seal                            # Seal (zeroize all keys)
 
-# Run (in-memory storage for dev)
-./target/release/vaultrs-server
+zvault kv put myapp/config key=value   # Write a secret
+zvault kv get myapp/config             # Read a secret
+zvault kv list myapp/                  # List secrets
+zvault kv delete myapp/config          # Delete a secret
 
-# Open the web UI
-open http://127.0.0.1:8200
+zvault transit create-key my-key       # Create encryption key
+zvault transit encrypt my-key <b64>    # Encrypt data
+zvault transit decrypt my-key <ct>     # Decrypt data
 
-# Or use the CLI
-cargo build --release --package vaultrs-cli
-./target/release/vaultrs-cli status
-./target/release/vaultrs-cli init --shares 5 --threshold 3
-./target/release/vaultrs-cli unseal <share>
+zvault import .env                     # Import .env → vault + .env.zvault
+zvault run -- npm run dev              # Run with secrets injected
+
+zvault mcp-server                      # Start MCP server (Pro)
+zvault setup cursor                    # Configure IDE (Pro)
+zvault activate <license-key>          # Activate Pro/Team/Enterprise
+zvault license                         # Show license status
 ```
+
+## Self-Hosting
+
+### Quick (in-memory, for dev)
+
+```bash
+cargo run --package vaultrs-server
+# → http://127.0.0.1:8200 (API + Web UI)
+```
+
+### Production (persistent storage)
+
+```bash
+cargo build --release --package vaultrs-server
+VAULTRS_STORAGE=rocksdb VAULTRS_STORAGE_PATH=/var/lib/zvault ./target/release/vaultrs-server
+```
+
+### Docker
+
+```bash
+docker build -t zvault .
+docker run -p 8200:8200 \
+  -e VAULTRS_STORAGE=rocksdb \
+  -e VAULTRS_STORAGE_PATH=/data \
+  -e VAULTRS_DISABLE_MLOCK=true \
+  -v zvault-data:/data \
+  zvault
+```
+
+### Railway
+
+One-click deploy with `railway.toml` included. Set `VAULTRS_STORAGE=rocksdb` and `VAULTRS_STORAGE_PATH=/data`.
 
 ## Configuration
 
-All configuration is via environment variables:
-
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PORT` | — | Bind port (Railway convention, binds to `0.0.0.0`) |
-| `VAULTRS_BIND_ADDR` | `127.0.0.1:8200` | Full bind address (overrides `PORT`) |
-| `VAULTRS_STORAGE` | `memory` | Storage backend: `memory`, `rocksdb`, `redb` |
-| `VAULTRS_STORAGE_PATH` | `./data` | Path for persistent storage backends |
-| `VAULTRS_LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error` |
-| `VAULTRS_AUDIT_FILE` | — | Path to audit log file (optional) |
-| `VAULTRS_ENABLE_TRANSIT` | `true` | Mount the transit encryption engine |
-| `VAULTRS_LEASE_SCAN_INTERVAL` | `60` | Seconds between lease expiry scans |
-| `VAULTRS_DISABLE_MLOCK` | `false` | Skip `mlockall` (for dev/containers) |
+| `PORT` | — | Bind port (Railway convention) |
+| `VAULTRS_BIND_ADDR` | `127.0.0.1:8200` | Full bind address |
+| `VAULTRS_STORAGE` | `memory` | `memory`, `rocksdb`, or `redb` |
+| `VAULTRS_STORAGE_PATH` | `./data` | Path for persistent storage |
+| `VAULTRS_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
+| `VAULTRS_AUDIT_FILE` | — | Audit log file path |
+| `VAULTRS_DISABLE_MLOCK` | `false` | Skip `mlockall` (for containers) |
 
 ## Crate Structure
 
@@ -85,167 +195,30 @@ All configuration is via environment variables:
 Z-vault/
 ├── crates/
 │   ├── vaultrs-core/       # Barrier, seal, tokens, policies, audit, engines
-│   ├── vaultrs-storage/    # StorageBackend trait + RocksDB/redb/memory impls
+│   ├── vaultrs-storage/    # StorageBackend trait + RocksDB/redb/memory
 │   ├── vaultrs-server/     # HTTP server, routes, middleware, web UI
-│   └── vaultrs-cli/        # Standalone CLI client (HTTP only)
-├── docs/
-│   └── DESIGN.md           # Full design document
-├── Cargo.toml              # Workspace root
-├── Dockerfile              # Multi-stage production build
-├── railway.toml            # Railway deployment config
-└── railpack.toml           # Railpack build config
-```
-
-## Secrets Engines
-
-| Engine | Path | Description |
-|--------|------|-------------|
-| KV v2 | `secret/` | Versioned key-value secrets with metadata |
-| Transit | `transit/` | Encryption-as-a-service (encrypt, decrypt, sign, verify) |
-| Database | `database/` | Dynamic credentials with automatic revocation (planned) |
-| PKI | `pki/` | X.509 certificate authority (planned) |
-
-## Auth Methods
-
-| Method | Description |
-|--------|-------------|
-| Token | Built-in token auth with policies and TTL |
-| AppRole | Machine-to-machine auth (planned) |
-| OIDC | OpenID Connect via external IdP (planned) |
-| Kubernetes | Service account JWT validation (planned) |
-
-## Security Model
-
-- **Encryption barrier**: All data passes through AES-256-GCM before reaching storage. Storage backends never see plaintext.
-- **Shamir unseal**: The root key is encrypted by an unseal key, which is split into N shares. T shares are required to reconstruct it.
-- **Key zeroization**: All key material implements `Zeroize` + `ZeroizeOnDrop`. Memory is locked with `mlock` to prevent swapping.
-- **Constant-time comparison**: Token verification uses `subtle::ConstantTimeEq` to prevent timing attacks.
-- **Audit logging**: Every operation is logged before the response is sent. If all audit backends fail, the request is denied (fail-closed).
-- **No unsafe crypto**: Pure Rust via the RustCrypto ecosystem. No OpenSSL, no ring.
-- **Core dump prevention**: `RLIMIT_CORE` set to 0 on startup.
-
-## API Reference
-
-### System
-
-```
-POST /v1/sys/init          Initialize vault (generate root key + unseal shares)
-POST /v1/sys/unseal        Submit an unseal share
-POST /v1/sys/seal          Seal the vault
-GET  /v1/sys/seal-status   Get seal status
-GET  /v1/sys/health        Health check
-```
-
-### Secrets (KV v2)
-
-```
-GET    /v1/secret/data/:path     Read a secret
-POST   /v1/secret/data/:path     Write a secret
-DELETE /v1/secret/data/:path     Soft-delete a secret
-GET    /v1/secret/metadata/:path Read secret metadata
-POST   /v1/secret/destroy/:path  Hard-destroy versions
-GET    /v1/secret/list/:prefix   List secrets
-```
-
-### Transit
-
-```
-POST /v1/transit/keys/:name       Create an encryption key
-GET  /v1/transit/keys/:name       Read key info
-POST /v1/transit/encrypt/:name    Encrypt plaintext
-POST /v1/transit/decrypt/:name    Decrypt ciphertext
-POST /v1/transit/sign/:name       Sign data
-POST /v1/transit/verify/:name     Verify signature
-POST /v1/transit/hash             Hash data
-POST /v1/transit/random/:bytes    Generate random bytes
-```
-
-### Auth
-
-```
-POST /v1/auth/token/create    Create a new token
-GET  /v1/auth/token/lookup     Lookup token info
-POST /v1/auth/token/renew      Renew a token
-POST /v1/auth/token/revoke     Revoke a token
-```
-
-### Policies
-
-```
-GET    /v1/sys/policies          List policies
-GET    /v1/sys/policies/:name    Read a policy
-POST   /v1/sys/policies/:name    Create/update a policy
-DELETE /v1/sys/policies/:name    Delete a policy
-```
-
-### Leases
-
-```
-GET  /v1/sys/leases           List active leases
-POST /v1/sys/leases/renew     Renew a lease
-POST /v1/sys/leases/revoke    Revoke a lease
-```
-
-### Mounts
-
-```
-GET    /v1/sys/mounts          List engine mounts
-POST   /v1/sys/mounts/:path    Mount a new engine
-DELETE /v1/sys/mounts/:path    Unmount an engine
-```
-
-## Deployment
-
-### Railway (recommended)
-
-The project includes `railway.toml` and `railpack.toml` for one-click Railway deployment.
-
-Set these environment variables in the Railway dashboard:
-
-```
-VAULTRS_STORAGE=rocksdb
-VAULTRS_STORAGE_PATH=/data
-VAULTRS_DISABLE_MLOCK=true
-VAULTRS_LOG_LEVEL=info
-```
-
-Railway auto-assigns `PORT` and the server binds to `0.0.0.0:$PORT` automatically.
-
-### Docker
-
-```bash
-docker build -t vaultrs .
-docker run -p 8200:8200 \
-  -e VAULTRS_STORAGE=rocksdb \
-  -e VAULTRS_STORAGE_PATH=/data \
-  -e VAULTRS_DISABLE_MLOCK=true \
-  -v vaultrs-data:/data \
-  vaultrs
-```
-
-### Binary
-
-```bash
-cargo build --release --package vaultrs-server
-VAULTRS_STORAGE=rocksdb VAULTRS_STORAGE_PATH=/var/lib/vaultrs ./target/release/vaultrs-server
+│   └── vaultrs-cli/        # Standalone CLI (HTTP client, MCP server, license)
+├── dashboard/              # React SPA (served by server at /ui)
+├── website/                # Landing page (zvault.cloud)
+├── docs-site/              # Documentation (docs.zvault.cloud)
+└── docs/                   # Design docs, roadmap, monetization
 ```
 
 ## Development
 
 ```bash
-# Run with in-memory storage (no persistence)
-cargo run --package vaultrs-server
-
-# Run tests
-cargo test --workspace
-
-# Clippy (strict — unwrap/expect/panic are denied)
-cargo clippy --workspace
-
-# Format
-cargo fmt --all
+cargo run --package vaultrs-server     # Run server (dev)
+cargo test --workspace                 # Run tests
+cargo clippy --workspace               # Lint (strict)
+cargo fmt --all                        # Format
 ```
 
 ## License
 
-Dual-licensed under MIT and Apache 2.0. See `Cargo.toml` for details.
+Dual-licensed under MIT and Apache 2.0.
+
+---
+
+<p align="center">
+  <a href="https://zvault.cloud">zvault.cloud</a> · <a href="https://docs.zvault.cloud">docs</a> · <a href="https://github.com/zvault/zvault">github</a>
+</p>

@@ -203,6 +203,35 @@ impl LeaseManager {
         Ok(expired)
     }
 
+    /// List all leases currently stored.
+    ///
+    /// Returns all leases (both active and expired). The caller can filter
+    /// by checking [`Lease::is_expired`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LeaseError::Barrier`] if storage fails.
+    pub async fn list_all(&self) -> Result<Vec<Lease>, LeaseError> {
+        let keys = self.barrier.list(LEASE_PREFIX).await?;
+        let mut leases = Vec::with_capacity(keys.len());
+
+        for key in &keys {
+            match self.barrier.get(key).await {
+                Ok(Some(data)) => {
+                    if let Ok(lease) = serde_json::from_slice::<Lease>(&data) {
+                        leases.push(lease);
+                    }
+                }
+                Ok(None) => {}
+                Err(e) => {
+                    warn!(key = %key, error = %e, "failed to read lease during list");
+                }
+            }
+        }
+
+        Ok(leases)
+    }
+
     /// Revoke all leases matching a prefix (e.g., when unmounting an engine).
     ///
     /// Returns the number of leases revoked.

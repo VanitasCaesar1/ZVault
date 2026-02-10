@@ -12,11 +12,13 @@
 
 pub mod approle;
 pub mod auth;
-pub mod dashboard;
 pub mod database;
 pub mod docs;
 pub mod leases;
+pub mod metrics;
 pub mod mounts;
+#[cfg(feature = "spring-oauth")]
+pub mod oidc;
 pub mod pki;
 pub mod policy;
 pub mod secrets;

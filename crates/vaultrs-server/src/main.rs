@@ -39,6 +39,7 @@ use vaultrs_server::state::AppState;
 
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
+use tower_http::cors::{Any, CorsLayer};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -132,6 +133,19 @@ async fn build_app_state(
         StorageBackendType::Redb { .. } => {
             anyhow::bail!("redb backend requested but feature 'redb-backend' is not enabled");
         }
+        #[cfg(feature = "postgres-backend")]
+        StorageBackendType::Postgres { url } => {
+            info!(url = %"[redacted]", "using PostgreSQL storage");
+            Arc::new(
+                vaultrs_storage::PostgresBackend::connect(url)
+                    .await
+                    .context("failed to connect to PostgreSQL storage")?,
+            )
+        }
+        #[cfg(not(feature = "postgres-backend"))]
+        StorageBackendType::Postgres { .. } => {
+            anyhow::bail!("PostgreSQL backend requested but feature 'postgres-backend' is not enabled");
+        }
     };
 
     // Build core subsystems.
@@ -139,7 +153,20 @@ async fn build_app_state(
     let seal_manager = Arc::new(SealManager::new(Arc::clone(&barrier)));
     let token_store = Arc::new(TokenStore::new(Arc::clone(&barrier)));
     let policy_store = Arc::new(PolicyStore::new(Arc::clone(&barrier)));
-    let audit_manager = Arc::new(AuditManager::new(Vec::new()));
+    // Generate a random 32-byte HMAC key for audit field hashing.
+    // This ensures audit HMACs are unique per server instance. In production,
+    // this should be persisted through the barrier so HMACs are consistent
+    // across restarts (TODO: store at sys/audit/hmac_key on first init).
+    let hmac_key: Vec<u8> = {
+        // Two UUID v4s = 32 bytes of OS CSPRNG randomness.
+        let a = uuid::Uuid::new_v4();
+        let b = uuid::Uuid::new_v4();
+        let mut key = Vec::with_capacity(32);
+        key.extend_from_slice(a.as_bytes());
+        key.extend_from_slice(b.as_bytes());
+        key
+    };
+    let audit_manager = Arc::new(AuditManager::new(hmac_key));
     let lease_manager = Arc::new(LeaseManager::new(Arc::clone(&barrier)));
 
     // Register file audit backend if configured.
@@ -253,6 +280,8 @@ async fn build_app_state(
         database_engines: RwLock::new(database_engines),
         pki_engines: RwLock::new(pki_engines),
         approle_store: Some(approle_store),
+        spring_oauth: config.spring_oauth.clone(),
+        audit_file_path: config.audit_file_path.clone(),
     });
 
     Ok((state, lease_manager))
@@ -276,13 +305,48 @@ fn build_router(state: Arc<AppState>) -> Router {
             auth_middleware,
         ));
 
-    Router::new()
+    // Concurrency-limit the sys routes (init/unseal) to prevent resource exhaustion.
+    let sys_routes = Router::new()
         .nest("/v1/sys", routes::sys::router())
+        .layer(tower::limit::ConcurrencyLimitLayer::new(10));
+
+    // CORS — restrictive defaults, allow dashboard dev server.
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods([
+            axum::http::Method::GET,
+            axum::http::Method::POST,
+            axum::http::Method::PUT,
+            axum::http::Method::DELETE,
+        ])
+        .allow_headers([
+            axum::http::header::CONTENT_TYPE,
+            axum::http::header::AUTHORIZATION,
+            axum::http::HeaderName::from_static("x-vault-token"),
+        ]);
+
+    // OIDC login routes (unauthenticated — these are the login flow).
+    #[cfg(feature = "spring-oauth")]
+    let oidc_routes = Router::new()
+        .nest("/v1/auth/oidc", routes::oidc::router());
+
+    let mut app = Router::new()
+        .merge(sys_routes)
         .nest("/v1/auth/approle", routes::approle::login_router())
-        .merge(authenticated_routes)
-        .merge(routes::ui::router())
+        .merge(authenticated_routes);
+
+    #[cfg(feature = "spring-oauth")]
+    {
+        app = app.merge(oidc_routes);
+    }
+
+    // Metrics endpoint (unauthenticated — Prometheus scrapes this).
+    app = app.nest("/v1/sys/metrics", routes::metrics::router());
+
+    app.merge(routes::ui::router())
         .merge(routes::docs::router())
         .layer(TraceLayer::new_for_http())
+        .layer(cors)
         .layer(SetResponseHeaderLayer::overriding(
             axum::http::header::X_CONTENT_TYPE_OPTIONS,
             HeaderValue::from_static("nosniff"),
@@ -298,36 +362,75 @@ fn build_router(state: Arc<AppState>) -> Router {
         .with_state(state)
 }
 
+/// Maximum retries per tick when the storage backend is unreachable.
+const LEASE_SCAN_MAX_RETRIES: u32 = 3;
+
 /// Background worker that periodically scans for expired leases and revokes them.
+///
+/// If the storage backend (DB) is unreachable during cleanup, the worker retries
+/// with exponential backoff (1s, 2s, 4s) before giving up on that tick. A
+/// consecutive-failure counter escalates log severity so operators notice
+/// persistent issues without being spammed on transient blips.
 async fn lease_expiry_worker(
     lease_manager: Arc<LeaseManager>,
     shutdown: &mut watch::Receiver<bool>,
     interval_secs: u64,
 ) {
     let mut interval = tokio::time::interval(Duration::from_secs(interval_secs));
+    let mut consecutive_failures: u32 = 0;
     info!(interval_secs, "lease expiry worker started");
 
     loop {
         tokio::select! {
             _ = interval.tick() => {
-                match lease_manager.find_expired().await {
-                    Ok(expired) if expired.is_empty() => {}
-                    Ok(expired) => {
-                        let count = expired.len();
+                let scan_result = retry_scan(&lease_manager, shutdown).await;
+
+                match scan_result {
+                    Ok(None) => {
+                        // Shutdown requested during retry — exit.
+                        info!("lease expiry worker shutting down");
+                        return;
+                    }
+                    Ok(Some(expired)) if expired.is_empty() => {
+                        // Reset on success.
+                        consecutive_failures = 0;
+                    }
+                    Ok(Some(expired)) => {
+                        consecutive_failures = 0;
+                        let total = expired.len();
+                        let mut revoked = 0u32;
+                        let mut failed = 0u32;
                         for lease in &expired {
-                            if let Err(e) = lease_manager.revoke(&lease.id).await {
-                                warn!(
-                                    lease_id = %lease.id,
-                                    error = %e,
-                                    "failed to revoke expired lease"
-                                );
+                            match lease_manager.revoke(&lease.id).await {
+                                Ok(()) => { revoked = revoked.saturating_add(1); }
+                                Err(e) => {
+                                    failed = failed.saturating_add(1);
+                                    warn!(
+                                        lease_id = %lease.id,
+                                        error = %e,
+                                        "failed to revoke expired lease"
+                                    );
+                                }
                             }
                         }
-                        info!(count, "expired leases revoked");
+                        info!(total, revoked, failed, "lease expiry tick complete");
                     }
-                    Err(e) => {
-                        // Barrier sealed or storage error — skip this tick.
-                        warn!(error = %e, "lease expiry scan failed");
+                    Err(last_err) => {
+                        consecutive_failures = consecutive_failures.saturating_add(1);
+                        if consecutive_failures >= 5 {
+                            tracing::error!(
+                                error = %last_err,
+                                consecutive_failures,
+                                "lease expiry scan persistently failing — storage may be down"
+                            );
+                        } else {
+                            warn!(
+                                error = %last_err,
+                                consecutive_failures,
+                                retries = LEASE_SCAN_MAX_RETRIES,
+                                "lease expiry scan failed after retries, will retry next tick"
+                            );
+                        }
                     }
                 }
             }
@@ -337,6 +440,50 @@ async fn lease_expiry_worker(
             }
         }
     }
+}
+
+/// Attempt `find_expired()` with exponential backoff. Returns:
+/// - `Ok(Some(leases))` on success
+/// - `Ok(None)` if shutdown was signalled during retry
+/// - `Err(last_error)` if all retries exhausted
+async fn retry_scan(
+    lease_manager: &Arc<LeaseManager>,
+    shutdown: &mut watch::Receiver<bool>,
+) -> Result<Option<Vec<vaultrs_core::lease::Lease>>, String> {
+    let mut last_err = String::new();
+
+    for attempt in 0..=LEASE_SCAN_MAX_RETRIES {
+        match lease_manager.find_expired().await {
+            Ok(expired) => return Ok(Some(expired)),
+            Err(e) => {
+                last_err = e.to_string();
+
+                if attempt == LEASE_SCAN_MAX_RETRIES {
+                    break;
+                }
+
+                // Exponential backoff: 1s, 2s, 4s
+                let backoff = Duration::from_secs(1u64 << attempt);
+                tracing::debug!(
+                    attempt = attempt.saturating_add(1),
+                    max = LEASE_SCAN_MAX_RETRIES.saturating_add(1),
+                    backoff_ms = backoff.as_millis() as u64,
+                    error = %e,
+                    "lease scan failed, retrying"
+                );
+
+                // Wait for backoff OR shutdown, whichever comes first.
+                tokio::select! {
+                    () = tokio::time::sleep(backoff) => {}
+                    _ = shutdown.changed() => {
+                        return Ok(None); // Shutdown requested.
+                    }
+                }
+            }
+        }
+    }
+
+    Err(last_err)
 }
 
 /// Wait for SIGINT or SIGTERM, then broadcast shutdown.

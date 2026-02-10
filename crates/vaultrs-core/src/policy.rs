@@ -284,3 +284,442 @@ impl std::fmt::Debug for PolicyStore {
         f.debug_struct("PolicyStore").finish_non_exhaustive()
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use std::sync::Arc;
+
+    use vaultrs_storage::MemoryBackend;
+
+    use super::*;
+    use crate::barrier::Barrier;
+    use crate::crypto::EncryptionKey;
+
+    async fn make_policy_store() -> PolicyStore {
+        let storage = Arc::new(MemoryBackend::new());
+        let barrier = Arc::new(Barrier::new(storage));
+        barrier.unseal(EncryptionKey::generate()).await;
+        PolicyStore::new(barrier)
+    }
+
+    fn test_policy(name: &str, rules: Vec<PolicyRule>) -> Policy {
+        Policy {
+            name: name.to_owned(),
+            rules,
+        }
+    }
+
+    // ── CRUD ─────────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn put_and_get_roundtrip() {
+        let store = make_policy_store().await;
+        let policy = test_policy(
+            "dev",
+            vec![PolicyRule {
+                path: "secret/data/dev/*".to_owned(),
+                capabilities: vec![Capability::Read, Capability::List],
+            }],
+        );
+
+        store.put(&policy).await.unwrap();
+        let fetched = store.get("dev").await.unwrap();
+        assert_eq!(fetched.name, "dev");
+        assert_eq!(fetched.rules.len(), 1);
+        assert_eq!(fetched.rules[0].capabilities.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn get_nonexistent_returns_not_found() {
+        let store = make_policy_store().await;
+        let err = store.get("nonexistent").await.unwrap_err();
+        assert!(matches!(err, PolicyError::NotFound { .. }));
+    }
+
+    #[tokio::test]
+    async fn delete_removes_policy() {
+        let store = make_policy_store().await;
+        let policy = test_policy(
+            "temp",
+            vec![PolicyRule {
+                path: "secret/*".to_owned(),
+                capabilities: vec![Capability::Read],
+            }],
+        );
+
+        store.put(&policy).await.unwrap();
+        store.delete("temp").await.unwrap();
+        let err = store.get("temp").await.unwrap_err();
+        assert!(matches!(err, PolicyError::NotFound { .. }));
+    }
+
+    #[tokio::test]
+    async fn put_empty_rules_rejected() {
+        let store = make_policy_store().await;
+        let policy = test_policy("empty", vec![]);
+        let err = store.put(&policy).await.unwrap_err();
+        assert!(matches!(err, PolicyError::Invalid { .. }));
+    }
+
+    // ── Built-in policies ────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn get_root_returns_builtin() {
+        let store = make_policy_store().await;
+        let root = store.get("root").await.unwrap();
+        assert_eq!(root.name, "root");
+        assert_eq!(root.rules.len(), 1);
+        assert_eq!(root.rules[0].path, "**");
+        assert!(root.rules[0].capabilities.contains(&Capability::Read));
+        assert!(root.rules[0].capabilities.contains(&Capability::Sudo));
+    }
+
+    #[tokio::test]
+    async fn get_default_returns_builtin() {
+        let store = make_policy_store().await;
+        let default = store.get("default").await.unwrap();
+        assert_eq!(default.name, "default");
+        assert_eq!(default.rules.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn cannot_modify_root_policy() {
+        let store = make_policy_store().await;
+        let policy = test_policy(
+            "root",
+            vec![PolicyRule {
+                path: "**".to_owned(),
+                capabilities: vec![Capability::Read],
+            }],
+        );
+        let err = store.put(&policy).await.unwrap_err();
+        assert!(matches!(err, PolicyError::BuiltIn { .. }));
+    }
+
+    #[tokio::test]
+    async fn cannot_modify_default_policy() {
+        let store = make_policy_store().await;
+        let policy = test_policy(
+            "default",
+            vec![PolicyRule {
+                path: "**".to_owned(),
+                capabilities: vec![Capability::Read],
+            }],
+        );
+        let err = store.put(&policy).await.unwrap_err();
+        assert!(matches!(err, PolicyError::BuiltIn { .. }));
+    }
+
+    #[tokio::test]
+    async fn cannot_delete_root_policy() {
+        let store = make_policy_store().await;
+        let err = store.delete("root").await.unwrap_err();
+        assert!(matches!(err, PolicyError::BuiltIn { .. }));
+    }
+
+    #[tokio::test]
+    async fn cannot_delete_default_policy() {
+        let store = make_policy_store().await;
+        let err = store.delete("default").await.unwrap_err();
+        assert!(matches!(err, PolicyError::BuiltIn { .. }));
+    }
+
+    // ── list ─────────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn list_includes_builtins() {
+        let store = make_policy_store().await;
+        let names = store.list().await.unwrap();
+        assert!(names.contains(&"root".to_owned()));
+        assert!(names.contains(&"default".to_owned()));
+    }
+
+    #[tokio::test]
+    async fn list_includes_custom_policies() {
+        let store = make_policy_store().await;
+        let policy = test_policy(
+            "custom",
+            vec![PolicyRule {
+                path: "secret/*".to_owned(),
+                capabilities: vec![Capability::Read],
+            }],
+        );
+        store.put(&policy).await.unwrap();
+
+        let names = store.list().await.unwrap();
+        assert!(names.contains(&"custom".to_owned()));
+        assert!(names.contains(&"root".to_owned()));
+        assert!(names.contains(&"default".to_owned()));
+    }
+
+    // ── check (exact path match) ─────────────────────────────────────
+
+    #[tokio::test]
+    async fn check_exact_path_grants_access() {
+        let store = make_policy_store().await;
+        let policy = test_policy(
+            "exact",
+            vec![PolicyRule {
+                path: "secret/data/prod/db-password".to_owned(),
+                capabilities: vec![Capability::Read],
+            }],
+        );
+        store.put(&policy).await.unwrap();
+
+        let result = store
+            .check(
+                &["exact".to_owned()],
+                "secret/data/prod/db-password",
+                &Capability::Read,
+            )
+            .await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn check_exact_path_denies_wrong_capability() {
+        let store = make_policy_store().await;
+        let policy = test_policy(
+            "readonly",
+            vec![PolicyRule {
+                path: "secret/data/prod/db-password".to_owned(),
+                capabilities: vec![Capability::Read],
+            }],
+        );
+        store.put(&policy).await.unwrap();
+
+        let result = store
+            .check(
+                &["readonly".to_owned()],
+                "secret/data/prod/db-password",
+                &Capability::Delete,
+            )
+            .await;
+        assert!(matches!(result, Err(PolicyError::Denied { .. })));
+    }
+
+    // ── check (glob * — one level) ──────────────────────────────────
+
+    #[tokio::test]
+    async fn check_star_glob_matches_one_level() {
+        let store = make_policy_store().await;
+        let policy = test_policy(
+            "dev",
+            vec![PolicyRule {
+                path: "secret/data/dev/*".to_owned(),
+                capabilities: vec![Capability::Read, Capability::Create],
+            }],
+        );
+        store.put(&policy).await.unwrap();
+
+        // Should match one level deep.
+        let result = store
+            .check(
+                &["dev".to_owned()],
+                "secret/data/dev/api-key",
+                &Capability::Read,
+            )
+            .await;
+        assert!(result.is_ok());
+    }
+
+    // ── check (glob ** — recursive) ─────────────────────────────────
+
+    #[tokio::test]
+    async fn check_double_star_glob_matches_recursively() {
+        let store = make_policy_store().await;
+        let policy = test_policy(
+            "admin",
+            vec![PolicyRule {
+                path: "secret/**".to_owned(),
+                capabilities: vec![
+                    Capability::Read,
+                    Capability::Create,
+                    Capability::Delete,
+                ],
+            }],
+        );
+        store.put(&policy).await.unwrap();
+
+        // Should match deeply nested paths.
+        let result = store
+            .check(
+                &["admin".to_owned()],
+                "secret/data/prod/nested/deep/key",
+                &Capability::Read,
+            )
+            .await;
+        assert!(result.is_ok());
+    }
+
+    // ── deny overrides grant ─────────────────────────────────────────
+
+    #[tokio::test]
+    async fn deny_overrides_grant_in_same_policy() {
+        let store = make_policy_store().await;
+        let policy = test_policy(
+            "mixed",
+            vec![
+                PolicyRule {
+                    path: "secret/**".to_owned(),
+                    capabilities: vec![Capability::Read],
+                },
+                PolicyRule {
+                    path: "secret/data/prod/*".to_owned(),
+                    capabilities: vec![Capability::Deny],
+                },
+            ],
+        );
+        store.put(&policy).await.unwrap();
+
+        // The deny rule should override the grant.
+        let result = store
+            .check(
+                &["mixed".to_owned()],
+                "secret/data/prod/db-password",
+                &Capability::Read,
+            )
+            .await;
+        assert!(matches!(result, Err(PolicyError::Denied { .. })));
+    }
+
+    #[tokio::test]
+    async fn deny_overrides_grant_across_policies() {
+        let store = make_policy_store().await;
+
+        let grant_policy = test_policy(
+            "grant-all",
+            vec![PolicyRule {
+                path: "secret/**".to_owned(),
+                capabilities: vec![Capability::Read, Capability::Create],
+            }],
+        );
+        let deny_policy = test_policy(
+            "deny-prod",
+            vec![PolicyRule {
+                path: "secret/data/prod/*".to_owned(),
+                capabilities: vec![Capability::Deny],
+            }],
+        );
+        store.put(&grant_policy).await.unwrap();
+        store.put(&deny_policy).await.unwrap();
+
+        let result = store
+            .check(
+                &["grant-all".to_owned(), "deny-prod".to_owned()],
+                "secret/data/prod/api-key",
+                &Capability::Read,
+            )
+            .await;
+        assert!(matches!(result, Err(PolicyError::Denied { .. })));
+    }
+
+    // ── multiple policies with conflicting rules ─────────────────────
+
+    #[tokio::test]
+    async fn multiple_policies_union_capabilities() {
+        let store = make_policy_store().await;
+
+        let read_policy = test_policy(
+            "reader",
+            vec![PolicyRule {
+                path: "secret/data/shared/*".to_owned(),
+                capabilities: vec![Capability::Read],
+            }],
+        );
+        let write_policy = test_policy(
+            "writer",
+            vec![PolicyRule {
+                path: "secret/data/shared/*".to_owned(),
+                capabilities: vec![Capability::Create],
+            }],
+        );
+        store.put(&read_policy).await.unwrap();
+        store.put(&write_policy).await.unwrap();
+
+        // Read should work (from reader policy).
+        let result = store
+            .check(
+                &["reader".to_owned(), "writer".to_owned()],
+                "secret/data/shared/key",
+                &Capability::Read,
+            )
+            .await;
+        assert!(result.is_ok());
+
+        // Create should work (from writer policy).
+        let result = store
+            .check(
+                &["reader".to_owned(), "writer".to_owned()],
+                "secret/data/shared/key",
+                &Capability::Create,
+            )
+            .await;
+        assert!(result.is_ok());
+
+        // Delete should be denied (neither policy grants it).
+        let result = store
+            .check(
+                &["reader".to_owned(), "writer".to_owned()],
+                "secret/data/shared/key",
+                &Capability::Delete,
+            )
+            .await;
+        assert!(matches!(result, Err(PolicyError::Denied { .. })));
+    }
+
+    // ── root policy grants everything ────────────────────────────────
+
+    #[tokio::test]
+    async fn root_policy_grants_all_capabilities() {
+        let store = make_policy_store().await;
+
+        for cap in &[
+            Capability::Read,
+            Capability::List,
+            Capability::Create,
+            Capability::Update,
+            Capability::Delete,
+            Capability::Sudo,
+        ] {
+            let result = store
+                .check(
+                    &["root".to_owned()],
+                    "any/arbitrary/path/here",
+                    cap,
+                )
+                .await;
+            assert!(result.is_ok(), "root should grant {cap:?}");
+        }
+    }
+
+    // ── nonexistent policy is skipped ────────────────────────────────
+
+    #[tokio::test]
+    async fn nonexistent_policy_name_is_skipped() {
+        let store = make_policy_store().await;
+
+        // Only "ghost" policy referenced, which doesn't exist — should deny.
+        let result = store
+            .check(
+                &["ghost".to_owned()],
+                "secret/data/anything",
+                &Capability::Read,
+            )
+            .await;
+        assert!(matches!(result, Err(PolicyError::Denied { .. })));
+    }
+
+    // ── no policies means denied ─────────────────────────────────────
+
+    #[tokio::test]
+    async fn empty_policy_list_denies_access() {
+        let store = make_policy_store().await;
+
+        let result = store
+            .check(&[], "secret/data/anything", &Capability::Read)
+            .await;
+        assert!(matches!(result, Err(PolicyError::Denied { .. })));
+    }
+}

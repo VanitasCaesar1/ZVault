@@ -22,6 +22,7 @@ use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use crate::barrier::Barrier;
 use crate::crypto::{self, EncryptionKey};
@@ -47,12 +48,55 @@ pub struct TransitKey {
 }
 
 /// A single version of a transit key.
+///
+/// Key material is wrapped in [`ZeroizingKeyMaterial`] so it is automatically
+/// zeroized when dropped, preventing key bytes from lingering in freed heap memory.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransitKeyVersion {
     /// The raw key material (32 bytes, stored encrypted through barrier).
-    pub key_material: Vec<u8>,
+    /// Zeroized on drop to prevent key material from lingering in memory.
+    pub key_material: ZeroizingKeyMaterial,
     /// When this version was created.
     pub created_at: DateTime<Utc>,
+}
+
+/// Wrapper around `Vec<u8>` that zeroizes key material on drop.
+///
+/// Implements `Serialize`/`Deserialize` by delegating to `Vec<u8>`, and
+/// `Clone` by cloning the inner bytes. The `Debug` impl redacts the contents.
+#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+pub struct ZeroizingKeyMaterial(Vec<u8>);
+
+impl ZeroizingKeyMaterial {
+    /// Create from raw bytes.
+    #[must_use]
+    pub fn new(bytes: Vec<u8>) -> Self {
+        Self(bytes)
+    }
+
+    /// Borrow the inner bytes.
+    #[must_use]
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl std::fmt::Debug for ZeroizingKeyMaterial {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("[REDACTED key material]")
+    }
+}
+
+impl Serialize for ZeroizingKeyMaterial {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for ZeroizingKeyMaterial {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        Vec::<u8>::deserialize(deserializer).map(Self)
+    }
 }
 
 /// Transit secrets engine — encryption as a service.
@@ -96,7 +140,7 @@ impl TransitEngine {
         versions.insert(
             1,
             TransitKeyVersion {
-                key_material: key_material.as_bytes().to_vec(),
+                key_material: ZeroizingKeyMaterial::new(key_material.as_bytes().to_vec()),
                 created_at: now,
             },
         );
@@ -136,7 +180,7 @@ impl TransitEngine {
         key.versions.insert(
             new_version,
             TransitKeyVersion {
-                key_material: new_material.as_bytes().to_vec(),
+                key_material: ZeroizingKeyMaterial::new(new_material.as_bytes().to_vec()),
                 created_at: Utc::now(),
             },
         );
@@ -172,7 +216,7 @@ impl TransitEngine {
                     reason: format!("key version {version} missing"),
                 })?;
 
-        let enc_key = Self::material_to_key(&key_version.key_material)?;
+        let enc_key = Self::material_to_key(key_version.key_material.as_bytes())?;
         let ciphertext = crypto::encrypt(&enc_key, plaintext).map_err(|e| {
             EngineError::Internal {
                 reason: format!("encryption failed: {e}"),
@@ -219,7 +263,7 @@ impl TransitEngine {
                     path: format!("{key_name}/v{version}"),
                 })?;
 
-        let enc_key = Self::material_to_key(&key_version.key_material)?;
+        let enc_key = Self::material_to_key(key_version.key_material.as_bytes())?;
         crypto::decrypt(&enc_key, &raw_ct).map_err(|e| EngineError::Internal {
             reason: format!("decryption failed: {e}"),
         })

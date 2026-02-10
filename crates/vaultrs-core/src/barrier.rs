@@ -143,14 +143,13 @@ impl Barrier {
 
     /// Write raw bytes to storage WITHOUT encryption.
     ///
-    /// This is used exclusively for storing the encrypted root key during
-    /// initialization. The root key is already encrypted by the unseal key
-    /// before reaching this method.
+    /// Used for storing the encrypted root key during initialization and
+    /// for backup/restore operations (which transfer ciphertext as-is).
     ///
     /// # Security
     ///
-    /// Do NOT use this for any other purpose. All normal data must go through
-    /// [`put`](Barrier::put).
+    /// Do NOT use this for normal secret storage. All application data must
+    /// go through [`put`](Barrier::put) which encrypts before writing.
     ///
     /// # Errors
     ///
@@ -162,13 +161,13 @@ impl Barrier {
 
     /// Read raw bytes from storage WITHOUT decryption.
     ///
-    /// This is used exclusively for reading the encrypted root key during
-    /// unseal. The returned bytes are still encrypted by the unseal key.
+    /// Used for reading the encrypted root key during unseal and for
+    /// backup/restore operations (which transfer ciphertext as-is).
     ///
     /// # Security
     ///
-    /// Do NOT use this for any other purpose. All normal data must go through
-    /// [`get`](Barrier::get).
+    /// Do NOT use this for normal secret reads. All application data must
+    /// go through [`get`](Barrier::get) which decrypts after reading.
     ///
     /// # Errors
     ///

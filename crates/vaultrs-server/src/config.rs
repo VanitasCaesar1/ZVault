@@ -22,6 +22,25 @@ pub struct ServerConfig {
     pub lease_scan_interval_secs: u64,
     /// Whether to skip `mlock` (for development without root/`CAP_IPC_LOCK`).
     pub disable_mlock: bool,
+    /// Spring OAuth configuration (optional — enables "Sign in with Spring").
+    pub spring_oauth: Option<SpringOAuthConfig>,
+}
+
+/// Configuration for Spring OAuth 2.0 / OIDC integration.
+#[derive(Debug, Clone)]
+pub struct SpringOAuthConfig {
+    /// Base URL of the Spring auth server (e.g., `https://auth.puddlesearch.in`).
+    pub auth_url: String,
+    /// OAuth client ID registered in Spring.
+    pub client_id: String,
+    /// OAuth client secret.
+    pub client_secret: String,
+    /// Redirect URI for the callback (auto-derived if not set).
+    pub redirect_uri: Option<String>,
+    /// Default vault policy to assign to Spring-authenticated users.
+    pub default_policy: String,
+    /// Vault policy to assign to Spring admin users.
+    pub admin_policy: String,
 }
 
 /// Supported storage backend types.
@@ -33,6 +52,8 @@ pub enum StorageBackendType {
     RocksDb { path: String },
     /// Redb persistent storage.
     Redb { path: String },
+    /// PostgreSQL persistent storage (recommended for Railway / cloud).
+    Postgres { url: String },
 }
 
 impl ServerConfig {
@@ -41,7 +62,9 @@ impl ServerConfig {
     /// Environment variables:
     /// - `PORT` — port to bind on (Railway convention, binds to `0.0.0.0`)
     /// - `VAULTRS_BIND_ADDR` — full bind address (overrides `PORT`, default: `127.0.0.1:8200`)
-    /// - `VAULTRS_STORAGE` — `memory`, `rocksdb`, or `redb` (default: `memory`)
+    /// - `VAULTRS_STORAGE` — `memory`, `rocksdb`, `redb`, or `postgres` (default: `memory`)
+    /// - `VAULTRS_STORAGE_PATH` — path for persistent backends (default: `./data`)
+    /// - `DATABASE_URL` — PostgreSQL connection string (required when `VAULTRS_STORAGE=postgres`)
     /// - `VAULTRS_STORAGE_PATH` — path for persistent backends (default: `./data`)
     /// - `VAULTRS_LOG_LEVEL` — log filter (default: `info`)
     /// - `VAULTRS_AUDIT_FILE` — path to audit log file (optional)
@@ -71,6 +94,11 @@ impl ServerConfig {
         {
             "rocksdb" => StorageBackendType::RocksDb { path: storage_path },
             "redb" => StorageBackendType::Redb { path: storage_path },
+            "postgres" | "postgresql" => {
+                let url = std::env::var("DATABASE_URL")
+                    .unwrap_or_else(|_| "postgres://localhost/zvault".to_owned());
+                StorageBackendType::Postgres { url }
+            }
             _ => StorageBackendType::Memory,
         };
 
@@ -92,6 +120,22 @@ impl ServerConfig {
             .map(|v| v == "true" || v == "1")
             .unwrap_or(false);
 
+        // Spring OAuth — enabled when SPRING_AUTH_URL is set.
+        let spring_oauth = std::env::var("SPRING_AUTH_URL").ok().map(|auth_url| {
+            SpringOAuthConfig {
+                auth_url,
+                client_id: std::env::var("SPRING_CLIENT_ID")
+                    .unwrap_or_else(|_| "zvault-dashboard".to_owned()),
+                client_secret: std::env::var("SPRING_CLIENT_SECRET")
+                    .unwrap_or_default(),
+                redirect_uri: std::env::var("SPRING_REDIRECT_URI").ok(),
+                default_policy: std::env::var("SPRING_DEFAULT_POLICY")
+                    .unwrap_or_else(|_| "default".to_owned()),
+                admin_policy: std::env::var("SPRING_ADMIN_POLICY")
+                    .unwrap_or_else(|_| "root".to_owned()),
+            }
+        });
+
         Self {
             bind_addr,
             storage_backend,
@@ -100,6 +144,7 @@ impl ServerConfig {
             enable_transit,
             lease_scan_interval_secs,
             disable_mlock,
+            spring_oauth,
         }
     }
 }

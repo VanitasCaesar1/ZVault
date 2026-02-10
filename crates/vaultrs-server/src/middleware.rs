@@ -39,7 +39,8 @@ pub async fn auth_middleware(
         || path == "/v1/sys/seal-status"
         || path == "/v1/sys/init"
         || path == "/v1/sys/unseal"
-        || path.starts_with("/app")
+        || path.starts_with("/app/")
+        || path == "/app"
         || path == "/"
     {
         return next.run(req).await;

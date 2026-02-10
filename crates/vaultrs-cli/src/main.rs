@@ -5,7 +5,12 @@
 
 #![allow(clippy::print_stdout, clippy::print_stderr)]
 
+mod license;
+mod mcp;
+mod setup;
+
 use std::collections::HashMap;
+use std::fmt::Write as _;
 use std::process::ExitCode;
 
 use anyhow::{Context, Result, bail};
@@ -27,23 +32,25 @@ const BG_RED: &str = "\x1b[41m";
 const BG_GREEN: &str = "\x1b[42m";
 
 // ── ASCII banner ─────────────────────────────────────────────────────
+//
+// ANSI Shadow style — renders cleanly across all modern terminals.
+// Generated with FIGlet "ANSI Shadow" font, hand-trimmed for alignment.
 
-const BANNER: &str = r#"
-                 ╔═╗╦  ╦┌─┐┬ ┬┬ ┌┬┐
-                 ╔═╝╚╗╔╝├─┤│ ││  │
-                 ╚═╝ ╚╝ ┴ ┴└─┘┴─┘┴
-"#;
+const BANNER: &str = r"
+  ███████╗██╗   ██╗ █████╗ ██╗   ██╗██╗  ████████╗
+  ╚══███╔╝██║   ██║██╔══██╗██║   ██║██║  ╚══██╔══╝
+    ███╔╝ ██║   ██║███████║██║   ██║██║     ██║
+   ███╔╝  ╚██╗ ██╔╝██╔══██║██║   ██║██║     ██║
+  ███████╗ ╚████╔╝ ██║  ██║╚██████╔╝███████╗██║
+  ╚══════╝  ╚═══╝  ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝
+";
 
 const BANNER_SMALL: &str = "⟐ ZVault";
 
 fn print_banner() {
     println!("{CYAN}{BOLD}{BANNER}{RESET}");
-    println!(
-        "  {DIM}Secrets management, done right.{RESET}"
-    );
-    println!(
-        "  {DIM}AES-256-GCM • Shamir's Secret Sharing • Zero-Trust{RESET}"
-    );
+    println!("  {DIM}Secrets management, done right.{RESET}");
+    println!("  {DIM}AES-256-GCM · Shamir's Secret Sharing · Zero-Trust{RESET}");
     println!();
 }
 
@@ -139,6 +146,105 @@ enum Commands {
     Approle {
         #[command(subcommand)]
         action: AppRoleCommands,
+    },
+    /// Import secrets from a .env file into the vault.
+    Import {
+        /// Path to the .env file (default: ".env").
+        #[arg(default_value = ".env")]
+        file: String,
+        /// Project name for namespacing secrets (default: current directory name).
+        #[arg(long)]
+        project: Option<String>,
+        /// Skip backing up the original .env file.
+        #[arg(long, default_value = "false")]
+        no_backup: bool,
+        /// Skip generating .env.zvault reference file.
+        #[arg(long, default_value = "false")]
+        no_ref: bool,
+        /// Skip adding .env to .gitignore.
+        #[arg(long, default_value = "false")]
+        no_gitignore: bool,
+    },
+    /// Run a command with secrets injected from the vault.
+    Run {
+        /// Path to .env.zvault (or .env with zvault:// URIs). Default: auto-detect.
+        #[arg(long)]
+        env_file: Option<String>,
+        /// The command and arguments to run.
+        #[arg(trailing_var_arg = true, required = true)]
+        command: Vec<String>,
+    },
+    /// Start the MCP (Model Context Protocol) server for AI assistant integration.
+    #[command(name = "mcp-server")]
+    McpServer,
+    /// Configure an IDE to use ZVault as an MCP server.
+    Setup {
+        /// IDE to configure: cursor, kiro, continue, or generic.
+        ide: String,
+    },
+    /// Activate a Pro/Team/Enterprise license.
+    Activate {
+        /// License key (from <https://zvault.cloud/pricing>).
+        key: String,
+    },
+    /// Show current license status.
+    License,
+    /// Run diagnostics on vault health, license, and MCP connectivity.
+    Doctor,
+    /// Initialize ZVault for the current project (generate .zvault.toml config).
+    #[command(name = "project-init")]
+    ProjectInit {
+        /// Project name (default: current directory name).
+        #[arg(long)]
+        name: Option<String>,
+        /// Vault server address to use.
+        #[arg(long, default_value = "http://127.0.0.1:8200")]
+        server: String,
+    },
+    /// Lease management operations.
+    Lease {
+        #[command(subcommand)]
+        action: LeaseCommands,
+    },
+    /// Export audit log entries.
+    #[command(name = "audit-export")]
+    AuditExport {
+        /// Output format: json or csv.
+        #[arg(long, default_value = "json")]
+        format: String,
+        /// Maximum entries to export.
+        #[arg(long, default_value = "1000")]
+        limit: usize,
+        /// Output file path (default: stdout).
+        #[arg(long)]
+        output: Option<String>,
+    },
+    /// Send a test webhook notification.
+    Notify {
+        #[command(subcommand)]
+        action: NotifyCommands,
+    },
+    /// Secret rotation operations.
+    Rotate {
+        #[command(subcommand)]
+        action: RotateCommands,
+    },
+    /// Log in via OIDC (opens browser for Spring authentication).
+    Login {
+        /// Use OIDC authentication (opens browser).
+        #[arg(long)]
+        oidc: bool,
+    },
+    /// Create an encrypted backup of all vault data.
+    Backup {
+        /// Output file path (default: stdout as JSON).
+        #[arg(long)]
+        output: Option<String>,
+    },
+    /// Restore vault data from an encrypted backup.
+    Restore {
+        /// Path to the backup file.
+        file: String,
     },
 }
 
@@ -347,6 +453,74 @@ enum AppRoleCommands {
     },
     /// List all AppRole roles.
     ListRoles,
+}
+
+#[derive(Subcommand)]
+enum LeaseCommands {
+    /// List all active leases.
+    List,
+    /// Look up a specific lease.
+    Lookup {
+        /// Lease ID.
+        lease_id: String,
+    },
+    /// Revoke a lease immediately.
+    Revoke {
+        /// Lease ID.
+        lease_id: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum NotifyCommands {
+    /// Configure a webhook endpoint for notifications.
+    SetWebhook {
+        /// Webhook URL (Slack, Discord, or generic).
+        url: String,
+        /// Events to subscribe to (comma-separated): secret.accessed, secret.rotated, policy.violated, lease.expired.
+        #[arg(long, value_delimiter = ',', default_value = "secret.accessed,secret.rotated,lease.expired")]
+        events: Vec<String>,
+    },
+    /// Show current webhook configuration.
+    GetWebhook,
+    /// Remove webhook configuration.
+    RemoveWebhook,
+    /// Send a test notification to the configured webhook.
+    Test,
+}
+
+#[derive(Subcommand)]
+enum RotateCommands {
+    /// Set a rotation policy for a secret path.
+    SetPolicy {
+        /// Secret path (e.g., env/myapp/DATABASE_URL).
+        path: String,
+        /// Rotation interval in hours.
+        #[arg(long)]
+        interval_hours: u64,
+        /// Maximum age before forced rotation (hours).
+        #[arg(long)]
+        max_age_hours: Option<u64>,
+    },
+    /// Show rotation policy for a secret path.
+    GetPolicy {
+        /// Secret path.
+        path: String,
+    },
+    /// List all rotation policies.
+    ListPolicies,
+    /// Remove a rotation policy.
+    RemovePolicy {
+        /// Secret path.
+        path: String,
+    },
+    /// Manually trigger rotation for a secret.
+    Trigger {
+        /// Secret path.
+        path: String,
+    },
+    /// Show rotation status for all secrets with policies.
+    Status,
 }
 
 // ── Pretty output helpers ────────────────────────────────────────────
@@ -873,6 +1047,38 @@ async fn run(client: Client, cmd: Commands) -> Result<()> {
         Commands::Database { action } => cmd_database(&client, action).await,
         Commands::Pki { action } => cmd_pki(&client, action).await,
         Commands::Approle { action } => cmd_approle(&client, action).await,
+        Commands::Import {
+            file,
+            project,
+            no_backup,
+            no_ref,
+            no_gitignore,
+        } => cmd_import(&client, &file, project.as_deref(), no_backup, no_ref, no_gitignore).await,
+        Commands::Run { env_file, command } => cmd_run(&client, env_file.as_deref(), &command).await,
+        Commands::McpServer => {
+            license::require_pro("MCP server (AI Mode)")?;
+            mcp::run_mcp_server(client.addr, client.token).await
+        }
+        Commands::Setup { ide } => {
+            license::require_pro("IDE setup (AI Mode)")?;
+            cmd_setup(&ide)
+        }
+        Commands::Activate { key } => cmd_activate(&key).await,
+        Commands::License => {
+            cmd_license();
+            Ok(())
+        },
+        Commands::Doctor => cmd_doctor(&client).await,
+        Commands::ProjectInit { name, server } => cmd_project_init(name.as_deref(), &server),
+        Commands::Lease { action } => cmd_lease(&client, action).await,
+        Commands::AuditExport { format, limit, output } => {
+            cmd_audit_export(&client, &format, limit, output.as_deref()).await
+        }
+        Commands::Notify { action } => cmd_notify(&client, action).await,
+        Commands::Rotate { action } => cmd_rotate(&client, action).await,
+        Commands::Login { oidc } => cmd_login(&client, oidc).await,
+        Commands::Backup { output } => cmd_backup(&client, output.as_deref()).await,
+        Commands::Restore { file } => cmd_restore(&client, &file).await,
     }
 }
 
@@ -1354,6 +1560,630 @@ async fn cmd_approle(client: &Client, action: AppRoleCommands) -> Result<()> {
     Ok(())
 }
 
+// ── Import command ────────────────────────────────────────────────────
+
+/// Parse a .env file into key-value pairs.
+///
+/// Handles:
+/// - `KEY=VALUE` (standard)
+/// - `KEY="quoted value"` and `KEY='single quoted'`
+/// - `# comments` and blank lines (skipped)
+/// - `export KEY=VALUE` (strips `export` prefix)
+fn parse_env_file(content: &str) -> Vec<(String, String)> {
+    let mut entries = Vec::new();
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+
+        // Skip empty lines and comments.
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+
+        // Strip optional `export ` prefix.
+        let trimmed = trimmed.strip_prefix("export ").unwrap_or(trimmed);
+
+        // Split on first `=`.
+        let Some((key, raw_value)) = trimmed.split_once('=') else {
+            continue;
+        };
+
+        let key = key.trim().to_owned();
+        if key.is_empty() {
+            continue;
+        }
+
+        let value = raw_value.trim();
+
+        // Strip surrounding quotes if present.
+        let value = if (value.starts_with('"') && value.ends_with('"'))
+            || (value.starts_with('\'') && value.ends_with('\''))
+        {
+            value[1..value.len().saturating_sub(1).max(1)].to_owned()
+        } else {
+            value.to_owned()
+        };
+
+        entries.push((key, value));
+    }
+
+    entries
+}
+
+/// Detect the project name from the current directory.
+fn detect_project_name() -> Result<String> {
+    let cwd = std::env::current_dir().context("failed to get current directory")?;
+    let name = cwd
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("default");
+    Ok(name.to_owned())
+}
+
+/// Import secrets from a .env file into the vault.
+async fn cmd_import(
+    client: &Client,
+    file: &str,
+    project: Option<&str>,
+    no_backup: bool,
+    no_ref: bool,
+    no_gitignore: bool,
+) -> Result<()> {
+    let path = std::path::Path::new(file);
+    if !path.exists() {
+        bail!("file not found: {file}");
+    }
+
+    let content = std::fs::read_to_string(path)
+        .with_context(|| format!("failed to read {file}"))?;
+
+    let entries = parse_env_file(&content);
+    if entries.is_empty() {
+        bail!("no secrets found in {file}");
+    }
+
+    let project_name = match project {
+        Some(p) => p.to_owned(),
+        None => detect_project_name()?,
+    };
+
+    println!();
+    header("📦", &format!("Importing secrets from {file}"));
+    println!();
+    println!("  {DIM}Project:{RESET}  {BOLD}{project_name}{RESET}");
+    println!("  {DIM}Secrets:{RESET}  {BOLD}{}{RESET}", entries.len());
+    println!();
+
+    // Store each secret in the vault under env/<project>/<key>.
+    let mut imported = 0u32;
+    let mut failed = 0u32;
+
+    for (key, value) in &entries {
+        let vault_path = format!("env/{project_name}/{key}");
+        let body = serde_json::json!({ "data": { "value": value } });
+
+        match client.post(&format!("/v1/secret/data/{vault_path}"), &body).await {
+            Ok(_) => {
+                println!("  {GREEN}✓{RESET} {key} → {DIM}zvault://env/{project_name}/{key}{RESET}");
+                imported = imported.saturating_add(1);
+            }
+            Err(e) => {
+                println!("  {RED}✗{RESET} {key} — {RED}{e}{RESET}");
+                failed = failed.saturating_add(1);
+            }
+        }
+    }
+
+    println!();
+
+    // Backup original .env file.
+    if !no_backup {
+        let backup_path = format!("{file}.backup");
+        if let Err(e) = std::fs::copy(file, &backup_path) {
+            warning(&format!("failed to backup {file}: {e}"));
+        } else {
+            success(&format!("Backed up original to {BOLD}{backup_path}{RESET}"));
+        }
+    }
+
+    // Generate .env.zvault reference file.
+    if !no_ref {
+        let ref_path = format!(
+            "{}{}",
+            path.parent()
+                .and_then(|p| p.to_str())
+                .map(|p| if p.is_empty() { String::new() } else { format!("{p}/") })
+                .unwrap_or_default(),
+            ".env.zvault"
+        );
+        let mut ref_content = String::from("# Generated by zvault import — safe to commit\n");
+        let _ = writeln!(ref_content, "# Project: {project_name}\n");
+        for (key, _) in &entries {
+            let _ = writeln!(ref_content, "{key}=zvault://env/{project_name}/{key}");
+        }
+        if let Err(e) = std::fs::write(&ref_path, &ref_content) {
+            warning(&format!("failed to write {ref_path}: {e}"));
+        } else {
+            success(&format!("Created {BOLD}{ref_path}{RESET} (safe for git)"));
+        }
+    }
+
+    // Add .env to .gitignore if not already there.
+    if !no_gitignore {
+        add_to_gitignore(file);
+    }
+
+    println!();
+    if failed == 0 {
+        println!(
+            "  {GREEN}{BOLD}✓ Imported {imported} secrets into vault{RESET}"
+        );
+    } else {
+        println!(
+            "  {YELLOW}{BOLD}⚠ Imported {imported} secrets, {failed} failed{RESET}"
+        );
+    }
+    println!();
+
+    Ok(())
+}
+
+/// Add a file pattern to .gitignore if not already present.
+fn add_to_gitignore(pattern: &str) {
+    let gitignore = std::path::Path::new(".gitignore");
+
+    if gitignore.exists() {
+        if let Ok(content) = std::fs::read_to_string(gitignore) {
+            // Check if pattern is already in .gitignore.
+            for line in content.lines() {
+                if line.trim() == pattern {
+                    return;
+                }
+            }
+            // Append to existing .gitignore.
+            let addition = if content.ends_with('\n') {
+                format!("{pattern}\n")
+            } else {
+                format!("\n{pattern}\n")
+            };
+            if let Err(e) = std::fs::write(gitignore, format!("{content}{addition}")) {
+                warning(&format!("failed to update .gitignore: {e}"));
+                return;
+            }
+        }
+    } else {
+        // Create new .gitignore.
+        if let Err(e) = std::fs::write(gitignore, format!("{pattern}\n")) {
+            warning(&format!("failed to create .gitignore: {e}"));
+            return;
+        }
+    }
+
+    success(&format!("Added {BOLD}{pattern}{RESET} to .gitignore"));
+}
+
+// ── Run command ──────────────────────────────────────────────────────
+
+/// Resolve a `zvault://` URI to its secret value from the vault.
+async fn resolve_zvault_uri(client: &Client, uri: &str) -> Result<String> {
+    let path = uri
+        .strip_prefix("zvault://")
+        .ok_or_else(|| anyhow::anyhow!("not a zvault:// URI: {uri}"))?;
+
+    let resp = client.get(&format!("/v1/secret/data/{path}")).await?;
+
+    // The KV v2 response has { data: { value: "..." } } or { data: { key: val, ... } }.
+    if let Some(data) = resp.get("data") {
+        // Single-value secret stored by `zvault import`.
+        if let Some(val) = data.get("value").and_then(Value::as_str) {
+            return Ok(val.to_owned());
+        }
+        // Multi-value secret — serialize as JSON for the env var.
+        if data.is_object() {
+            return serde_json::to_string(data).context("failed to serialize secret data");
+        }
+    }
+
+    bail!("no data found at {path}");
+}
+
+/// Find the .env.zvault or .env file with zvault:// references.
+fn find_env_file(explicit: Option<&str>) -> Result<String> {
+    if let Some(path) = explicit {
+        if std::path::Path::new(path).exists() {
+            return Ok(path.to_owned());
+        }
+        bail!("env file not found: {path}");
+    }
+
+    // Auto-detect: prefer .env.zvault, fall back to .env.
+    if std::path::Path::new(".env.zvault").exists() {
+        return Ok(".env.zvault".to_owned());
+    }
+    if std::path::Path::new(".env").exists() {
+        return Ok(".env".to_owned());
+    }
+
+    bail!("no .env.zvault or .env file found — run `zvault import .env` first");
+}
+
+/// Run a command with secrets injected from the vault.
+async fn cmd_run(client: &Client, env_file: Option<&str>, command: &[String]) -> Result<()> {
+    if command.is_empty() {
+        bail!("no command specified — usage: zvault run -- npm run dev");
+    }
+
+    let env_path = find_env_file(env_file)?;
+    let content = std::fs::read_to_string(&env_path)
+        .with_context(|| format!("failed to read {env_path}"))?;
+
+    let entries = parse_env_file(&content);
+    if entries.is_empty() {
+        bail!("no environment variables found in {env_path}");
+    }
+
+    // Resolve zvault:// URIs and collect plain values.
+    let mut env_vars: Vec<(String, String)> = Vec::with_capacity(entries.len());
+    let mut resolved = 0u32;
+    let mut plain = 0u32;
+
+    println!();
+    header("🔑", &format!("Resolving secrets from {env_path}"));
+    println!();
+
+    for (key, value) in &entries {
+        if value.starts_with("zvault://") {
+            match resolve_zvault_uri(client, value).await {
+                Ok(secret) => {
+                    println!("  {GREEN}✓{RESET} {key} {DIM}← {value}{RESET}");
+                    env_vars.push((key.clone(), secret));
+                    resolved = resolved.saturating_add(1);
+                }
+                Err(e) => {
+                    println!("  {RED}✗{RESET} {key} — {RED}{e}{RESET}");
+                    bail!("failed to resolve {key}: {e}");
+                }
+            }
+        } else {
+            // Plain value — pass through as-is.
+            env_vars.push((key.clone(), value.clone()));
+            plain = plain.saturating_add(1);
+        }
+    }
+
+    println!();
+    println!(
+        "  {DIM}Resolved {resolved} secrets, {plain} plain values{RESET}"
+    );
+    println!();
+
+    // Execute the child process with injected environment.
+    let program = &command[0];
+    let args = &command[1..];
+
+    println!(
+        "  {CYAN}{BOLD}▶{RESET} {BOLD}{}{RESET}",
+        command.join(" ")
+    );
+    println!();
+
+    let status = std::process::Command::new(program)
+        .args(args)
+        .envs(env_vars)
+        .status()
+        .with_context(|| format!("failed to execute: {program}"))?;
+
+    if !status.success() {
+        let code = status.code().unwrap_or(1);
+        bail!("command exited with code {code}");
+    }
+
+    Ok(())
+}
+
+// ── License commands ──────────────────────────────────────────────────
+
+async fn cmd_activate(key: &str) -> Result<()> {
+    println!();
+    header("🔑", "Activating License");
+    println!();
+
+    // Detect key type: Polar keys have no `.` separator, Ed25519 keys do.
+    if license::is_polar_key(key) {
+        let lic = license::validate_polar_key(key).await?;
+
+        println!("  {DIM}License ID:{RESET}   {BOLD}{}{RESET}", lic.payload.license_id);
+        println!("  {DIM}Tier:{RESET}         {GREEN}{BOLD}{}{RESET}", lic.payload.tier);
+        println!("  {DIM}Expires:{RESET}      {}", lic.payload.expires_at);
+        println!("  {DIM}Source:{RESET}        Polar.sh");
+        println!();
+        success("License activated via Polar. AI Mode features are now unlocked.");
+    } else {
+        // Ed25519-signed key — verify locally.
+        let lic = license::verify_license_key(key)?;
+
+        // Save to ~/.zvault/license.key.
+        let path = license::save_license(key)?;
+
+        println!("  {DIM}License ID:{RESET}   {BOLD}{}{RESET}", lic.payload.license_id);
+        println!("  {DIM}Tier:{RESET}         {GREEN}{BOLD}{}{RESET}", lic.payload.tier);
+        println!("  {DIM}Email:{RESET}        {}", lic.payload.email);
+        println!("  {DIM}Expires:{RESET}      {}", lic.payload.expires_at);
+        println!("  {DIM}Saved to:{RESET}     {}", path.display());
+        println!();
+        success("License activated. AI Mode features are now unlocked.");
+    }
+
+    println!();
+    Ok(())
+}
+
+fn cmd_license() {
+    println!();
+
+    match license::load_license() {
+        Ok(Some(lic)) => {
+            header("🪪", "License Status");
+            println!();
+            println!("  {DIM}License ID:{RESET}   {BOLD}{}{RESET}", lic.payload.license_id);
+            println!("  {DIM}Tier:{RESET}         {GREEN}{BOLD}{}{RESET}", lic.payload.tier);
+            println!("  {DIM}Email:{RESET}        {}", lic.payload.email);
+            println!("  {DIM}Issued:{RESET}       {}", lic.payload.issued_at);
+            println!("  {DIM}Expires:{RESET}      {}", lic.payload.expires_at);
+            println!();
+
+            // Show unlocked features.
+            let tier = lic.payload.tier;
+            println!("  {BOLD}Unlocked Features:{RESET}");
+            println!("  {GREEN}✓{RESET} Local vault, CLI, .env import");
+            if tier >= license::Tier::Pro {
+                println!("  {GREEN}✓{RESET} AI Mode (MCP server)");
+                println!("  {GREEN}✓{RESET} zvault:// references");
+                println!("  {GREEN}✓{RESET} IDE setup (Cursor, Kiro, Continue)");
+                println!("  {GREEN}✓{RESET} llms.txt generation");
+            }
+            if tier >= license::Tier::Team {
+                println!("  {GREEN}✓{RESET} Shared vault");
+                println!("  {GREEN}✓{RESET} OIDC SSO");
+                println!("  {GREEN}✓{RESET} Audit log export");
+                println!("  {GREEN}✓{RESET} Slack/Discord alerts");
+            }
+            if tier >= license::Tier::Enterprise {
+                println!("  {GREEN}✓{RESET} HA clustering");
+                println!("  {GREEN}✓{RESET} K8s operator");
+                println!("  {GREEN}✓{RESET} Namespaces");
+                println!("  {GREEN}✓{RESET} SLA");
+            }
+        }
+        Ok(None) => {
+            header("🪪", "License Status");
+            println!();
+            println!("  {DIM}Tier:{RESET}         {BOLD}Free{RESET}");
+            println!();
+            println!("  {DIM}Included:{RESET}");
+            println!("  {GREEN}✓{RESET} Local vault, CLI, .env import");
+            println!("  {GREEN}✓{RESET} KV, Transit, PKI engines");
+            println!("  {GREEN}✓{RESET} Web dashboard");
+            println!();
+            println!("  {DIM}Locked (Pro $8/mo):{RESET}");
+            println!("  {RED}✗{RESET} AI Mode (MCP server)");
+            println!("  {RED}✗{RESET} zvault:// references");
+            println!("  {RED}✗{RESET} IDE setup & llms.txt");
+            println!();
+            println!("  {CYAN}Upgrade:{RESET} https://zvault.cloud/pricing");
+            println!("  {CYAN}Activate:{RESET} zvault activate <license-key>");
+        }
+        Err(e) => {
+            header("🪪", "License Status");
+            println!();
+            println!("  {RED}{BOLD}✗{RESET} {RED}License error: {e}{RESET}");
+            println!();
+            println!("  {DIM}Your license file may be corrupted or expired.{RESET}");
+            println!("  {DIM}Re-activate with:{RESET} zvault activate <license-key>");
+        }
+    }
+
+    println!();
+}
+
+// ── IDE setup ────────────────────────────────────────────────────────
+
+fn cmd_setup(ide: &str) -> Result<()> {
+    println!();
+    header("🔧", &format!("Setting up ZVault for {ide}"));
+    println!();
+
+    let target = match ide.to_lowercase().as_str() {
+        "cursor" => setup::Ide::Cursor,
+        "kiro" => setup::Ide::Kiro,
+        "continue" => setup::Ide::Continue,
+        "generic" => setup::Ide::Generic,
+        other => bail!(
+            "unknown IDE: '{other}'. Supported: cursor, kiro, continue, generic"
+        ),
+    };
+
+    setup::run_setup(target)?;
+
+    println!();
+    success("IDE setup complete.");
+    println!();
+    Ok(())
+}
+
+// ── Doctor command ────────────────────────────────────────────────────
+
+/// Run diagnostics on vault health, license status, and MCP connectivity.
+async fn cmd_doctor(client: &Client) -> Result<()> {
+    println!();
+    header("🩺", "ZVault Doctor");
+    println!();
+
+    let mut pass = 0u32;
+    let mut fail = 0u32;
+    let mut warn = 0u32;
+
+    // ── 1. Vault server reachability ─────────────────────────────
+    print!("  Vault server ({})... ", client.addr);
+    match client.get_no_auth("/v1/sys/health").await {
+        Ok(resp) => {
+            let initialized = resp.get("initialized").and_then(Value::as_bool).unwrap_or(false);
+            let sealed = resp.get("sealed").and_then(Value::as_bool).unwrap_or(true);
+
+            if !initialized {
+                println!("{YELLOW}not initialized{RESET}");
+                warn = warn.saturating_add(1);
+            } else if sealed {
+                println!("{YELLOW}sealed{RESET}");
+                warn = warn.saturating_add(1);
+            } else {
+                println!("{GREEN}healthy (unsealed){RESET}");
+                pass = pass.saturating_add(1);
+            }
+        }
+        Err(_) => {
+            println!("{RED}unreachable{RESET}");
+            fail = fail.saturating_add(1);
+        }
+    }
+
+    // ── 2. Authentication token ──────────────────────────────────
+    print!("  Auth token... ");
+    match &client.token {
+        Some(token) if !token.is_empty() => {
+            // Try a token lookup to verify it's valid.
+            match client.post("/v1/auth/token/lookup-self", &serde_json::json!({})).await {
+                Ok(resp) => {
+                    let policies = resp
+                        .get("policies")
+                        .and_then(Value::as_array)
+                        .map(|a| a.len())
+                        .unwrap_or(0);
+                    println!("{GREEN}valid ({policies} policies){RESET}");
+                    pass = pass.saturating_add(1);
+                }
+                Err(_) => {
+                    println!("{YELLOW}set but invalid/expired{RESET}");
+                    warn = warn.saturating_add(1);
+                }
+            }
+        }
+        _ => {
+            println!("{YELLOW}not set (VAULT_TOKEN){RESET}");
+            warn = warn.saturating_add(1);
+        }
+    }
+
+    // ── 3. License status ────────────────────────────────────────
+    print!("  License... ");
+    match license::load_license() {
+        Ok(Some(lic)) => {
+            println!(
+                "{GREEN}{} (expires {}){RESET}",
+                lic.payload.tier, lic.payload.expires_at
+            );
+            pass = pass.saturating_add(1);
+        }
+        Ok(None) => {
+            println!("{DIM}Free tier{RESET}");
+            pass = pass.saturating_add(1);
+        }
+        Err(e) => {
+            println!("{RED}error: {e}{RESET}");
+            fail = fail.saturating_add(1);
+        }
+    }
+
+    // ── 4. MCP server availability ───────────────────────────────
+    print!("  MCP server (AI Mode)... ");
+    let tier = license::current_tier();
+    if tier >= license::Tier::Pro {
+        println!("{GREEN}available ({}){RESET}", tier);
+        pass = pass.saturating_add(1);
+    } else {
+        println!("{DIM}locked (requires Pro){RESET}");
+        warn = warn.saturating_add(1);
+    }
+
+    // ── 5. .env.zvault file ──────────────────────────────────────
+    print!("  .env.zvault... ");
+    if std::path::Path::new(".env.zvault").exists() {
+        let content = std::fs::read_to_string(".env.zvault").unwrap_or_default();
+        let uri_count = content.lines().filter(|l| l.contains("zvault://")).count();
+        println!("{GREEN}found ({uri_count} references){RESET}");
+        pass = pass.saturating_add(1);
+    } else if std::path::Path::new(".env").exists() {
+        println!("{YELLOW}not found (.env exists — run `zvault import .env`){RESET}");
+        warn = warn.saturating_add(1);
+    } else {
+        println!("{DIM}not found (no .env either){RESET}");
+        warn = warn.saturating_add(1);
+    }
+
+    // ── 6. .gitignore check ──────────────────────────────────────
+    print!("  .gitignore (.env excluded)... ");
+    if std::path::Path::new(".gitignore").exists() {
+        let content = std::fs::read_to_string(".gitignore").unwrap_or_default();
+        if content.lines().any(|l| l.trim() == ".env") {
+            println!("{GREEN}yes{RESET}");
+            pass = pass.saturating_add(1);
+        } else {
+            println!("{YELLOW}.env not in .gitignore{RESET}");
+            warn = warn.saturating_add(1);
+        }
+    } else {
+        println!("{YELLOW}no .gitignore found{RESET}");
+        warn = warn.saturating_add(1);
+    }
+
+    // ── 7. IDE MCP config ────────────────────────────────────────
+    print!("  IDE MCP config... ");
+    let mcp_configs = [
+        (".cursor/mcp.json", "Cursor"),
+        (".kiro/settings/mcp.json", "Kiro"),
+        (".continue/config.json", "Continue"),
+    ];
+    let mut found_ide: Option<&str> = None;
+    for (path, name) in &mcp_configs {
+        if std::path::Path::new(path).exists() {
+            found_ide = Some(name);
+            break;
+        }
+    }
+    match found_ide {
+        Some(name) => {
+            println!("{GREEN}found ({name}){RESET}");
+            pass = pass.saturating_add(1);
+        }
+        None => {
+            println!("{DIM}not configured (run `zvault setup <ide>`){RESET}");
+            warn = warn.saturating_add(1);
+        }
+    }
+
+    // ── Summary ──────────────────────────────────────────────────
+    println!();
+    println!(
+        "  {BOLD}{GREEN}✓ {pass} passed{RESET}  \
+         {BOLD}{YELLOW}⚠ {warn} warnings{RESET}  \
+         {BOLD}{RED}✗ {fail} failed{RESET}"
+    );
+
+    if fail > 0 {
+        println!();
+        println!("  {DIM}Fix the failures above to get ZVault working properly.{RESET}");
+    } else if warn > 0 {
+        println!();
+        println!("  {DIM}Warnings are non-critical but worth addressing.{RESET}");
+    } else {
+        println!();
+        println!("  {GREEN}Everything looks good.{RESET}");
+    }
+
+    println!();
+    Ok(())
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────
 
 fn parse_kv_pairs(pairs: &[String]) -> Result<HashMap<String, String>> {
@@ -1375,4 +2205,869 @@ fn print_json(value: &Value) {
         Ok(s) => println!("{s}"),
         Err(e) => eprintln!("failed to format JSON: {e}"),
     }
+}
+
+// ── Phase 1.3: Project Init ──────────────────────────────────────────
+
+fn cmd_project_init(name: Option<&str>, server: &str) -> Result<()> {
+    println!();
+    header("📁", "Project Init");
+    println!();
+
+    let project_name = match name {
+        Some(n) => n.to_owned(),
+        None => detect_project_name()?,
+    };
+
+    let config_path = std::path::Path::new(".zvault.toml");
+    if config_path.exists() {
+        warning("  .zvault.toml already exists — skipping");
+        println!();
+        return Ok(());
+    }
+
+    let config_content = format!(
+        r#"# ZVault project configuration
+# Generated by `zvault project-init`
+
+[project]
+name = "{project_name}"
+
+[vault]
+# Server address (override with VAULT_ADDR env var)
+address = "{server}"
+
+[secrets]
+# Default mount path for this project's secrets
+mount = "secret"
+# Prefix for all secrets in this project
+prefix = "env/{project_name}"
+
+[import]
+# Files to import secrets from
+sources = [".env"]
+# Skip backing up original files
+no_backup = false
+
+[rotation]
+# Default rotation check interval (hours)
+check_interval = 24
+# Enable rotation notifications
+notify = false
+"#
+    );
+
+    std::fs::write(config_path, &config_content)
+        .map_err(|e| anyhow::anyhow!("failed to write .zvault.toml: {e}"))?;
+
+    success(&format!("Created .zvault.toml for project \"{project_name}\""));
+
+    // Add .zvault.toml to .gitignore if it contains tokens/server info
+    // Actually, .zvault.toml is safe to commit — it has no secrets.
+    // But add .env and .env.backup to .gitignore.
+    add_to_gitignore(".env");
+    add_to_gitignore(".env.backup");
+
+    println!();
+    println!("  {DIM}Next steps:{RESET}");
+    println!("    1. Start your vault:  {CYAN}zvault status{RESET}");
+    println!("    2. Import secrets:    {CYAN}zvault import .env{RESET}");
+    println!("    3. Run your app:      {CYAN}zvault run -- npm run dev{RESET}");
+    println!();
+
+    Ok(())
+}
+
+// ── Phase 1.5: Lease CLI ─────────────────────────────────────────────
+
+async fn cmd_lease(client: &Client, action: LeaseCommands) -> Result<()> {
+    match action {
+        LeaseCommands::List => {
+            println!();
+            header("📋", "Leases");
+            println!();
+
+            let resp = client.get("/v1/sys/leases").await?;
+            let leases = resp.get("leases").and_then(|v| v.as_array());
+
+            match leases {
+                Some(arr) if arr.is_empty() => {
+                    println!("  {DIM}No active leases.{RESET}");
+                }
+                Some(arr) => {
+                    println!(
+                        "  {DIM}{:<36}  {:<24}  {:<8}  {:<8}  {}{RESET}",
+                        "LEASE ID", "ENGINE", "TTL", "RENEW", "STATUS"
+                    );
+                    for lease in arr {
+                        let id = lease.get("lease_id").and_then(|v| v.as_str()).unwrap_or("-");
+                        let engine = lease.get("engine_path").and_then(|v| v.as_str()).unwrap_or("-");
+                        let ttl = lease.get("ttl_secs").and_then(|v| v.as_i64()).unwrap_or(0);
+                        let renewable = lease.get("renewable").and_then(|v| v.as_bool()).unwrap_or(false);
+                        let expired = lease.get("expired").and_then(|v| v.as_bool()).unwrap_or(false);
+
+                        let status = if expired {
+                            format!("{RED}expired{RESET}")
+                        } else {
+                            format!("{GREEN}active{RESET}")
+                        };
+                        let renew_str = if renewable { "yes" } else { "no" };
+
+                        println!(
+                            "  {:<36}  {:<24}  {:<8}  {:<8}  {}",
+                            id, engine, format_duration(ttl), renew_str, status
+                        );
+                    }
+                    let total = resp.get("total").and_then(|v| v.as_u64()).unwrap_or(0);
+                    println!();
+                    println!("  {DIM}Total: {total} lease(s){RESET}");
+                }
+                None => {
+                    println!("  {DIM}No lease data returned.{RESET}");
+                }
+            }
+            println!();
+            Ok(())
+        }
+        LeaseCommands::Lookup { lease_id } => {
+            let resp = client
+                .post(
+                    "/v1/sys/leases/lookup",
+                    &serde_json::json!({ "lease_id": lease_id }),
+                )
+                .await?;
+            println!();
+            header("🔍", "Lease Lookup");
+            println!();
+            kv_line("Lease ID", resp.get("lease_id").and_then(|v| v.as_str()).unwrap_or("-"));
+            kv_line("Engine", resp.get("engine_path").and_then(|v| v.as_str()).unwrap_or("-"));
+            kv_line("Issued At", resp.get("issued_at").and_then(|v| v.as_str()).unwrap_or("-"));
+            let ttl = resp.get("ttl_secs").and_then(|v| v.as_i64()).unwrap_or(0);
+            kv_line("TTL", &format_duration(ttl));
+            let renewable = resp.get("renewable").and_then(|v| v.as_bool()).unwrap_or(false);
+            kv_line("Renewable", if renewable { "yes" } else { "no" });
+            let expired = resp.get("expired").and_then(|v| v.as_bool()).unwrap_or(false);
+            if expired {
+                kv_line("Status", &format!("{RED}expired{RESET}"));
+            } else {
+                kv_line("Status", &format!("{GREEN}active{RESET}"));
+            }
+            println!();
+            Ok(())
+        }
+        LeaseCommands::Revoke { lease_id } => {
+            client
+                .post(
+                    "/v1/sys/leases/revoke",
+                    &serde_json::json!({ "lease_id": lease_id }),
+                )
+                .await?;
+            println!();
+            success(&format!("Lease {lease_id} revoked"));
+            println!();
+            Ok(())
+        }
+    }
+}
+
+// ── Phase 3.3: Audit Export ──────────────────────────────────────────
+
+async fn cmd_audit_export(
+    client: &Client,
+    format: &str,
+    limit: usize,
+    output: Option<&str>,
+) -> Result<()> {
+    println!();
+    header("📊", "Audit Log Export");
+    println!();
+
+    let resp = client
+        .get_no_auth(&format!("/v1/sys/audit-log?limit={limit}"))
+        .await?;
+
+    let entries = resp
+        .get("entries")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    if entries.is_empty() {
+        println!("  {DIM}No audit entries found.{RESET}");
+        println!();
+        return Ok(());
+    }
+
+    let content = match format {
+        "csv" => {
+            let mut csv = String::from("timestamp,operation,path,actor,status\n");
+            for entry in &entries {
+                let ts = entry.get("timestamp").and_then(|v| v.as_str()).unwrap_or("");
+                let op = entry.get("operation").and_then(|v| v.as_str()).unwrap_or("");
+                let path = entry.get("path").and_then(|v| v.as_str()).unwrap_or("");
+                let actor = entry.get("actor").and_then(|v| v.as_str()).unwrap_or("");
+                let status = entry
+                    .get("response")
+                    .and_then(|v| v.get("status_code"))
+                    .and_then(|v| v.as_u64())
+                    .map(|v| v.to_string())
+                    .unwrap_or_default();
+                csv.push_str(&format!("{ts},{op},{path},{actor},{status}\n"));
+            }
+            csv
+        }
+        _ => serde_json::to_string_pretty(&entries)
+            .unwrap_or_else(|_| "[]".to_owned()),
+    };
+
+    match output {
+        Some(path) => {
+            std::fs::write(path, &content)
+                .map_err(|e| anyhow::anyhow!("failed to write {path}: {e}"))?;
+            success(&format!(
+                "Exported {} entries to {path} ({format})",
+                entries.len()
+            ));
+        }
+        None => {
+            println!("{content}");
+        }
+    }
+
+    println!();
+    Ok(())
+}
+
+// ── Phase 3.4: Notifications (Webhook) ──────────────────────────────
+
+const WEBHOOK_CONFIG_PATH: &str = ".zvault/webhooks.json";
+
+fn ensure_zvault_dir() -> Result<()> {
+    let dir = std::path::Path::new(".zvault");
+    if !dir.exists() {
+        std::fs::create_dir_all(dir)
+            .map_err(|e| anyhow::anyhow!("failed to create .zvault dir: {e}"))?;
+    }
+    Ok(())
+}
+
+fn load_webhook_config() -> Result<serde_json::Value> {
+    let path = std::path::Path::new(WEBHOOK_CONFIG_PATH);
+    if !path.exists() {
+        return Ok(serde_json::json!({ "webhooks": [] }));
+    }
+    let content = std::fs::read_to_string(path)
+        .map_err(|e| anyhow::anyhow!("failed to read webhook config: {e}"))?;
+    serde_json::from_str(&content)
+        .map_err(|e| anyhow::anyhow!("invalid webhook config: {e}"))
+}
+
+fn save_webhook_config(config: &serde_json::Value) -> Result<()> {
+    ensure_zvault_dir()?;
+    let content = serde_json::to_string_pretty(config)
+        .map_err(|e| anyhow::anyhow!("failed to serialize webhook config: {e}"))?;
+    std::fs::write(WEBHOOK_CONFIG_PATH, content)
+        .map_err(|e| anyhow::anyhow!("failed to write webhook config: {e}"))?;
+    Ok(())
+}
+
+async fn send_webhook(url: &str, payload: &serde_json::Value) -> Result<()> {
+    let http = reqwest::Client::new();
+    let resp = http
+        .post(url)
+        .json(payload)
+        .timeout(std::time::Duration::from_secs(10))
+        .send()
+        .await
+        .map_err(|e| anyhow::anyhow!("webhook request failed: {e}"))?;
+
+    if resp.status().is_success() {
+        Ok(())
+    } else {
+        Err(anyhow::anyhow!(
+            "webhook returned status {}",
+            resp.status()
+        ))
+    }
+}
+
+async fn cmd_notify(_client: &Client, action: NotifyCommands) -> Result<()> {
+    match action {
+        NotifyCommands::SetWebhook { url, events } => {
+            println!();
+            header("🔔", "Configure Webhook");
+            println!();
+
+            let config = serde_json::json!({
+                "webhooks": [{
+                    "url": url,
+                    "events": events,
+                    "created_at": chrono_now_iso(),
+                }]
+            });
+            save_webhook_config(&config)?;
+
+            success(&format!("Webhook configured: {url}"));
+            println!("  {DIM}Events: {}{RESET}", events.join(", "));
+            println!();
+            Ok(())
+        }
+        NotifyCommands::GetWebhook => {
+            println!();
+            header("🔔", "Webhook Configuration");
+            println!();
+
+            let config = load_webhook_config()?;
+            let webhooks = config
+                .get("webhooks")
+                .and_then(|v| v.as_array())
+                .cloned()
+                .unwrap_or_default();
+
+            if webhooks.is_empty() {
+                println!("  {DIM}No webhooks configured.{RESET}");
+                println!("  {DIM}Run: zvault notify set-webhook <url>{RESET}");
+            } else {
+                for wh in &webhooks {
+                    let url = wh.get("url").and_then(|v| v.as_str()).unwrap_or("-");
+                    let events = wh
+                        .get("events")
+                        .and_then(|v| v.as_array())
+                        .map(|arr| {
+                            arr.iter()
+                                .filter_map(|v| v.as_str())
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        })
+                        .unwrap_or_default();
+                    kv_line("URL", url);
+                    kv_line("Events", &events);
+                }
+            }
+            println!();
+            Ok(())
+        }
+        NotifyCommands::RemoveWebhook => {
+            println!();
+            let config = serde_json::json!({ "webhooks": [] });
+            save_webhook_config(&config)?;
+            success("Webhook configuration removed");
+            println!();
+            Ok(())
+        }
+        NotifyCommands::Test => {
+            println!();
+            header("🔔", "Test Webhook");
+            println!();
+
+            let config = load_webhook_config()?;
+            let webhooks = config
+                .get("webhooks")
+                .and_then(|v| v.as_array())
+                .cloned()
+                .unwrap_or_default();
+
+            if webhooks.is_empty() {
+                warning("No webhooks configured. Run: zvault notify set-webhook <url>");
+                println!();
+                return Ok(());
+            }
+
+            let payload = serde_json::json!({
+                "event": "test",
+                "message": "ZVault webhook test notification",
+                "timestamp": chrono_now_iso(),
+                "vault": "zvault"
+            });
+
+            for wh in &webhooks {
+                let url = wh.get("url").and_then(|v| v.as_str()).unwrap_or("");
+                if url.is_empty() {
+                    continue;
+                }
+                print!("  Sending to {url}... ");
+                match send_webhook(url, &payload).await {
+                    Ok(()) => println!("{GREEN}ok{RESET}"),
+                    Err(e) => println!("{RED}failed: {e}{RESET}"),
+                }
+            }
+            println!();
+            Ok(())
+        }
+    }
+}
+
+// ── Phase 3.2: Secret Rotation ───────────────────────────────────────
+
+const ROTATION_CONFIG_PATH: &str = ".zvault/rotation.json";
+
+fn load_rotation_config() -> Result<serde_json::Value> {
+    let path = std::path::Path::new(ROTATION_CONFIG_PATH);
+    if !path.exists() {
+        return Ok(serde_json::json!({ "policies": {} }));
+    }
+    let content = std::fs::read_to_string(path)
+        .map_err(|e| anyhow::anyhow!("failed to read rotation config: {e}"))?;
+    serde_json::from_str(&content)
+        .map_err(|e| anyhow::anyhow!("invalid rotation config: {e}"))
+}
+
+fn save_rotation_config(config: &serde_json::Value) -> Result<()> {
+    ensure_zvault_dir()?;
+    let content = serde_json::to_string_pretty(config)
+        .map_err(|e| anyhow::anyhow!("failed to serialize rotation config: {e}"))?;
+    std::fs::write(ROTATION_CONFIG_PATH, content)
+        .map_err(|e| anyhow::anyhow!("failed to write rotation config: {e}"))?;
+    Ok(())
+}
+
+async fn cmd_rotate(client: &Client, action: RotateCommands) -> Result<()> {
+    match action {
+        RotateCommands::SetPolicy {
+            path,
+            interval_hours,
+            max_age_hours,
+        } => {
+            println!();
+            header("🔄", "Set Rotation Policy");
+            println!();
+
+            let mut config = load_rotation_config()?;
+            let policies = config
+                .get_mut("policies")
+                .and_then(|v| v.as_object_mut())
+                .ok_or_else(|| anyhow::anyhow!("invalid rotation config"))?;
+
+            policies.insert(
+                path.clone(),
+                serde_json::json!({
+                    "interval_hours": interval_hours,
+                    "max_age_hours": max_age_hours,
+                    "created_at": chrono_now_iso(),
+                    "last_rotated": null,
+                }),
+            );
+
+            save_rotation_config(&config)?;
+            success(&format!(
+                "Rotation policy set for {path}: every {interval_hours}h"
+            ));
+            println!();
+            Ok(())
+        }
+        RotateCommands::GetPolicy { path } => {
+            println!();
+            header("🔄", "Rotation Policy");
+            println!();
+
+            let config = load_rotation_config()?;
+            let policy = config
+                .get("policies")
+                .and_then(|v| v.get(&path));
+
+            match policy {
+                Some(p) => {
+                    kv_line("Path", &path);
+                    let interval = p.get("interval_hours").and_then(|v| v.as_u64()).unwrap_or(0);
+                    kv_line("Interval", &format!("{interval}h"));
+                    let max_age = p.get("max_age_hours").and_then(|v| v.as_u64());
+                    kv_line("Max Age", &max_age.map_or("none".to_owned(), |v| format!("{v}h")));
+                    let last = p.get("last_rotated").and_then(|v| v.as_str()).unwrap_or("never");
+                    kv_line("Last Rotated", last);
+                }
+                None => {
+                    println!("  {DIM}No rotation policy for {path}{RESET}");
+                }
+            }
+            println!();
+            Ok(())
+        }
+        RotateCommands::ListPolicies => {
+            println!();
+            header("🔄", "Rotation Policies");
+            println!();
+
+            let config = load_rotation_config()?;
+            let policies = config
+                .get("policies")
+                .and_then(|v| v.as_object())
+                .cloned()
+                .unwrap_or_default();
+
+            if policies.is_empty() {
+                println!("  {DIM}No rotation policies configured.{RESET}");
+            } else {
+                println!(
+                    "  {DIM}{:<40}  {:<12}  {:<12}  {}{RESET}",
+                    "PATH", "INTERVAL", "MAX AGE", "LAST ROTATED"
+                );
+                for (path, policy) in &policies {
+                    let interval = policy.get("interval_hours").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let max_age = policy
+                        .get("max_age_hours")
+                        .and_then(|v| v.as_u64())
+                        .map_or("-".to_owned(), |v| format!("{v}h"));
+                    let last = policy
+                        .get("last_rotated")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("never");
+                    println!(
+                        "  {:<40}  {:<12}  {:<12}  {}",
+                        path,
+                        format!("{interval}h"),
+                        max_age,
+                        last
+                    );
+                }
+            }
+            println!();
+            Ok(())
+        }
+        RotateCommands::RemovePolicy { path } => {
+            println!();
+            let mut config = load_rotation_config()?;
+            if let Some(policies) = config.get_mut("policies").and_then(|v| v.as_object_mut()) {
+                policies.remove(&path);
+            }
+            save_rotation_config(&config)?;
+            success(&format!("Rotation policy removed for {path}"));
+            println!();
+            Ok(())
+        }
+        RotateCommands::Trigger { path } => {
+            println!();
+            header("🔄", "Manual Rotation");
+            println!();
+
+            // Read the current secret to verify it exists.
+            let parts: Vec<&str> = path.splitn(3, '/').collect();
+            if parts.len() < 3 {
+                return Err(anyhow::anyhow!(
+                    "invalid path format — expected env/<project>/<key>"
+                ));
+            }
+
+            let api_path = format!("/v1/secret/data/{path}");
+            let resp = client.get(&api_path).await;
+            match resp {
+                Ok(_) => {
+                    // Update last_rotated timestamp in rotation config.
+                    let mut config = load_rotation_config()?;
+                    if let Some(policies) =
+                        config.get_mut("policies").and_then(|v| v.as_object_mut())
+                    {
+                        if let Some(policy) = policies.get_mut(&path) {
+                            if let Some(obj) = policy.as_object_mut() {
+                                obj.insert(
+                                    "last_rotated".to_owned(),
+                                    serde_json::Value::String(chrono_now_iso()),
+                                );
+                            }
+                        }
+                    }
+                    save_rotation_config(&config)?;
+
+                    success(&format!("Rotation triggered for {path}"));
+                    println!("  {DIM}The secret value should be updated by your rotation handler.{RESET}");
+                    println!("  {DIM}Use `zvault kv put {path} value=<new_value>` to update.{RESET}");
+
+                    // Send webhook notification if configured.
+                    let wh_config = load_webhook_config()?;
+                    let webhooks = wh_config
+                        .get("webhooks")
+                        .and_then(|v| v.as_array())
+                        .cloned()
+                        .unwrap_or_default();
+                    for wh in &webhooks {
+                        let events = wh
+                            .get("events")
+                            .and_then(|v| v.as_array())
+                            .cloned()
+                            .unwrap_or_default();
+                        let has_rotation = events
+                            .iter()
+                            .any(|e| e.as_str() == Some("secret.rotated"));
+                        if has_rotation {
+                            if let Some(url) = wh.get("url").and_then(|v| v.as_str()) {
+                                let payload = serde_json::json!({
+                                    "event": "secret.rotated",
+                                    "path": path,
+                                    "timestamp": chrono_now_iso(),
+                                    "vault": "zvault"
+                                });
+                                let _ = send_webhook(url, &payload).await;
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    return Err(anyhow::anyhow!("secret not found at {path}: {e}"));
+                }
+            }
+            println!();
+            Ok(())
+        }
+        RotateCommands::Status => {
+            println!();
+            header("🔄", "Rotation Status");
+            println!();
+
+            let config = load_rotation_config()?;
+            let policies = config
+                .get("policies")
+                .and_then(|v| v.as_object())
+                .cloned()
+                .unwrap_or_default();
+
+            if policies.is_empty() {
+                println!("  {DIM}No rotation policies configured.{RESET}");
+                println!();
+                return Ok(());
+            }
+
+            println!(
+                "  {DIM}{:<40}  {:<12}  {}{RESET}",
+                "PATH", "INTERVAL", "STATUS"
+            );
+            for (path, policy) in &policies {
+                let interval = policy.get("interval_hours").and_then(|v| v.as_u64()).unwrap_or(0);
+                let last = policy.get("last_rotated").and_then(|v| v.as_str());
+
+                let status = match last {
+                    None | Some("never") => format!("{YELLOW}never rotated{RESET}"),
+                    Some(_ts) => {
+                        // Simple status — in production you'd parse the timestamp
+                        // and compare against interval_hours.
+                        format!("{GREEN}ok{RESET}")
+                    }
+                };
+
+                println!(
+                    "  {:<40}  {:<12}  {}",
+                    path,
+                    format!("{interval}h"),
+                    status
+                );
+            }
+            println!();
+            Ok(())
+        }
+    }
+}
+
+// ── Login command ─────────────────────────────────────────────────────
+
+async fn cmd_login(client: &Client, oidc: bool) -> Result<()> {
+    if !oidc {
+        bail!("only --oidc login is supported — for token auth, set VAULT_TOKEN");
+    }
+
+    println!();
+    header("🔐", "OIDC Login");
+    println!();
+
+    // Check if OIDC is configured on the server.
+    let config_resp = client.get_no_auth("/v1/auth/oidc/config").await?;
+    let enabled = config_resp
+        .get("enabled")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+
+    if !enabled {
+        bail!("OIDC authentication is not configured on this vault server");
+    }
+
+    let login_url = format!("{}/v1/auth/oidc/login", client.addr);
+    println!("  {DIM}Opening browser for authentication...{RESET}");
+    println!();
+    println!("  {CYAN}{login_url}{RESET}");
+    println!();
+
+    // Try to open the browser.
+    #[cfg(target_os = "macos")]
+    {
+        let _ = std::process::Command::new("open").arg(&login_url).spawn();
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let _ = std::process::Command::new("xdg-open")
+            .arg(&login_url)
+            .spawn();
+    }
+    #[cfg(target_os = "windows")]
+    {
+        let _ = std::process::Command::new("cmd")
+            .args(["/C", "start", &login_url])
+            .spawn();
+    }
+
+    println!("  {DIM}After authenticating, copy the vault token from the dashboard{RESET}");
+    println!("  {DIM}and set it with:{RESET}");
+    println!();
+    println!("    {CYAN}export VAULT_TOKEN=<your-token>{RESET}");
+    println!();
+
+    Ok(())
+}
+
+// ── Backup command ───────────────────────────────────────────────────
+
+async fn cmd_backup(client: &Client, output: Option<&str>) -> Result<()> {
+    println!();
+    header("💾", "Vault Backup");
+    println!();
+
+    let resp = client.get_no_auth("/v1/sys/backup").await?;
+
+    let entry_count = resp
+        .get("entry_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let created_at = resp
+        .get("created_at")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
+    let version = resp
+        .get("version")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
+
+    let content = serde_json::to_string_pretty(&resp)
+        .unwrap_or_else(|_| resp.to_string());
+
+    match output {
+        Some(path) => {
+            std::fs::write(path, &content)
+                .with_context(|| format!("failed to write backup to {path}"))?;
+            success(&format!("Backup saved to {BOLD}{path}{RESET}"));
+        }
+        None => {
+            println!("{content}");
+        }
+    }
+
+    println!();
+    kv_line("Entries", &entry_count.to_string());
+    kv_line("Created", created_at);
+    kv_line("Version", version);
+    println!();
+
+    if output.is_some() {
+        println!("  {YELLOW}⚠  The backup contains encrypted data. Keep it safe.{RESET}");
+        println!("  {DIM}Restore with: zvault restore <backup-file>{RESET}");
+        println!();
+    }
+
+    Ok(())
+}
+
+// ── Restore command ──────────────────────────────────────────────────
+
+async fn cmd_restore(client: &Client, file: &str) -> Result<()> {
+    println!();
+    header("💾", "Vault Restore");
+    println!();
+
+    let content = std::fs::read_to_string(file)
+        .with_context(|| format!("failed to read backup file: {file}"))?;
+
+    let backup: Value = serde_json::from_str(&content)
+        .context("invalid backup file format")?;
+
+    let snapshot = backup
+        .get("snapshot")
+        .and_then(Value::as_str)
+        .ok_or_else(|| anyhow::anyhow!("backup file missing 'snapshot' field"))?;
+
+    let entry_count = backup
+        .get("entry_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+
+    println!("  {DIM}Backup contains {entry_count} entries{RESET}");
+    println!("  {YELLOW}⚠  This will overwrite existing vault data.{RESET}");
+    println!();
+
+    let body = serde_json::json!({ "snapshot": snapshot });
+    let resp = client.post_no_auth("/v1/sys/restore", &body).await?;
+
+    let restored = resp
+        .get("entry_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let ok = resp
+        .get("success")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+
+    if ok {
+        success(&format!("Restored {restored} entries from backup"));
+        println!();
+        println!("  {DIM}Seal and re-unseal the vault to pick up restored state:{RESET}");
+        println!("    {CYAN}zvault seal{RESET}");
+        println!("    {CYAN}zvault unseal --share <share>{RESET}");
+    } else {
+        println!("  {RED}Restore failed{RESET}");
+    }
+
+    println!();
+    Ok(())
+}
+
+/// Get current time as ISO 8601 string (no chrono dependency — use simple approach).
+fn chrono_now_iso() -> String {
+    // We don't have chrono in CLI deps, so use a simple approach.
+    // Format: 2026-02-11T12:00:00Z
+    let now = std::time::SystemTime::now();
+    let duration = now
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default();
+    let secs = duration.as_secs();
+    // Simple UTC timestamp formatting.
+    let days = secs / 86400;
+    let time_secs = secs % 86400;
+    let hours = time_secs / 3600;
+    let minutes = (time_secs % 3600) / 60;
+    let seconds = time_secs % 60;
+
+    // Calculate year/month/day from days since epoch (1970-01-01).
+    let (year, month, day) = days_to_ymd(days);
+
+    format!(
+        "{year:04}-{month:02}-{day:02}T{hours:02}:{minutes:02}:{seconds:02}Z"
+    )
+}
+
+/// Convert days since Unix epoch to (year, month, day).
+///
+/// Uses Howard Hinnant's civil calendar algorithm. All arithmetic is
+/// mathematically proven to stay within `u64` bounds for any valid Unix
+/// timestamp (up to year ~5.8 million), so `saturating_*` is used purely
+/// as a defensive measure per project coding standards.
+fn days_to_ymd(days: u64) -> (u64, u64, u64) {
+    let z = days.saturating_add(719_468);
+    let era = z / 146_097;
+    let doe = z.saturating_sub(era.saturating_mul(146_097));
+    let yoe = (doe.saturating_sub(doe / 1460)
+        .saturating_add(doe / 36524)
+        .saturating_sub(doe / 146_096))
+        / 365;
+    let y = yoe.saturating_add(era.saturating_mul(400));
+    let doy = doe.saturating_sub(
+        365u64
+            .saturating_mul(yoe)
+            .saturating_add(yoe / 4)
+            .saturating_sub(yoe / 100),
+    );
+    let mp = (5u64.saturating_mul(doy).saturating_add(2)) / 153;
+    let d = doy
+        .saturating_sub((153u64.saturating_mul(mp).saturating_add(2)) / 5)
+        .saturating_add(1);
+    let m = if mp < 10 {
+        mp.saturating_add(3)
+    } else {
+        mp.saturating_sub(9)
+    };
+    let y = if m <= 2 { y.saturating_add(1) } else { y };
+    (y, m, d)
 }

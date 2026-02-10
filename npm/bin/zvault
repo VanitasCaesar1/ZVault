@@ -1,0 +1,25 @@
+#!/usr/bin/env node
+
+const { execFileSync } = require("child_process");
+const path = require("path");
+const fs = require("fs");
+
+const binDir = path.join(__dirname, "..", "bin");
+const ext = process.platform === "win32" ? ".exe" : "";
+const binary = path.join(binDir, `zvault${ext}`);
+
+if (!fs.existsSync(binary) || fs.statSync(binary).size < 1000) {
+  console.error(
+    "zvault binary not found. Run `npm install` or `npx zvault` to trigger postinstall."
+  );
+  process.exit(1);
+}
+
+try {
+  const result = execFileSync(binary, process.argv.slice(2), {
+    stdio: "inherit",
+    env: process.env,
+  });
+} catch (err) {
+  process.exit(err.status || 1);
+}

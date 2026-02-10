@@ -22,6 +22,8 @@ use vaultrs_core::seal::SealManager;
 use vaultrs_core::token::TokenStore;
 use vaultrs_core::transit::TransitEngine;
 
+use crate::config::SpringOAuthConfig;
+
 /// Shared application state passed to all HTTP handlers.
 pub struct AppState {
     /// The encryption barrier.
@@ -48,6 +50,10 @@ pub struct AppState {
     pub pki_engines: RwLock<HashMap<String, Arc<PkiEngine>>>,
     /// AppRole auth store (None if not enabled).
     pub approle_store: Option<Arc<AppRoleStore>>,
+    /// Spring OAuth configuration (None if not configured).
+    pub spring_oauth: Option<SpringOAuthConfig>,
+    /// Path to the audit log file (for reading audit entries via API).
+    pub audit_file_path: Option<String>,
 }
 
 impl std::fmt::Debug for AppState {

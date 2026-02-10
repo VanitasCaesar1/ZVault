@@ -1,0 +1,86 @@
+---
+title: Encryption
+description: Cryptographic primitives and key management in ZVault.
+sidebar:
+  order: 2
+---
+
+## Symmetric Encryption
+
+ZVault uses AES-256-GCM for all symmetric encryption. This provides both confidentiality and integrity (authenticated encryption).
+
+### Parameters
+
+| Parameter | Value |
+|-----------|-------|
+| Algorithm | AES-256-GCM |
+| Key size | 256 bits (32 bytes) |
+| Nonce size | 96 bits (12 bytes) |
+| Tag size | 128 bits (16 bytes) |
+| Nonce generation | Fresh from `OsRng` per operation |
+
+### Ciphertext Format
+
+```
+[nonce: 12 bytes][ciphertext: variable][tag: 16 bytes]
+```
+
+Encoded as base64 for storage and transport.
+
+## Key Hierarchy
+
+```
+Unseal Key (Shamir shares)
+    │
+    ▼
+Root Key (AES-256, in-memory only)
+    │
+    ├── HKDF(root, "vaultrs-kv-engine")     → KV engine key
+    ├── HKDF(root, "vaultrs-transit-engine") → Transit engine key
+    ├── HKDF(root, "vaultrs-pki-engine")     → PKI engine key
+    └── HKDF(root, "vaultrs-audit")          → Audit HMAC key
+```
+
+Each engine derives its own key from the root key using HKDF-SHA256 with a unique `info` parameter. This ensures per-engine key isolation — compromising one engine's key doesn't affect others.
+
+## Shamir's Secret Sharing
+
+The root key is split into `N` shares with a threshold of `T`:
+
+- Minimum threshold: 2
+- Maximum shares: 10
+- Any `T` shares can reconstruct the root key
+- Fewer than `T` shares reveal nothing about the key
+
+## Key Derivation
+
+### HKDF-SHA256
+
+Used for deriving per-engine keys from the root key:
+
+```
+derived_key = HKDF-Expand(root_key, info="vaultrs-<engine>", length=32)
+```
+
+### Argon2id
+
+Used for any password-based key derivation:
+
+| Parameter | Value |
+|-----------|-------|
+| Memory | 64 MB |
+| Iterations | 3 |
+| Parallelism | 4 |
+
+## Transit Encryption-as-a-Service
+
+The transit engine provides encryption without exposing keys:
+
+- Named keys with automatic versioning
+- Key rotation without re-encrypting existing data
+- Ciphertext format: `vault:v<version>:<base64>`
+- Minimum decryption version enforcement
+
+## Nonce Safety
+
+Every encryption operation generates a fresh 96-bit nonce from the OS CSPRNG (`OsRng`). Nonces are never derived from counters, timestamps, or deterministic sources. With AES-256-GCM's 96-bit nonce, the probability of collision is negligible for practical workloads.
