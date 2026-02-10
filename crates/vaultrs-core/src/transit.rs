@@ -1,4 +1,4 @@
-//! Transit secrets engine for `VaultRS`.
+//! Transit secrets engine for `ZVault`.
 //!
 //! Provides encryption-as-a-service: callers send plaintext, get back
 //! ciphertext (and vice versa), without ever seeing the encryption key.

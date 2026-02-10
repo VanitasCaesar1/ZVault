@@ -1,4 +1,4 @@
-//! Encryption barrier for `VaultRS`.
+//! Encryption barrier for `ZVault`.
 //!
 //! The barrier is the most critical architectural invariant: every byte that
 //! touches the storage backend passes through the barrier's encrypt/decrypt.

@@ -1,6 +1,6 @@
-//! `VaultRS` CLI — command-line client for the `VaultRS` secrets manager.
+//! `ZVault` CLI — command-line client for the `ZVault` secrets manager.
 //!
-//! A standalone HTTP client that communicates with the `VaultRS` server.
+//! A standalone HTTP client that communicates with the `ZVault` server.
 //! No internal crate dependencies — talks exclusively via the REST API.
 
 #![allow(clippy::print_stdout, clippy::print_stderr)]
@@ -29,12 +29,12 @@ const BG_GREEN: &str = "\x1b[42m";
 // ── ASCII banner ─────────────────────────────────────────────────────
 
 const BANNER: &str = r#"
-                 ╦  ╦┌─┐┬ ┬┬ ┌┬┐╦═╗╔═╗
-                 ╚╗╔╝├─┤│ ││  │ ╠╦╝╚═╗
-                  ╚╝ ┴ ┴└─┘┴─┘┴ ╩╚═╚═╝
+                 ╔═╗╦  ╦┌─┐┬ ┬┬ ┌┬┐
+                 ╔═╝╚╗╔╝├─┤│ ││  │
+                 ╚═╝ ╚╝ ┴ ┴└─┘┴─┘┴
 "#;
 
-const BANNER_SMALL: &str = "⟐ VaultRS";
+const BANNER_SMALL: &str = "⟐ ZVault";
 
 fn print_banner() {
     println!("{CYAN}{BOLD}{BANNER}{RESET}");
@@ -49,26 +49,26 @@ fn print_banner() {
 
 // ── CLI structure ────────────────────────────────────────────────────
 
-/// VaultRS — secrets management, done right.
+/// ZVault — secrets management, done right.
 #[derive(Parser)]
 #[command(
-    name = "vaultrs",
+    name = "zvault",
     version,
-    about = "VaultRS CLI — manage secrets, tokens, policies, and transit keys",
+    about = "ZVault CLI — manage secrets, tokens, policies, and transit keys",
     long_about = None,
     after_help = format!(
         "{DIM}Environment variables:{RESET}\n  \
          VAULT_ADDR    Server address (default: http://127.0.0.1:8200)\n  \
          VAULT_TOKEN   Authentication token\n\n\
          {DIM}Examples:{RESET}\n  \
-         vaultrs status\n  \
-         vaultrs init --shares 5 --threshold 3\n  \
-         vaultrs kv put myapp/config db_host=10.0.0.1 db_port=5432\n  \
-         vaultrs transit encrypt my-key $(echo -n 'hello' | base64)"
+         zvault status\n  \
+         zvault init --shares 5 --threshold 3\n  \
+         zvault kv put myapp/config db_host=10.0.0.1 db_port=5432\n  \
+         zvault transit encrypt my-key $(echo -n 'hello' | base64)"
     ),
 )]
 struct Cli {
-    /// VaultRS server address.
+    /// ZVault server address.
     #[arg(long, env = "VAULT_ADDR", default_value = "http://127.0.0.1:8200")]
     addr: String,
 
@@ -124,6 +124,21 @@ enum Commands {
     Transit {
         #[command(subcommand)]
         action: TransitCommands,
+    },
+    /// Database secrets engine operations.
+    Database {
+        #[command(subcommand)]
+        action: DatabaseCommands,
+    },
+    /// PKI certificate authority operations.
+    Pki {
+        #[command(subcommand)]
+        action: PkiCommands,
+    },
+    /// AppRole authentication operations.
+    Approle {
+        #[command(subcommand)]
+        action: AppRoleCommands,
     },
 }
 
@@ -225,6 +240,113 @@ enum TransitCommands {
         /// Key name.
         name: String,
     },
+}
+
+#[derive(Subcommand)]
+enum DatabaseCommands {
+    /// Configure a database connection.
+    Configure {
+        /// Connection name.
+        name: String,
+        /// Database plugin ("postgresql" or "mysql").
+        #[arg(long)]
+        plugin: String,
+        /// Connection URL.
+        #[arg(long)]
+        connection_url: String,
+    },
+    /// Create a database role.
+    CreateRole {
+        /// Role name.
+        name: String,
+        /// Database connection name.
+        #[arg(long)]
+        db_name: String,
+        /// SQL creation statement.
+        #[arg(long)]
+        creation_statement: String,
+    },
+    /// Generate dynamic credentials for a role.
+    Creds {
+        /// Role name.
+        name: String,
+    },
+    /// List all database roles.
+    ListRoles,
+    /// List all database configs.
+    ListConfigs,
+}
+
+#[derive(Subcommand)]
+enum PkiCommands {
+    /// Generate a self-signed root CA.
+    GenerateRoot {
+        /// CA common name.
+        #[arg(long)]
+        common_name: String,
+        /// Validity in hours (default: 87600 = 10 years).
+        #[arg(long, default_value = "87600")]
+        ttl_hours: u64,
+    },
+    /// Issue a certificate using a role.
+    Issue {
+        /// Role name.
+        role: String,
+        /// Certificate common name (domain).
+        #[arg(long)]
+        common_name: String,
+        /// TTL in hours.
+        #[arg(long)]
+        ttl_hours: Option<u64>,
+    },
+    /// List all PKI roles.
+    ListRoles,
+    /// List all issued certificates.
+    ListCerts,
+    /// Create a PKI role.
+    CreateRole {
+        /// Role name.
+        name: String,
+        /// Comma-separated allowed domains.
+        #[arg(long, value_delimiter = ',')]
+        allowed_domains: Vec<String>,
+        /// Allow subdomains.
+        #[arg(long, default_value = "false")]
+        allow_subdomains: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum AppRoleCommands {
+    /// Create an AppRole role.
+    CreateRole {
+        /// Role name.
+        name: String,
+        /// Comma-separated policies.
+        #[arg(long, value_delimiter = ',')]
+        policies: Vec<String>,
+    },
+    /// Get the role ID for a named role.
+    RoleId {
+        /// Role name.
+        name: String,
+    },
+    /// Generate a secret ID for a role.
+    SecretId {
+        /// Role name.
+        name: String,
+    },
+    /// Login with role_id and secret_id.
+    Login {
+        /// Role ID.
+        #[arg(long)]
+        role_id: String,
+        /// Secret ID.
+        #[arg(long)]
+        secret_id: String,
+    },
+    /// List all AppRole roles.
+    ListRoles,
 }
 
 // ── Pretty output helpers ────────────────────────────────────────────
@@ -329,7 +451,7 @@ fn print_init_response(resp: &Value) {
 
     println!();
     println!(
-        "  {DIM}Vault is initialized but {YELLOW}{BOLD}sealed{RESET}{DIM}. Use `vaultrs unseal`{RESET}"
+        "  {DIM}Vault is initialized but {YELLOW}{BOLD}sealed{RESET}{DIM}. Use `zvault unseal`{RESET}"
     );
     println!(
         "  {DIM}with the required threshold of key shares to unseal.{RESET}"
@@ -748,6 +870,9 @@ async fn run(client: Client, cmd: Commands) -> Result<()> {
         Commands::Kv { action } => cmd_kv(&client, action).await,
         Commands::Policy { action } => cmd_policy(&client, action).await,
         Commands::Transit { action } => cmd_transit(&client, action).await,
+        Commands::Database { action } => cmd_database(&client, action).await,
+        Commands::Pki { action } => cmd_pki(&client, action).await,
+        Commands::Approle { action } => cmd_approle(&client, action).await,
     }
 }
 
@@ -934,6 +1059,296 @@ async fn cmd_transit(client: &Client, action: TransitCommands) -> Result<()> {
             let resp = client.get(&format!("/v1/transit/keys/{name}")).await?;
             println!();
             print_transit_key_info(&resp);
+        }
+    }
+    Ok(())
+}
+
+// ── Database commands ────────────────────────────────────────────────
+
+async fn cmd_database(client: &Client, action: DatabaseCommands) -> Result<()> {
+    match action {
+        DatabaseCommands::Configure {
+            name,
+            plugin,
+            connection_url,
+        } => {
+            let body = serde_json::json!({
+                "plugin": plugin,
+                "connection_url": connection_url,
+            });
+            client
+                .post(&format!("/v1/database/config/{name}"), &body)
+                .await?;
+            println!();
+            success(&format!("Database connection {BOLD}{name}{RESET} configured."));
+            println!();
+        }
+        DatabaseCommands::CreateRole {
+            name,
+            db_name,
+            creation_statement,
+        } => {
+            let body = serde_json::json!({
+                "db_name": db_name,
+                "creation_statements": [creation_statement],
+            });
+            client
+                .post(&format!("/v1/database/roles/{name}"), &body)
+                .await?;
+            println!();
+            success(&format!("Database role {BOLD}{name}{RESET} created."));
+            println!();
+        }
+        DatabaseCommands::Creds { name } => {
+            let resp = client.get(&format!("/v1/database/creds/{name}")).await?;
+            println!();
+            header("🗄️", &format!("Database Credentials: {name}"));
+            if let Some(u) = resp.get("username").and_then(Value::as_str) {
+                kv_line("Username", u);
+            }
+            if let Some(p) = resp.get("password").and_then(Value::as_str) {
+                kv_line("Password", p);
+            }
+            if let Some(lease) = resp.get("lease_id").and_then(Value::as_str) {
+                kv_line("Lease ID", lease);
+            }
+            if let Some(dur) = resp.get("lease_duration").and_then(Value::as_i64) {
+                kv_line("Lease Duration", &format_duration(dur));
+            }
+            println!();
+        }
+        DatabaseCommands::ListRoles => {
+            let resp = client.get("/v1/database/roles").await?;
+            println!();
+            header("🗄️", "Database Roles");
+            if let Some(keys) = resp.get("keys").and_then(Value::as_array) {
+                if keys.is_empty() {
+                    println!("  {DIM}(no roles){RESET}");
+                } else {
+                    for k in keys {
+                        if let Some(name) = k.as_str() {
+                            println!("  {CYAN}├─{RESET} {name}");
+                        }
+                    }
+                }
+            }
+            println!();
+        }
+        DatabaseCommands::ListConfigs => {
+            let resp = client.get("/v1/database/config").await?;
+            println!();
+            header("🗄️", "Database Connections");
+            if let Some(keys) = resp.get("keys").and_then(Value::as_array) {
+                if keys.is_empty() {
+                    println!("  {DIM}(no connections){RESET}");
+                } else {
+                    for k in keys {
+                        if let Some(name) = k.as_str() {
+                            println!("  {CYAN}├─{RESET} {name}");
+                        }
+                    }
+                }
+            }
+            println!();
+        }
+    }
+    Ok(())
+}
+
+// ── PKI commands ─────────────────────────────────────────────────────
+
+async fn cmd_pki(client: &Client, action: PkiCommands) -> Result<()> {
+    match action {
+        PkiCommands::GenerateRoot {
+            common_name,
+            ttl_hours,
+        } => {
+            let body = serde_json::json!({
+                "common_name": common_name,
+                "ttl_hours": ttl_hours,
+            });
+            let resp = client.post("/v1/pki/root/generate", &body).await?;
+            println!();
+            header("🏛️", "Root CA Generated");
+            if let Some(cn) = resp.get("common_name").and_then(Value::as_str) {
+                kv_line("Common Name", cn);
+            }
+            if let Some(ttl) = resp.get("ttl_hours").and_then(Value::as_u64) {
+                kv_line("Validity", &format!("{ttl} hours"));
+            }
+            if let Some(cert) = resp.get("certificate").and_then(Value::as_str) {
+                let short = if cert.len() > 80 {
+                    format!("{}...", &cert[..80])
+                } else {
+                    cert.to_owned()
+                };
+                kv_line("Certificate", &short);
+            }
+            println!();
+        }
+        PkiCommands::Issue {
+            role,
+            common_name,
+            ttl_hours,
+        } => {
+            let mut body = serde_json::json!({ "common_name": common_name });
+            if let Some(ttl) = ttl_hours {
+                body["ttl_hours"] = serde_json::json!(ttl);
+            }
+            let resp = client
+                .post(&format!("/v1/pki/issue/{role}"), &body)
+                .await?;
+            println!();
+            header("📜", "Certificate Issued");
+            if let Some(serial) = resp.get("serial_number").and_then(Value::as_str) {
+                kv_line("Serial", serial);
+            }
+            if let Some(exp) = resp.get("expiration").and_then(Value::as_str) {
+                kv_line("Expires", exp);
+            }
+            if let Some(cert) = resp.get("certificate").and_then(Value::as_str) {
+                let short = if cert.len() > 80 {
+                    format!("{}...", &cert[..80])
+                } else {
+                    cert.to_owned()
+                };
+                kv_line("Certificate", &short);
+            }
+            if resp.get("private_key").and_then(Value::as_str).is_some() {
+                kv_line("Private Key", "(included in response)");
+            }
+            println!();
+        }
+        PkiCommands::CreateRole {
+            name,
+            allowed_domains,
+            allow_subdomains,
+        } => {
+            let body = serde_json::json!({
+                "allowed_domains": allowed_domains,
+                "allow_subdomains": allow_subdomains,
+            });
+            client
+                .post(&format!("/v1/pki/roles/{name}"), &body)
+                .await?;
+            println!();
+            success(&format!("PKI role {BOLD}{name}{RESET} created."));
+            println!();
+        }
+        PkiCommands::ListRoles => {
+            let resp = client.get("/v1/pki/roles").await?;
+            println!();
+            header("🏛️", "PKI Roles");
+            if let Some(keys) = resp.get("keys").and_then(Value::as_array) {
+                if keys.is_empty() {
+                    println!("  {DIM}(no roles){RESET}");
+                } else {
+                    for k in keys {
+                        if let Some(name) = k.as_str() {
+                            println!("  {CYAN}├─{RESET} {name}");
+                        }
+                    }
+                }
+            }
+            println!();
+        }
+        PkiCommands::ListCerts => {
+            let resp = client.get("/v1/pki/certs").await?;
+            println!();
+            header("📜", "Issued Certificates");
+            if let Some(keys) = resp.get("keys").and_then(Value::as_array) {
+                if keys.is_empty() {
+                    println!("  {DIM}(no certificates){RESET}");
+                } else {
+                    for k in keys {
+                        if let Some(serial) = k.as_str() {
+                            println!("  {CYAN}├─{RESET} {serial}");
+                        }
+                    }
+                }
+            }
+            println!();
+        }
+    }
+    Ok(())
+}
+
+// ── AppRole commands ─────────────────────────────────────────────────
+
+async fn cmd_approle(client: &Client, action: AppRoleCommands) -> Result<()> {
+    match action {
+        AppRoleCommands::CreateRole { name, policies } => {
+            let body = serde_json::json!({ "policies": policies });
+            let resp = client
+                .post(&format!("/v1/auth/approle/role/{name}"), &body)
+                .await?;
+            println!();
+            header("🤖", &format!("AppRole: {name}"));
+            if let Some(role_id) = resp.get("role_id").and_then(Value::as_str) {
+                kv_line("Role ID", role_id);
+            }
+            success("Role created.");
+            println!();
+        }
+        AppRoleCommands::RoleId { name } => {
+            let resp = client
+                .get(&format!("/v1/auth/approle/role/{name}/role-id"))
+                .await?;
+            println!();
+            header("🤖", &format!("AppRole: {name}"));
+            if let Some(role_id) = resp.get("role_id").and_then(Value::as_str) {
+                kv_line("Role ID", role_id);
+            }
+            println!();
+        }
+        AppRoleCommands::SecretId { name } => {
+            let resp = client
+                .post(
+                    &format!("/v1/auth/approle/role/{name}/secret-id"),
+                    &serde_json::json!({}),
+                )
+                .await?;
+            println!();
+            header("🤖", &format!("AppRole Secret ID: {name}"));
+            if let Some(secret_id) = resp.get("secret_id").and_then(Value::as_str) {
+                println!();
+                println!("  {DIM}Secret ID:{RESET}  {GREEN}{BOLD}{secret_id}{RESET}");
+                println!();
+                println!("  {YELLOW}⚠  Store this securely. It will NOT be shown again.{RESET}");
+            }
+            println!();
+        }
+        AppRoleCommands::Login {
+            role_id,
+            secret_id,
+        } => {
+            let body = serde_json::json!({
+                "role_id": role_id,
+                "secret_id": secret_id,
+            });
+            let resp = client
+                .post_no_auth("/v1/auth/approle/login", &body)
+                .await?;
+            println!();
+            print_token_response(&resp);
+        }
+        AppRoleCommands::ListRoles => {
+            let resp = client.get("/v1/auth/approle/role").await?;
+            println!();
+            header("🤖", "AppRole Roles");
+            if let Some(keys) = resp.get("keys").and_then(Value::as_array) {
+                if keys.is_empty() {
+                    println!("  {DIM}(no roles){RESET}");
+                } else {
+                    for k in keys {
+                        if let Some(name) = k.as_str() {
+                            println!("  {CYAN}├─{RESET} {name}");
+                        }
+                    }
+                }
+            }
+            println!();
         }
     }
     Ok(())

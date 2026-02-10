@@ -1,4 +1,4 @@
-//! Lease manager for `VaultRS`.
+//! Lease manager for `ZVault`.
 //!
 //! Every dynamically generated credential (database creds, certificates, etc.)
 //! gets a lease with a TTL. The lease manager runs a background tick that

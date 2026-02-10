@@ -1,4 +1,4 @@
-//! Token store for `VaultRS`.
+//! Token store for `ZVault`.
 //!
 //! Tokens are the primary authentication mechanism. Every API request carries
 //! a token that maps to policies. Tokens are never stored in plaintext —

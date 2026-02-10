@@ -1,4 +1,4 @@
-//! Cryptographic primitives for `VaultRS`.
+//! Cryptographic primitives for `ZVault`.
 //!
 //! Provides AES-256-GCM authenticated encryption, HKDF-SHA256 key derivation,
 //! and zeroize-on-drop key newtypes. All key material is automatically cleared

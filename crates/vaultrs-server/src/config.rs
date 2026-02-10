@@ -1,4 +1,4 @@
-//! Server configuration for `VaultRS`.
+//! Server configuration for `ZVault`.
 //!
 //! Loads configuration from environment variables with sensible defaults.
 //! All settings can be overridden via `VAULTRS_*` environment variables.

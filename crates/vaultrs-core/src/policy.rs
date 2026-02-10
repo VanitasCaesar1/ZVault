@@ -1,4 +1,4 @@
-//! Policy engine for `VaultRS`.
+//! Policy engine for `ZVault`.
 //!
 //! Policies are JSON documents that define path-based access rules. Each rule
 //! maps a path pattern to a set of capabilities (`read`, `list`, `create`,

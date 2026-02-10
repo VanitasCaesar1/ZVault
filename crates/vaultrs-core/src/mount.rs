@@ -1,4 +1,4 @@
-//! Engine mount table for `VaultRS`.
+//! Engine mount table for `ZVault`.
 //!
 //! The mount table maps path prefixes to secrets engine types. When a request
 //! arrives at `/v1/secret/data/foo`, the router strips `/v1/`, looks up

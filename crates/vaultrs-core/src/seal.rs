@@ -1,4 +1,4 @@
-//! Seal/unseal lifecycle for `VaultRS`.
+//! Seal/unseal lifecycle for `ZVault`.
 //!
 //! Implements the Shamir's Secret Sharing based initialization and unseal
 //! protocol. The flow is:

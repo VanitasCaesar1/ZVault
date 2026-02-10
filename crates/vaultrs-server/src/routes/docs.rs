@@ -1,8 +1,9 @@
-//! Built-in documentation site for `VaultRS`.
+//! Built-in documentation site for `ZVault`.
 //!
-//! Serves a multi-page documentation site at `/docs/*` with the same golden
-//! chest theme as the dashboard. Covers getting started, architecture, API
-//! reference, CLI reference, security model, and configuration.
+//! Serves a multi-page documentation site at `/docs/*` with the same warm
+//! amber Crextio-inspired glassmorphism theme as the dashboard. Covers
+//! getting started, architecture, API reference, CLI reference, security
+//! model, and configuration.
 
 use axum::response::Html;
 use axum::routing::get;
@@ -85,7 +86,7 @@ fn docs_shell(title: &str, active: &str, content: &str) -> String {
     html.push_str("<body>\n");
 
     // Top nav
-    html.push_str(r##"<header class="docs-header"><div class="docs-header-inner"><a href="/" class="docs-logo"><svg viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="6" fill="#D4A843"/><path d="M8 14l4 4 8-8" stroke="#3D2B1F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>VaultRS</a><nav class="docs-header-nav"><a href="/app">Dashboard</a><a href="/docs">Docs</a><a href="https://github.com/vaultrs/vaultrs">GitHub</a></nav></div></header>"##);
+    html.push_str(r##"<header class="docs-header"><div class="docs-header-inner"><a href="/" class="docs-logo"><svg viewBox="0 0 32 32" fill="none"><defs><linearGradient id="zg" x1="0" y1="0" x2="32" y2="32"><stop offset="0%" stop-color="#F5C842"/><stop offset="100%" stop-color="#E8A817"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#zg)"/><path d="M9 11h14l-14 10h14" stroke="#2D1F0E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>ZVault</a><nav class="docs-header-nav"><a href="/app">Dashboard</a><a href="/docs">Docs</a><a href="https://github.com/zvault/zvault">GitHub</a></nav></div></header>"##);
 
     // Sidebar
     html.push_str(r##"<div class="docs-layout"><aside class="docs-sidebar"><nav class="docs-sidebar-nav">"##);
@@ -115,68 +116,71 @@ fn docs_shell(title: &str, active: &str, content: &str) -> String {
     html
 }
 
-/// CSS for the documentation site.
+/// CSS for the documentation site — Crextio-inspired warm amber glassmorphism.
 const DOCS_CSS: &str = r##"<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>VaultRS Docs</title>
+<title>ZVault Docs</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#FDF6E3;
-  --surface:#FFFDF7;
-  --surface-warm:#FFF8E7;
-  --border:#E8D5A3;
-  --border-light:#F0E4C4;
-  --text:#3D2B1F;
-  --text-muted:#8B7355;
+  --bg:linear-gradient(145deg,#FEF3D0 0%,#FAEAB5 30%,#F5DFA0 60%,#EDD48C 100%);
+  --bg-flat:#FBF0C8;
+  --surface:rgba(255,255,253,.72);
+  --surface-warm:rgba(255,248,231,.8);
+  --glass:rgba(255,255,255,.45);
+  --glass-border:rgba(255,255,255,.6);
+  --border:rgba(212,168,67,.2);
+  --border-light:rgba(212,168,67,.12);
+  --text:#2D1F0E;
+  --text-muted:#7A6543;
   --text-light:#A69274;
-  --primary:#D4A843;
-  --primary-hover:#C49A35;
-  --primary-light:#F5E6B8;
-  --primary-glow:rgba(212,168,67,.15);
-  --sidebar-bg:#2C1E12;
+  --primary:#E8A817;
+  --primary-hover:#D49A0F;
+  --primary-light:#FFF0C2;
+  --primary-glow:rgba(232,168,23,.12);
+  --sidebar-bg:#1E1610;
   --sidebar-text:#A69274;
   --sidebar-active:#F5E6B8;
-  --sidebar-active-bg:rgba(212,168,67,.2);
-  --success:#6B8E4E;
-  --warning:#D4A843;
-  --danger:#C25B4A;
-  --accent:#B8860B;
-  --radius:12px;
-  --radius-sm:8px;
-  --shadow:0 1px 3px rgba(61,43,31,.06);
+  --sidebar-active-bg:rgba(232,168,23,.18);
+  --success:#4CAF50;
+  --warning:#F5A623;
+  --danger:#E74C3C;
+  --accent:#D4A843;
+  --radius:16px;
+  --radius-sm:10px;
+  --shadow:0 4px 16px rgba(45,31,14,.08);
   --mono:'JetBrains Mono','SF Mono',Monaco,Consolas,monospace;
   --font:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 }
-body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.7;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font);background:var(--bg);background-attachment:fixed;color:var(--text);line-height:1.7;-webkit-font-smoothing:antialiased}
 a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .docs-header{background:var(--sidebar-bg);border-bottom:1px solid rgba(245,230,184,.08);position:sticky;top:0;z-index:100}
 .docs-header-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 24px}
-.docs-logo{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:800;color:#F5E6B8;text-decoration:none}
-.docs-logo svg{width:26px;height:26px}
-.docs-header-nav{display:flex;gap:20px;font-size:14px;font-weight:600}
-.docs-header-nav a{color:#A69274;text-decoration:none;transition:color .15s}
-.docs-header-nav a:hover{color:#F5E6B8}
+.docs-logo{display:flex;align-items:center;gap:12px;font-size:18px;font-weight:800;color:#F5E6B8;text-decoration:none}
+.docs-logo svg{width:28px;height:28px}
+.docs-header-nav{display:flex;gap:8px;font-size:14px;font-weight:600}
+.docs-header-nav a{color:#A69274;text-decoration:none;transition:all .2s;padding:6px 14px;border-radius:50px}
+.docs-header-nav a:hover{color:#F5E6B8;background:rgba(255,255,255,.05)}
 .docs-layout{display:flex;max-width:1200px;margin:0 auto;min-height:calc(100vh - 56px)}
 .docs-sidebar{width:240px;padding:28px 16px;border-right:1px solid var(--border-light);position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto;flex-shrink:0}
 .docs-sidebar-nav{display:flex;flex-direction:column}
 .docs-sidebar-section{margin-bottom:24px}
-.docs-sidebar-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-light);padding:0 10px;margin-bottom:8px}
-.docs-nav-link{display:block;padding:7px 12px;border-radius:var(--radius-sm);color:var(--text-muted);font-size:14px;font-weight:500;text-decoration:none;transition:all .15s}
+.docs-sidebar-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-light);padding:0 12px;margin-bottom:8px}
+.docs-nav-link{display:block;padding:8px 14px;border-radius:var(--radius-sm);color:var(--text-muted);font-size:14px;font-weight:500;text-decoration:none;transition:all .2s}
 .docs-nav-link:hover{color:var(--text);background:var(--primary-glow);text-decoration:none}
-.docs-nav-link.active{color:var(--accent);background:var(--primary-glow);font-weight:700}
+.docs-nav-link.active{color:#B8860B;background:var(--primary-glow);font-weight:700}
 .docs-main{flex:1;padding:36px 48px;max-width:820px}
-.docs-title{font-size:32px;font-weight:800;letter-spacing:-.5px;margin-bottom:8px;color:var(--text)}
+.docs-title{font-size:34px;font-weight:800;letter-spacing:-.5px;margin-bottom:8px;color:var(--text)}
 .docs-content h2{font-size:22px;font-weight:800;margin:36px 0 12px;letter-spacing:-.3px;color:var(--text);padding-bottom:8px;border-bottom:1px solid var(--border-light)}
 .docs-content h3{font-size:17px;font-weight:700;margin:28px 0 10px;color:var(--text)}
 .docs-content p{margin-bottom:16px;color:var(--text);font-size:15px;line-height:1.75}
 .docs-content ul,.docs-content ol{margin-bottom:16px;padding-left:24px}
 .docs-content li{margin-bottom:6px;font-size:15px;line-height:1.7}
-.docs-content code{font-family:var(--mono);font-size:13px;background:var(--primary-glow);color:var(--accent);padding:2px 6px;border-radius:4px}
-.docs-content pre{background:var(--sidebar-bg);color:#E8D5A3;padding:18px 20px;border-radius:var(--radius-sm);font-family:var(--mono);font-size:13px;overflow-x:auto;line-height:1.7;margin-bottom:20px;white-space:pre;border:1px solid rgba(245,230,184,.08)}
+.docs-content code{font-family:var(--mono);font-size:13px;background:var(--primary-glow);color:#B8860B;padding:2px 7px;border-radius:6px}
+.docs-content pre{background:#1E1610;color:#E8D5A3;padding:20px 22px;border-radius:var(--radius-sm);font-family:var(--mono);font-size:13px;overflow-x:auto;line-height:1.7;margin-bottom:20px;white-space:pre;border:1px solid rgba(245,230,184,.08)}
 .docs-content pre code{background:none;color:inherit;padding:0;font-size:13px}
 .docs-content table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:14px}
 .docs-content th{text-align:left;font-weight:700;color:var(--text-muted);font-size:12px;text-transform:uppercase;letter-spacing:.5px;padding:10px 14px;border-bottom:2px solid var(--border);background:var(--surface-warm)}
@@ -184,27 +188,27 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .docs-content tr:hover{background:var(--primary-glow)}
 .docs-content blockquote{border-left:3px solid var(--primary);padding:12px 20px;margin:16px 0;background:var(--primary-glow);border-radius:0 var(--radius-sm) var(--radius-sm) 0;font-size:14px;color:var(--text-muted)}
 .docs-content .callout{padding:16px 20px;border-radius:var(--radius-sm);margin:16px 0;font-size:14px}
-.docs-content .callout-warn{background:#FFF3D0;border:1px solid #E8D5A3;color:#8B6914}
-.docs-content .callout-danger{background:#FBEAE7;border:1px solid #E8B4AB;color:#943D2E}
-.docs-content .callout-info{background:#E8EDF2;border:1px solid #C8D5E0;color:#556B82}
-.docs-content .callout-success{background:#E8F0DE;border:1px solid #C4D9B0;color:#4A6B33}
-.docs-content .endpoint{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border-light);border-radius:var(--radius-sm);margin-bottom:8px;font-family:var(--mono);font-size:13px}
-.docs-content .method{font-weight:800;padding:3px 8px;border-radius:4px;font-size:11px;letter-spacing:.5px}
-.docs-content .method-get{background:#E8F0DE;color:#4A6B33}
-.docs-content .method-post{background:#F5E6B8;color:#8B6914}
-.docs-content .method-delete{background:#FBEAE7;color:#943D2E}
-.docs-content .method-put{background:#E8EDF2;color:#556B82}
+.docs-content .callout-warn{background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.2);color:#E65100}
+.docs-content .callout-danger{background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.15);color:#C62828}
+.docs-content .callout-info{background:rgba(91,155,213,.08);border:1px solid rgba(91,155,213,.15);color:#1565C0}
+.docs-content .callout-success{background:rgba(76,175,80,.08);border:1px solid rgba(76,175,80,.15);color:#2E7D32}
+.docs-content .endpoint{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--glass);backdrop-filter:blur(8px);border:1px solid var(--glass-border);border-radius:var(--radius-sm);margin-bottom:8px;font-family:var(--mono);font-size:13px}
+.docs-content .method{font-weight:800;padding:3px 10px;border-radius:50px;font-size:11px;letter-spacing:.5px}
+.docs-content .method-get{background:rgba(76,175,80,.1);color:#2E7D32}
+.docs-content .method-post{background:rgba(232,168,23,.12);color:#B8860B}
+.docs-content .method-delete{background:rgba(231,76,60,.08);color:#C62828}
+.docs-content .method-put{background:rgba(91,155,213,.1);color:#1565C0}
 @media(max-width:900px){.docs-sidebar{display:none}.docs-main{padding:24px 16px}}
 </style></head>
 "##;
 
 /// Documentation index / introduction page.
 const DOCS_INDEX: &str = r##"
-<p>Welcome to the VaultRS documentation. VaultRS is a secrets management platform
+<p>Welcome to the ZVault documentation. ZVault is a secrets management platform
 written entirely in Rust, designed to keep your sensitive data encrypted at rest
 and tightly controlled at runtime.</p>
 
-<h2>Why VaultRS?</h2>
+<h2>Why ZVault?</h2>
 <ul>
   <li><strong>Single binary</strong> — no external databases, no Consul, no etcd. Embedded storage ships with the server.</li>
   <li><strong>Encryption barrier</strong> — every byte in storage is AES-256-GCM encrypted. The storage backend never sees plaintext.</li>
@@ -239,7 +243,7 @@ and tightly controlled at runtime.</p>
 
 /// Getting started guide.
 const GETTING_STARTED: &str = r##"
-<p>This guide walks you through building, running, and initializing VaultRS for the first time.</p>
+<p>This guide walks you through building, running, and initializing ZVault for the first time.</p>
 
 <h2>Prerequisites</h2>
 <ul>
@@ -259,7 +263,7 @@ cargo build --release --package vaultrs-cli</code></pre>
 ./target/release/vaultrs-server
 
 # RocksDB storage (production)
-VAULTRS_STORAGE=rocksdb VAULTRS_STORAGE_PATH=/var/lib/vaultrs \
+VAULTRS_STORAGE=rocksdb VAULTRS_STORAGE_PATH=/var/lib/zvault \
   ./target/release/vaultrs-server</code></pre>
 
 <p>The server starts on <code>http://127.0.0.1:8200</code> by default. Open the web UI or use the CLI.</p>
@@ -277,7 +281,7 @@ curl -X POST http://127.0.0.1:8200/v1/sys/init \
   -d '{"shares": 5, "threshold": 3}'</code></pre>
 
 <div class="callout callout-danger">
-  <strong>Save your unseal shares securely.</strong> They are shown once and never stored by VaultRS.
+  <strong>Save your unseal shares securely.</strong> They are shown once and never stored by ZVault.
   Distribute them to trusted operators. You need the threshold number to unseal.
 </div>
 
@@ -313,7 +317,7 @@ vaultrs-cli kv get secret/myapp/db</code></pre>
 
 /// Architecture documentation.
 const ARCHITECTURE: &str = r##"
-<p>VaultRS follows a layered architecture where security boundaries are enforced at each level.</p>
+<p>ZVault follows a layered architecture where security boundaries are enforced at each level.</p>
 
 <h2>The Barrier Pattern</h2>
 <p>This is the most important architectural invariant. Every byte that reaches the storage backend
@@ -529,7 +533,7 @@ Response: {"token": "hvs.xxx", "policies": ["app-readonly"], "ttl": 3600}</code>
 
 /// CLI reference documentation.
 const CLI_REFERENCE: &str = r##"
-<p>The <code>vaultrs-cli</code> is a standalone binary that communicates with the VaultRS server
+<p>The <code>vaultrs-cli</code> is a standalone binary that communicates with the ZVault server
 over HTTP. It has no internal dependencies on the server crates.</p>
 
 <h2>Global Options</h2>
@@ -623,7 +627,7 @@ over HTTP. It has no internal dependencies on the server crates.</p>
 
 /// Security model documentation.
 const SECURITY_MODEL: &str = r##"
-<p>VaultRS is a secrets management platform. Security is the product, not a feature.
+<p>ZVault is a secrets management platform. Security is the product, not a feature.
 This page documents the threat model, cryptographic choices, and hardening measures.</p>
 
 <h2>Cryptographic Primitives</h2>
@@ -705,7 +709,7 @@ Cache-Control: no-store</code></pre>
 
 /// Configuration documentation.
 const CONFIGURATION: &str = r##"
-<p>VaultRS is configured entirely through environment variables. No config files required.</p>
+<p>ZVault is configured entirely through environment variables. No config files required.</p>
 
 <h2>Environment Variables</h2>
 <table>
@@ -778,13 +782,13 @@ Use for development and testing only.</p>
 <p>Embedded LSM-tree storage. Battle-tested at Facebook, TiKV, CockroachDB scale.
 Requires <code>clang</code> and <code>libclang-dev</code> at build time.</p>
 <pre><code>VAULTRS_STORAGE=rocksdb
-VAULTRS_STORAGE_PATH=/var/lib/vaultrs/data</code></pre>
+VAULTRS_STORAGE_PATH=/var/lib/zvault/data</code></pre>
 
 <h3>redb (pure Rust alternative)</h3>
 <p>Embedded B-tree storage. Pure Rust, no C dependencies. Good for environments
 where cross-compilation matters. Enable with the <code>redb-backend</code> feature flag.</p>
 <pre><code>VAULTRS_STORAGE=redb
-VAULTRS_STORAGE_PATH=/var/lib/vaultrs/data</code></pre>
+VAULTRS_STORAGE_PATH=/var/lib/zvault/data</code></pre>
 
 <h2>Deployment Examples</h2>
 
@@ -797,31 +801,31 @@ VAULTRS_DISABLE_MLOCK=true
 VAULTRS_LOG_LEVEL=info</code></pre>
 
 <h3>Docker</h3>
-<pre><code>docker build -t vaultrs .
+<pre><code>docker build -t zvault .
 docker run -p 8200:8200 \
   -e VAULTRS_STORAGE=rocksdb \
   -e VAULTRS_STORAGE_PATH=/data \
   -e VAULTRS_DISABLE_MLOCK=true \
-  -v vaultrs-data:/data \
-  vaultrs</code></pre>
+  -v zvault-data:/data \
+  zvault</code></pre>
 
 <h3>Systemd</h3>
 <pre><code>[Unit]
-Description=VaultRS Secrets Manager
+Description=ZVault Secrets Manager
 After=network.target
 
 [Service]
 Type=simple
-User=vaultrs
-Group=vaultrs
+User=zvault
+Group=zvault
 ExecStart=/usr/local/bin/vaultrs-server
 Environment=VAULTRS_STORAGE=rocksdb
-Environment=VAULTRS_STORAGE_PATH=/var/lib/vaultrs/data
-Environment=VAULTRS_AUDIT_FILE=/var/log/vaultrs/audit.log
+Environment=VAULTRS_STORAGE_PATH=/var/lib/zvault/data
+Environment=VAULTRS_AUDIT_FILE=/var/log/zvault/audit.log
 AmbientCapabilities=CAP_IPC_LOCK
 NoNewPrivileges=true
 ProtectSystem=strict
-ReadWritePaths=/var/lib/vaultrs /var/log/vaultrs
+ReadWritePaths=/var/lib/zvault /var/log/zvault
 
 [Install]
 WantedBy=multi-user.target</code></pre>
@@ -861,7 +865,7 @@ curl http://127.0.0.1:8200/v1/secret/list/myapp/ \
 
 <h2>Transit (Encryption as a Service)</h2>
 <p>Provides encryption, decryption, signing, and verification without exposing key material.
-Applications send data to VaultRS and get encrypted/signed results back.</p>
+Applications send data to ZVault and get encrypted/signed results back.</p>
 
 <h3>Key Types</h3>
 <table>
@@ -907,7 +911,7 @@ with configurable SANs, TTL, and key usage.</p>
 
 /// Policies and auth documentation.
 const POLICIES: &str = r##"
-<p>VaultRS uses path-based policies to control access. Every token is bound to one or more
+<p>ZVault uses path-based policies to control access. Every token is bound to one or more
 policies that define what paths it can access and what operations it can perform.</p>
 
 <h2>Policy Structure</h2>
@@ -984,7 +988,7 @@ Designed for CI/CD pipelines and automated systems.</p>
 
 <h3>OIDC (planned)</h3>
 <p>Authenticate via an external OpenID Connect provider (Okta, Auth0, Keycloak, Spring).
-Maps OIDC claims to VaultRS policies.</p>
+Maps OIDC claims to ZVault policies.</p>
 
 <h3>Kubernetes (planned)</h3>
 <p>Validate Kubernetes service account JWTs. Maps service accounts and namespaces to policies.

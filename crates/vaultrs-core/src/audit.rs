@@ -1,4 +1,4 @@
-//! Audit logging system for `VaultRS`.
+//! Audit logging system for `ZVault`.
 //!
 //! Every API request that touches secrets, auth, or system config generates
 //! an audit entry BEFORE the response is sent. If all audit backends fail

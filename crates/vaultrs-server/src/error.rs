@@ -8,7 +8,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 
-use vaultrs_core::error::{BarrierError, EngineError, LeaseError, MountError, PolicyError, SealError, TokenError};
+use vaultrs_core::error::{AppRoleError, BarrierError, DatabaseError, EngineError, LeaseError, MountError, PkiError, PolicyError, SealError, TokenError};
 
 /// Application-level error returned from HTTP handlers.
 #[derive(Debug)]
@@ -168,6 +168,62 @@ impl From<LeaseError> for AppError {
                 Self::BadRequest(err.to_string())
             }
             LeaseError::Barrier(ref inner) => match inner {
+                BarrierError::Sealed => Self::Sealed,
+                BarrierError::Crypto(_) | BarrierError::Storage(_) => {
+                    Self::Internal(err.to_string())
+                }
+            },
+        }
+    }
+}
+
+impl From<DatabaseError> for AppError {
+    fn from(err: DatabaseError) -> Self {
+        match err {
+            DatabaseError::NotFound { .. } | DatabaseError::RoleNotFound { .. } => {
+                Self::NotFound(err.to_string())
+            }
+            DatabaseError::InvalidConfig { .. } => Self::BadRequest(err.to_string()),
+            DatabaseError::Internal { .. } => Self::Internal(err.to_string()),
+            DatabaseError::Barrier(ref inner) => match inner {
+                BarrierError::Sealed => Self::Sealed,
+                BarrierError::Crypto(_) | BarrierError::Storage(_) => {
+                    Self::Internal(err.to_string())
+                }
+            },
+        }
+    }
+}
+
+impl From<PkiError> for AppError {
+    fn from(err: PkiError) -> Self {
+        match err {
+            PkiError::NoRootCa => Self::NotFound(err.to_string()),
+            PkiError::RoleNotFound { .. } => Self::NotFound(err.to_string()),
+            PkiError::InvalidRequest { .. } => Self::BadRequest(err.to_string()),
+            PkiError::CertGeneration { .. } | PkiError::Internal { .. } => {
+                Self::Internal(err.to_string())
+            }
+            PkiError::Barrier(ref inner) => match inner {
+                BarrierError::Sealed => Self::Sealed,
+                BarrierError::Crypto(_) | BarrierError::Storage(_) => {
+                    Self::Internal(err.to_string())
+                }
+            },
+        }
+    }
+}
+
+impl From<AppRoleError> for AppError {
+    fn from(err: AppRoleError) -> Self {
+        match err {
+            AppRoleError::RoleNotFound { .. } => Self::NotFound(err.to_string()),
+            AppRoleError::InvalidSecretId { .. } => {
+                Self::Unauthorized(err.to_string())
+            }
+            AppRoleError::InvalidConfig { .. } => Self::BadRequest(err.to_string()),
+            AppRoleError::Internal { .. } => Self::Internal(err.to_string()),
+            AppRoleError::Barrier(ref inner) => match inner {
                 BarrierError::Sealed => Self::Sealed,
                 BarrierError::Crypto(_) | BarrierError::Storage(_) => {
                     Self::Internal(err.to_string())

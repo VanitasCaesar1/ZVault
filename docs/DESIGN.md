@@ -1,4 +1,4 @@
-# VaultRS — Complete Design Document
+# ZVault — Complete Design Document
 
 An in-house secrets management platform written in Rust. Takes the security
 architecture of HashiCorp Vault and the developer ergonomics of Infisical,
@@ -170,7 +170,7 @@ HA cluster:   Client → API → Barrier → Raft Leader → RocksDB (replicated
                          │ mTLS / HTTPS
                          ▼
 ┌──────────────────────────────────────────────────────────────┐
-│                     VaultRS Node                             │
+│                     ZVault Node                             │
 │                                                              │
 │  ┌──────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐ │
 │  │  Auth    │  │  Router   │  │  Audit    │  │  Metrics  │ │
@@ -664,15 +664,15 @@ Client requests → Load balancer → Any node
 ### 8.3 Node Configuration
 
 ```toml
-# vaultrs.toml
+# zvault.toml
 [server]
 bind_addr = "0.0.0.0:8200"
-tls_cert = "/etc/vaultrs/tls/cert.pem"
-tls_key = "/etc/vaultrs/tls/key.pem"
+tls_cert = "/etc/zvault/tls/cert.pem"
+tls_key = "/etc/zvault/tls/key.pem"
 
 [storage]
 backend = "rocksdb"           # or "redb"
-path = "/var/lib/vaultrs/data"
+path = "/var/lib/zvault/data"
 
 [cluster]
 enabled = true
@@ -691,24 +691,24 @@ prometheus_bind = "0.0.0.0:9090"
 
 ## 9. Kubernetes Operator
 
-A separate binary (`vaultrs-operator`) that runs in-cluster and syncs
-secrets from VaultRS into Kubernetes Secrets.
+A separate binary (`zvault-operator`) that runs in-cluster and syncs
+secrets from ZVault into Kubernetes Secrets.
 
 ### 9.1 Custom Resource Definitions
 
 ```yaml
-apiVersion: vaultrs.io/v1alpha1
-kind: VaultRSSecret
+apiVersion: zvault.io/v1alpha1
+kind: ZVaultSecret
 metadata:
   name: db-credentials
   namespace: production
 spec:
-  # Where to read from VaultRS
+  # Where to read from ZVault
   secretPath: "secret/data/production/db-password"
   # Or dynamic credentials
   # secretPath: "database/creds/readonly"
 
-  # How to authenticate with VaultRS
+  # How to authenticate with ZVault
   authRef:
     method: kubernetes
     role: "production-app"
@@ -732,10 +732,10 @@ Built with `kube-rs` (CNCF Sandbox project):
 
 ```
 ┌─────────────────────────────────────────┐
-│          vaultrs-operator               │
+│          zvault-operator               │
 │                                         │
 │  ┌─────────────┐  ┌─────────────────┐  │
-│  │  Controller  │  │  VaultRS Client │  │
+│  │  Controller  │  │  ZVault Client │  │
 │  │  (kube-rs)   │──│  (HTTP + auth)  │  │
 │  └──────┬──────┘  └────────┬────────┘  │
 │         │                   │           │
@@ -747,9 +747,9 @@ Built with `kube-rs` (CNCF Sandbox project):
 ```
 
 The reconciliation loop:
-1. Watch for `VaultRSSecret` CRD changes
-2. Authenticate with VaultRS using configured auth method
-3. Fetch secret from VaultRS
+1. Watch for `ZVaultSecret` CRD changes
+2. Authenticate with ZVault using configured auth method
+3. Fetch secret from ZVault
 4. Create/update target Kubernetes Secret
 5. Re-queue for refresh (based on `refreshInterval` or lease TTL)
 
@@ -758,10 +758,10 @@ The reconciliation loop:
 ## 10. CLI Client
 
 ```
-vaultrs-cli — Command-line interface for VaultRS
+zvault-cli — Command-line interface for ZVault
 
 USAGE:
-    vaultrs <COMMAND>
+    zvault <COMMAND>
 
 SYSTEM:
     init              Initialize a new vault
@@ -818,7 +818,7 @@ AUDIT:
     audit query -from=... -to=... ...    Query audit log
 
 OPERATOR:
-    server start                         Start the VaultRS server
+    server start                         Start the ZVault server
     server start -cluster ...            Start in HA cluster mode
 ```
 
@@ -872,43 +872,43 @@ Scheduler tick
 
 ```
 # Seal status
-vaultrs_sealed{node="node-1"} 0
+zvault_sealed{node="node-1"} 0
 
 # Request metrics
-vaultrs_http_requests_total{method="GET", path="/v1/secret/*", status="200"} 1523
-vaultrs_http_request_duration_seconds{method="GET", path="/v1/secret/*", quantile="0.99"} 0.003
+zvault_http_requests_total{method="GET", path="/v1/secret/*", status="200"} 1523
+zvault_http_request_duration_seconds{method="GET", path="/v1/secret/*", quantile="0.99"} 0.003
 
 # Engine metrics
-vaultrs_secrets_engine_operations_total{engine="kv", operation="read"} 892
-vaultrs_secrets_engine_operations_total{engine="database", operation="generate"} 45
-vaultrs_secrets_engine_operations_total{engine="transit", operation="encrypt"} 3201
+zvault_secrets_engine_operations_total{engine="kv", operation="read"} 892
+zvault_secrets_engine_operations_total{engine="database", operation="generate"} 45
+zvault_secrets_engine_operations_total{engine="transit", operation="encrypt"} 3201
 
 # Lease metrics
-vaultrs_leases_active{engine="database"} 12
-vaultrs_leases_expired_total{engine="database"} 340
-vaultrs_leases_revoked_total{engine="database"} 15
+zvault_leases_active{engine="database"} 12
+zvault_leases_expired_total{engine="database"} 340
+zvault_leases_revoked_total{engine="database"} 15
 
 # Raft metrics (HA mode)
-vaultrs_raft_leader{node="node-1"} 1
-vaultrs_raft_peers{node="node-1"} 3
-vaultrs_raft_commit_index{node="node-1"} 48291
-vaultrs_raft_apply_duration_seconds{quantile="0.99"} 0.001
+zvault_raft_leader{node="node-1"} 1
+zvault_raft_peers{node="node-1"} 3
+zvault_raft_commit_index{node="node-1"} 48291
+zvault_raft_apply_duration_seconds{quantile="0.99"} 0.001
 
 # Storage metrics
-vaultrs_storage_operations_total{backend="rocksdb", operation="get"} 5000
-vaultrs_storage_operations_total{backend="rocksdb", operation="put"} 1200
+zvault_storage_operations_total{backend="rocksdb", operation="get"} 5000
+zvault_storage_operations_total{backend="rocksdb", operation="put"} 1200
 
 # Audit metrics
-vaultrs_audit_entries_total 8923
-vaultrs_audit_failures_total 0
+zvault_audit_entries_total 8923
+zvault_audit_failures_total 0
 
 # Token metrics
-vaultrs_tokens_active 34
-vaultrs_tokens_expired_total 120
+zvault_tokens_active 34
+zvault_tokens_expired_total 120
 
 # Rotation metrics
-vaultrs_rotation_success_total 15
-vaultrs_rotation_failure_total 1
+zvault_rotation_success_total 15
+zvault_rotation_failure_total 1
 ```
 
 ### 12.2 Structured Logging
@@ -1012,7 +1012,7 @@ Per-token rate limiting via token bucket algorithm:
 ```
 vaultrs/
 ├── Cargo.toml                          # workspace root
-├── vaultrs.toml.example                # example server config
+├── zvault.toml.example                 # example server config
 ├── docs/
 │   └── DESIGN.md                       # ← you are here
 │
@@ -1105,8 +1105,8 @@ vaultrs/
 │   │   └── src/
 │   │       ├── main.rs
 │   │       ├── controller.rs           # reconciliation loop
-│   │       ├── crd.rs                  # VaultRSSecret CRD definition
-│   │       └── client.rs              # VaultRS API client
+│   │       ├── crd.rs                  # ZVaultSecret CRD definition
+│   │       └── client.rs              # ZVault API client
 │   │
 │   ├── vaultrs-types/                 # shared request/response types
 │   │   ├── Cargo.toml

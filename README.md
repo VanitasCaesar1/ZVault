@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/license-MIT%20%2F%20Apache--2.0-B8860B?style=flat-square" alt="License"/>
 </p>
 
-<h1 align="center">VaultRS</h1>
+<h1 align="center">ZVault</h1>
 <p align="center">
   A secrets management platform written entirely in Rust.<br/>
   Takes the security architecture of HashiCorp Vault and ships it as a single static binary.
@@ -12,9 +12,9 @@
 
 ---
 
-## What is VaultRS?
+## What is ZVault?
 
-VaultRS is an in-house secrets manager that encrypts everything at rest using AES-256-GCM, protects the root key with Shamir's Secret Sharing, and serves a full HTTP API + web dashboard — all from one binary with zero external dependencies.
+ZVault is an in-house secrets manager that encrypts everything at rest using AES-256-GCM, protects the root key with Shamir's Secret Sharing, and serves a full HTTP API + web dashboard — all from one binary with zero external dependencies.
 
 **Key properties:**
 - Every byte in storage is encrypted (barrier pattern)
@@ -22,7 +22,7 @@ VaultRS is an in-house secrets manager that encrypts everything at rest using AE
 - Shamir unseal with configurable threshold
 - Pure Rust crypto (RustCrypto ecosystem, no OpenSSL)
 - Embedded storage (RocksDB or redb)
-- Built-in web UI with golden "treasure chest" theme
+- Built-in web UI with warm amber glassmorphism theme
 
 ## Architecture
 

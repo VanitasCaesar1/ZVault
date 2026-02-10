@@ -1,4 +1,4 @@
-//! `VaultRS` server entry point.
+//! `ZVault` server entry point.
 //!
 //! Bootstraps the storage backend, barrier, seal manager, and all subsystems,
 //! then starts the Axum HTTP server with graceful shutdown. A background
@@ -18,10 +18,13 @@ use tracing::{info, warn};
 
 use vaultrs_core::audit::AuditManager;
 use vaultrs_core::audit_file::FileAuditBackend;
+use vaultrs_core::approle::AppRoleStore;
 use vaultrs_core::barrier::Barrier;
+use vaultrs_core::database::DatabaseEngine;
 use vaultrs_core::engine::KvEngine;
 use vaultrs_core::lease::LeaseManager;
 use vaultrs_core::mount::{MountEntry, MountManager};
+use vaultrs_core::pki::PkiEngine;
 use vaultrs_core::policy::PolicyStore;
 use vaultrs_core::seal::SealManager;
 use vaultrs_core::token::TokenStore;
@@ -55,7 +58,7 @@ async fn main() -> anyhow::Result<()> {
         .json()
         .init();
 
-    info!(storage = ?config.storage_backend, "VaultRS starting");
+    info!(storage = ?config.storage_backend, "ZVault starting");
 
     let (state, lease_manager) = build_app_state(&config).await?;
 
@@ -79,7 +82,7 @@ async fn main() -> anyhow::Result<()> {
         .await
         .with_context(|| format!("failed to bind to {}", config.bind_addr))?;
 
-    info!(addr = %config.bind_addr, "VaultRS server listening");
+    info!(addr = %config.bind_addr, "ZVault server listening");
 
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal(shutdown_tx))
@@ -90,7 +93,7 @@ async fn main() -> anyhow::Result<()> {
     info!("waiting for background workers to stop");
     let _ = tokio::time::timeout(Duration::from_secs(10), lease_worker_handle).await;
 
-    info!("VaultRS server stopped");
+    info!("ZVault server stopped");
     Ok(())
 }
 
@@ -191,6 +194,52 @@ async fn build_app_state(
         info!("transit engine mounted at transit/");
     }
 
+    // Pre-register the default `database/` engine.
+    let mut database_engines = HashMap::new();
+    let db_engine = Arc::new(DatabaseEngine::new(
+        Arc::clone(&barrier),
+        "db/database/".to_owned(),
+    ));
+    database_engines.insert("database/".to_owned(), db_engine);
+
+    let _ = mount_manager
+        .mount(MountEntry {
+            path: "database/".to_owned(),
+            engine_type: "database".to_owned(),
+            description: "Database dynamic credentials engine".to_owned(),
+            config: serde_json::Value::Null,
+        })
+        .await;
+
+    info!("database engine mounted at database/");
+
+    // Pre-register the default `pki/` engine.
+    let mut pki_engines = HashMap::new();
+    let pki_engine = Arc::new(PkiEngine::new(
+        Arc::clone(&barrier),
+        "pki/pki/".to_owned(),
+    ));
+    pki_engines.insert("pki/".to_owned(), pki_engine);
+
+    let _ = mount_manager
+        .mount(MountEntry {
+            path: "pki/".to_owned(),
+            engine_type: "pki".to_owned(),
+            description: "PKI certificate authority engine".to_owned(),
+            config: serde_json::Value::Null,
+        })
+        .await;
+
+    info!("PKI engine mounted at pki/");
+
+    // Initialize AppRole auth store.
+    let approle_store = Arc::new(AppRoleStore::new(
+        Arc::clone(&barrier),
+        "sys/approle/".to_owned(),
+    ));
+
+    info!("AppRole auth method enabled");
+
     let state = Arc::new(AppState {
         barrier,
         seal_manager,
@@ -201,6 +250,9 @@ async fn build_app_state(
         lease_manager: Arc::clone(&lease_manager),
         kv_engines: RwLock::new(kv_engines),
         transit_engines: RwLock::new(transit_engines),
+        database_engines: RwLock::new(database_engines),
+        pki_engines: RwLock::new(pki_engines),
+        approle_store: Some(approle_store),
     });
 
     Ok((state, lease_manager))
@@ -211,11 +263,14 @@ fn build_router(state: Arc<AppState>) -> Router {
     // Authenticated routes go through the auth middleware layer.
     let authenticated_routes = Router::new()
         .nest("/v1/auth/token", routes::auth::router())
+        .nest("/v1/auth/approle", routes::approle::router())
         .nest("/v1/sys/policies", routes::policy::router())
         .nest("/v1/sys/mounts", routes::mounts::router())
         .nest("/v1/sys/leases", routes::leases::router())
         .nest("/v1/secret", routes::secrets::router())
         .nest("/v1/transit", routes::transit::router())
+        .nest("/v1/database", routes::database::router())
+        .nest("/v1/pki", routes::pki::router())
         .route_layer(axum_mw::from_fn_with_state(
             Arc::clone(&state),
             auth_middleware,
@@ -223,6 +278,7 @@ fn build_router(state: Arc<AppState>) -> Router {
 
     Router::new()
         .nest("/v1/sys", routes::sys::router())
+        .nest("/v1/auth/approle", routes::approle::login_router())
         .merge(authenticated_routes)
         .merge(routes::ui::router())
         .merge(routes::docs::router())

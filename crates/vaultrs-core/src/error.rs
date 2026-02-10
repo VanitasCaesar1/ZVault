@@ -217,3 +217,79 @@ pub enum LeaseError {
     #[error("lease barrier error: {0}")]
     Barrier(#[from] BarrierError),
 }
+
+/// Errors from the database secrets engine.
+#[derive(Debug, thiserror::Error)]
+pub enum DatabaseError {
+    /// Database connection config not found.
+    #[error("database config not found: {name}")]
+    NotFound { name: String },
+
+    /// Database role not found.
+    #[error("database role not found: {name}")]
+    RoleNotFound { name: String },
+
+    /// Invalid configuration parameters.
+    #[error("invalid database config: {reason}")]
+    InvalidConfig { reason: String },
+
+    /// Internal engine error.
+    #[error("database engine error: {reason}")]
+    Internal { reason: String },
+
+    /// The barrier returned an error.
+    #[error("database barrier error: {0}")]
+    Barrier(#[from] BarrierError),
+}
+
+/// Errors from the PKI secrets engine.
+#[derive(Debug, thiserror::Error)]
+pub enum PkiError {
+    /// No root CA has been generated yet.
+    #[error("no root CA configured — generate one first")]
+    NoRootCa,
+
+    /// PKI role not found.
+    #[error("PKI role not found: {name}")]
+    RoleNotFound { name: String },
+
+    /// Invalid configuration or request.
+    #[error("invalid PKI request: {reason}")]
+    InvalidRequest { reason: String },
+
+    /// Certificate generation failed.
+    #[error("certificate generation failed: {reason}")]
+    CertGeneration { reason: String },
+
+    /// Internal engine error.
+    #[error("PKI engine error: {reason}")]
+    Internal { reason: String },
+
+    /// The barrier returned an error.
+    #[error("PKI barrier error: {0}")]
+    Barrier(#[from] BarrierError),
+}
+
+/// Errors from the AppRole auth method.
+#[derive(Debug, thiserror::Error)]
+pub enum AppRoleError {
+    /// AppRole role not found.
+    #[error("approle role not found: {name}")]
+    RoleNotFound { name: String },
+
+    /// Invalid secret ID.
+    #[error("invalid secret ID for role '{role_name}'")]
+    InvalidSecretId { role_name: String },
+
+    /// Invalid configuration.
+    #[error("invalid approle config: {reason}")]
+    InvalidConfig { reason: String },
+
+    /// Internal error.
+    #[error("approle error: {reason}")]
+    Internal { reason: String },
+
+    /// The barrier returned an error.
+    #[error("approle barrier error: {0}")]
+    Barrier(#[from] BarrierError),
+}

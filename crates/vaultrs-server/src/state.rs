@@ -1,4 +1,4 @@
-//! Shared application state for `VaultRS` server.
+//! Shared application state for `ZVault` server.
 //!
 //! A single [`AppState`] is constructed at startup and shared across all
 //! Axum handlers via `Arc`. It holds references to the barrier, seal manager,
@@ -9,11 +9,14 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
+use vaultrs_core::approle::AppRoleStore;
 use vaultrs_core::audit::AuditManager;
 use vaultrs_core::barrier::Barrier;
+use vaultrs_core::database::DatabaseEngine;
 use vaultrs_core::engine::KvEngine;
 use vaultrs_core::lease::LeaseManager;
 use vaultrs_core::mount::MountManager;
+use vaultrs_core::pki::PkiEngine;
 use vaultrs_core::policy::PolicyStore;
 use vaultrs_core::seal::SealManager;
 use vaultrs_core::token::TokenStore;
@@ -39,6 +42,12 @@ pub struct AppState {
     pub kv_engines: RwLock<HashMap<String, Arc<KvEngine>>>,
     /// Registered transit engines keyed by mount path.
     pub transit_engines: RwLock<HashMap<String, Arc<TransitEngine>>>,
+    /// Registered database engines keyed by mount path.
+    pub database_engines: RwLock<HashMap<String, Arc<DatabaseEngine>>>,
+    /// Registered PKI engines keyed by mount path.
+    pub pki_engines: RwLock<HashMap<String, Arc<PkiEngine>>>,
+    /// AppRole auth store (None if not enabled).
+    pub approle_store: Option<Arc<AppRoleStore>>,
 }
 
 impl std::fmt::Debug for AppState {

@@ -1,4 +1,4 @@
-//! Authentication middleware for `VaultRS`.
+//! Authentication middleware for `ZVault`.
 //!
 //! Extracts the `X-Vault-Token` header, validates it against the token store,
 //! and injects the token entry into the request extensions for downstream

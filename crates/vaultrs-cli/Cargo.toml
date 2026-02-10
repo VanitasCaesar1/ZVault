@@ -3,10 +3,10 @@ name = "vaultrs-cli"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "VaultRS CLI — command-line client for the VaultRS secrets manager"
+description = "ZVault CLI — command-line client for the ZVault secrets manager"
 
 [[bin]]
-name = "vaultrs"
+name = "zvault"
 path = "src/main.rs"
 
 [lints]

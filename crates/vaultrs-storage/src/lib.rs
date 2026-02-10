@@ -1,4 +1,4 @@
-//! Storage backend abstraction for `VaultRS`.
+//! Storage backend abstraction for `ZVault`.
 //!
 //! This crate defines the [`StorageBackend`] trait — a pure key-value storage
 //! interface that knows nothing about secrets, encryption, or engines. The

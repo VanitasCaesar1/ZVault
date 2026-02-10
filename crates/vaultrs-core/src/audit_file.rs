@@ -1,4 +1,4 @@
-//! File-based audit backend for `VaultRS`.
+//! File-based audit backend for `ZVault`.
 //!
 //! Appends JSON-lines audit entries to a file. Each line is a complete
 //! JSON object representing one [`AuditEntry`]. The file is opened in
