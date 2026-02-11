@@ -1,51 +1,4 @@
 ---
-// Quick wins — the headline differentiators shown as cards
-const highlights = [
-  {
-    label: 'AI Mode (MCP Server)',
-    zvault: true,
-    others: 'Nobody else',
-    icon: '⚡',
-    desc: 'Native IDE integration for Cursor, Kiro, Continue. AI sees secret names, never values.',
-  },
-  {
-    label: 'Setup Time',
-    zvault: '2 min',
-    others: 'Hours → Days',
-    icon: '⏱️',
-    desc: 'One curl command. Import your .env. Done.',
-  },
-  {
-    label: 'License',
-    zvault: 'MIT',
-    others: 'BSL / Proprietary',
-    icon: '📜',
-    desc: 'Truly open source. No BSL restrictions, no vendor lock-in.',
-  },
-  {
-    label: 'Dependencies',
-    zvault: 'None',
-    others: 'Node + DB + Redis',
-    icon: '📦',
-    desc: 'Single Rust binary. No Docker, no database, no runtime deps.',
-  },
-  {
-    label: 'Local-First',
-    zvault: true,
-    others: 'Cloud required',
-    icon: '💻',
-    desc: 'Secrets never leave your machine. No cloud account needed.',
-  },
-  {
-    label: 'Starting Price',
-    zvault: '$0 (free tier)',
-    others: '$7-18/user/mo',
-    icon: '💰',
-    desc: 'Full vault free forever. AI Mode from $8/dev/mo.',
-  },
-];
-
-// Detailed comparison rows grouped by category
 interface Row {
   feature: string;
   zvault: boolean | string;
@@ -61,6 +14,16 @@ interface Category {
 
 const categories: Category[] = [
   {
+    name: 'Pricing',
+    rows: [
+      { feature: 'License', zvault: 'MIT', hashicorp: 'BSL 1.1', infisical: 'MIT Expat', doppler: 'Proprietary' },
+      { feature: 'Free tier', zvault: true, hashicorp: false, infisical: true, doppler: true },
+      { feature: 'Starting price', zvault: '$8/dev/mo', hashicorp: '$1.58/hr', infisical: '$9/user/mo', doppler: '$7/user/mo' },
+      { feature: 'Self-host free', zvault: true, hashicorp: 'BSL limits', infisical: true, doppler: false },
+      { feature: 'Truly open source', zvault: true, hashicorp: false, infisical: true, doppler: false },
+    ],
+  },
+  {
     name: 'AI & Developer Experience',
     rows: [
       { feature: 'AI Mode (MCP server)', zvault: true, hashicorp: false, infisical: false, doppler: false },
@@ -68,7 +31,7 @@ const categories: Category[] = [
       { feature: 'IDE setup (Cursor, Kiro, Continue)', zvault: '1 cmd', hashicorp: false, infisical: false, doppler: false },
       { feature: 'llms.txt generation', zvault: true, hashicorp: false, infisical: false, doppler: false },
       { feature: '.env import → encrypted vault', zvault: true, hashicorp: false, infisical: true, doppler: true },
-      { feature: 'zvault run (inject at runtime)', zvault: true, hashicorp: false, infisical: true, doppler: true },
+      { feature: 'Inject secrets at runtime', zvault: true, hashicorp: false, infisical: true, doppler: true },
       { feature: 'Setup time', zvault: '2 min', hashicorp: 'Hours', infisical: '~15 min', doppler: '~5 min' },
       { feature: '.env.example AI generation', zvault: true, hashicorp: false, infisical: false, doppler: false },
       { feature: 'Secret search from IDE', zvault: true, hashicorp: false, infisical: false, doppler: false },
@@ -78,7 +41,7 @@ const categories: Category[] = [
     name: 'Security & Encryption',
     rows: [
       { feature: 'Encryption at rest', zvault: 'AES-256-GCM', hashicorp: 'AES-256-GCM', infisical: 'AES-256-GCM', doppler: 'AES-256' },
-      { feature: 'Shamir\'s Secret Sharing', zvault: true, hashicorp: true, infisical: false, doppler: false },
+      { feature: "Shamir's Secret Sharing", zvault: true, hashicorp: true, infisical: false, doppler: false },
       { feature: 'Key zeroization (memory wipe)', zvault: true, hashicorp: false, infisical: false, doppler: 'N/A' },
       { feature: 'Constant-time token comparison', zvault: true, hashicorp: true, infisical: false, doppler: 'N/A' },
       { feature: 'Core dump prevention', zvault: true, hashicorp: false, infisical: false, doppler: 'N/A' },
@@ -111,114 +74,96 @@ const categories: Category[] = [
       { feature: 'K8s operator', zvault: 'Planned', hashicorp: true, infisical: true, doppler: true },
     ],
   },
-  {
-    name: 'Pricing & Licensing',
-    rows: [
-      { feature: 'License', zvault: 'MIT', hashicorp: 'BSL 1.1', infisical: 'MIT Expat', doppler: 'Proprietary' },
-      { feature: 'Free tier', zvault: true, hashicorp: false, infisical: true, doppler: true },
-      { feature: 'Starting price', zvault: '$8/dev/mo', hashicorp: '$1.58/hr', infisical: '$9/user/mo', doppler: '$7/user/mo' },
-      { feature: 'Self-host free', zvault: true, hashicorp: 'BSL limits', infisical: true, doppler: false },
-      { feature: 'Truly open source', zvault: true, hashicorp: false, infisical: true, doppler: false },
-    ],
-  },
 ];
 
-function renderCell(value: boolean | string, isZvault: boolean = false) {
-  if (value === true) return { text: '✓', cls: isZvault ? 'text-accent font-bold' : 'text-green font-semibold' };
-  if (value === false) return { text: '✗', cls: 'text-dim/40' };
-  if (value === 'N/A') return { text: '—', cls: 'text-dim/30' };
-  if (value === 'Planned') return { text: value, cls: 'text-purple text-[11px] font-medium' };
-  return { text: String(value), cls: isZvault ? 'text-accent font-medium text-[11px]' : 'text-muted text-[11px]' };
+const totalFeatures = categories.reduce((s, c) => s + c.rows.length, 0);
+
+// Helper to render cell HTML
+function cellHtml(value: boolean | string, isZvault: boolean): string {
+  if (value === true) {
+    const bg = isZvault ? 'background:rgba(34,211,238,0.12)' : 'background:rgba(161,161,170,0.1)';
+    const color = isZvault ? '#22d3ee' : '#a1a1aa';
+    return `<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;${bg}"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="${color}" stroke-width="2.5"><path d="M3 8l3.5 3.5L13 5"/></svg></span>`;
+  }
+  if (value === false) {
+    return `<span style="color:rgba(113,113,122,0.3)">—</span>`;
+  }
+  if (value === 'N/A') {
+    return `<span style="color:rgba(113,113,122,0.3)">N/A</span>`;
+  }
+  if (value === 'Planned') {
+    return `<span style="color:#a78bfa;font-size:11px;font-weight:500">Planned</span>`;
+  }
+  const color = isZvault ? '#22d3ee' : '#a1a1aa';
+  const weight = isZvault ? '600' : '400';
+  return `<span style="color:${color};font-weight:${weight};font-size:12px">${value}</span>`;
 }
 ---
 
 <section class="py-24 relative overflow-hidden" id="comparison">
-  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-accent/[0.02] rounded-full blur-[120px] pointer-events-none"></div>
-
   <div class="container relative">
-    <div class="text-center mb-14">
+    <div class="text-center mb-6">
       <div class="inline-flex items-center gap-2 text-xs font-semibold text-accent uppercase tracking-wider mb-4 px-3 py-1.5 rounded-full border border-accent/20 bg-accent/5">
-        Why ZVault
+        Compare
       </div>
       <h2 class="text-3xl md:text-5xl font-bold tracking-tight mb-4">How ZVault stacks up</h2>
-      <p class="text-muted text-lg max-w-xl mx-auto">
-        The only secrets manager built for the AI coding era.
+      <p class="text-muted text-base max-w-lg mx-auto">
+        The only secrets manager built for the AI coding era. Compare across {totalFeatures}+ features.
       </p>
     </div>
 
-    <!-- Highlight cards — the quick visual differentiators -->
-    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-4xl mx-auto mb-16">
-      {highlights.map((h) => (
-        <div class="bg-bg-card border border-border rounded-xl p-4 hover:border-accent/20 transition-colors">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="text-base">{h.icon}</span>
-            <span class="text-xs font-semibold text-white">{h.label}</span>
-          </div>
-          <div class="flex items-center gap-3 mb-2">
-            <div class="flex items-center gap-1.5">
-              <span class="text-[10px] text-dim uppercase tracking-wider">ZVault</span>
-              <span class="text-xs font-bold text-accent">{typeof h.zvault === 'boolean' ? '✓' : h.zvault}</span>
-            </div>
-            <div class="w-px h-3 bg-border"></div>
-            <div class="flex items-center gap-1.5">
-              <span class="text-[10px] text-dim uppercase tracking-wider">Others</span>
-              <span class="text-xs text-dim">{h.others}</span>
-            </div>
-          </div>
-          <p class="text-[11px] text-dim leading-relaxed">{h.desc}</p>
-        </div>
-      ))}
-    </div>
+    <p class="text-dim text-xs text-center mb-8 sm:hidden">← Scroll horizontally →</p>
 
-    <!-- Detailed comparison table -->
-    <div class="max-w-4xl mx-auto">
-      <h3 class="text-lg font-bold text-center mb-2">Detailed comparison</h3>
-      <p class="text-dim text-xs text-center mb-6">Across {categories.reduce((sum, c) => sum + c.rows.length, 0)}+ features</p>
-
-      <p class="text-dim text-xs text-center mb-4 sm:hidden">← Scroll horizontally →</p>
-
-      <div class="overflow-x-auto rounded-xl border border-border bg-bg-card/30">
-        <table class="w-full text-[12px] min-w-[600px]">
-          <thead class="sticky top-0 z-10">
-            <tr class="border-b border-border bg-bg-card/95 backdrop-blur-sm">
-              <th class="text-left px-4 py-3 text-[10px] text-dim uppercase tracking-wider font-semibold w-[200px]">Feature</th>
-              <th class="px-3 py-3 text-center w-[90px]">
-                <span class="text-accent font-bold text-[11px]">ZVault</span>
+    <div class="comp-wrapper">
+      <div class="comp-scroll">
+        <table class="comp-table">
+          <thead>
+            <tr>
+              <th class="col-feature"></th>
+              <th class="col-brand col-zv">
+                <div class="brand-cell">
+                  <div class="brand-icon zv-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#22d3ee" stroke-width="2" stroke-linejoin="round"/><path d="M2 17l10 5 10-5" stroke="#22d3ee" stroke-width="2" stroke-linejoin="round"/><path d="M2 12l10 5 10-5" stroke="#22d3ee" stroke-width="2" stroke-linejoin="round"/></svg>
+                  </div>
+                  <span class="bname zv-name">ZVault</span>
+                  <a href="https://docs.zvault.cloud/getting-started/installation" class="zv-btn">Get Started</a>
+                </div>
               </th>
-              <th class="px-3 py-3 text-center w-[90px]">
-                <span class="text-muted font-semibold text-[11px]">HashiCorp</span>
+              <th class="col-brand">
+                <div class="brand-cell">
+                  <div class="brand-icon ot-icon"><span style="font-size:16px">🔒</span></div>
+                  <span class="bname">HashiCorp</span>
+                </div>
               </th>
-              <th class="px-3 py-3 text-center w-[90px]">
-                <span class="text-muted font-semibold text-[11px]">Infisical</span>
+              <th class="col-brand">
+                <div class="brand-cell">
+                  <div class="brand-icon ot-icon"><span style="font-size:16px">🔐</span></div>
+                  <span class="bname">Infisical</span>
+                </div>
               </th>
-              <th class="px-3 py-3 text-center w-[90px]">
-                <span class="text-muted font-semibold text-[11px]">Doppler</span>
+              <th class="col-brand">
+                <div class="brand-cell">
+                  <div class="brand-icon ot-icon"><span style="font-size:16px">🔑</span></div>
+                  <span class="bname">Doppler</span>
+                </div>
               </th>
             </tr>
           </thead>
           <tbody>
             {categories.map((cat) => (
               <>
-                <tr class="bg-bg/60">
-                  <td colspan="5" class="px-4 py-2 border-t border-border">
-                    <span class="text-[10px] font-bold text-white uppercase tracking-wider">{cat.name}</span>
-                  </td>
+                <tr class="cat-row">
+                  <td colspan="5" class="cat-cell">{cat.name}</td>
                 </tr>
-                {cat.rows.map((row) => {
-                  const zv = renderCell(row.zvault, true);
-                  const hc = renderCell(row.hashicorp);
-                  const inf = renderCell(row.infisical);
-                  const dop = renderCell(row.doppler);
-                  return (
-                    <tr class="border-t border-border/20 hover:bg-accent/[0.02] transition-colors">
-                      <td class="px-4 py-2 text-muted">{row.feature}</td>
-                      <td class={`px-3 py-2 text-center bg-accent/[0.02] ${zv.cls}`}>{zv.text}</td>
-                      <td class={`px-3 py-2 text-center ${hc.cls}`}>{hc.text}</td>
-                      <td class={`px-3 py-2 text-center ${inf.cls}`}>{inf.text}</td>
-                      <td class={`px-3 py-2 text-center ${dop.cls}`}>{dop.text}</td>
-                    </tr>
-                  );
-                })}
+                {cat.rows.map((row) => (
+                  <tr class="feat-row">
+                    <td class="feat-name">{row.feature}</td>
+                    <td class="feat-val zv-col" set:html={cellHtml(row.zvault, true)} />
+                    <td class="feat-val" set:html={cellHtml(row.hashicorp, false)} />
+                    <td class="feat-val" set:html={cellHtml(row.infisical, false)} />
+                    <td class="feat-val" set:html={cellHtml(row.doppler, false)} />
+                  </tr>
+                ))}
               </>
             ))}
           </tbody>
@@ -227,3 +172,81 @@ function renderCell(value: boolean | string, isZvault: boolean = false) {
     </div>
   </div>
 </section>
+
+<style>
+  .comp-wrapper {
+    max-width: 960px;
+    margin: 0 auto;
+    border-radius: 16px;
+    border: 1px solid #27272a;
+    background: #111113;
+    overflow: hidden;
+  }
+  .comp-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .comp-table {
+    width: 100%;
+    min-width: 700px;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead tr { border-bottom: 1px solid #27272a; }
+  .col-feature { width: 220px; padding: 20px 20px 16px; }
+  .col-brand {
+    width: calc((100% - 220px) / 4);
+    padding: 20px 12px 16px;
+    text-align: center;
+    vertical-align: bottom;
+  }
+  .col-zv { background: rgba(34,211,238,0.03); }
+
+  .brand-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .brand-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .zv-icon { background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.2); }
+  .ot-icon { background: rgba(255,255,255,0.05); border: 1px solid #27272a; }
+  .bname { font-size: 13px; font-weight: 600; color: #a1a1aa; }
+  .zv-name { color: #22d3ee; }
+  .zv-btn {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 14px;
+    border-radius: 999px;
+    text-decoration: none;
+    margin-top: 2px;
+    background: #22d3ee;
+    color: #0a0a0b;
+    transition: opacity 0.2s;
+  }
+  .zv-btn:hover { opacity: 0.9; }
+
+  .cat-row { background: rgba(255,255,255,0.02); }
+  .cat-cell {
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fafafa;
+    border-top: 1px solid #27272a;
+  }
+
+  .feat-row { border-top: 1px solid rgba(39,39,42,0.5); }
+  .feat-row:hover { background: rgba(34,211,238,0.02); }
+  .feat-name { padding: 10px 20px; color: #a1a1aa; }
+  .feat-val { padding: 10px 12px; text-align: center; }
+  .zv-col { background: rgba(34,211,238,0.03); }
+</style>
