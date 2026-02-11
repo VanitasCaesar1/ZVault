@@ -1,64 +1,89 @@
 ---
 ---
 
-<nav id="nav" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b border-transparent" data-nav>
-  <div class="max-w-content mx-auto px-6 flex items-center justify-between h-16">
-    <a href="/" class="flex items-center gap-2 font-bold text-lg text-white hover:no-underline">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="text-accent">
-        <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-        <path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-        <path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-      </svg>
+<nav id="nav" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300" data-nav>
+  <!-- Glass background (always visible, opacity changes on scroll) -->
+  <div id="nav-bg" class="absolute inset-0 bg-bg/60 backdrop-blur-xl border-b border-border/50 opacity-0 transition-opacity duration-300"></div>
+
+  <div class="relative max-w-[1100px] mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
+    <!-- Logo -->
+    <a href="/" class="flex items-center gap-2 font-bold text-lg text-white hover:no-underline group">
+      <div class="w-8 h-8 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center group-hover:bg-accent/15 transition-colors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" class="text-accent">
+          <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        </svg>
+      </div>
       <span class="text-accent">ZVault</span>
+      <span class="hidden sm:inline-flex text-[9px] font-semibold text-accent/60 bg-accent/5 border border-accent/10 px-1.5 py-0.5 rounded-full uppercase tracking-wider ml-1">v0.1</span>
     </a>
 
     <!-- Desktop links -->
-    <div class="hidden md:flex items-center gap-8">
-      <a href="/#features" class="text-sm font-medium text-muted hover:text-white transition-colors">Features</a>
-      <a href="/#pricing" class="text-sm font-medium text-muted hover:text-white transition-colors">Pricing</a>
-      <a href="https://docs.zvault.cloud" class="text-sm font-medium text-muted hover:text-white transition-colors">Docs</a>
-      <a href="/blog" class="text-sm font-medium text-muted hover:text-white transition-colors">Blog</a>
-      <a href="/changelog" class="text-sm font-medium text-muted hover:text-white transition-colors">Changelog</a>
-      <a href="https://github.com/ArcadeLabsInc/zvault" class="text-sm font-medium text-muted hover:text-white transition-colors">GitHub</a>
-      <a href="/dashboard" class="text-sm font-semibold text-bg bg-accent hover:bg-accent/90 px-4 py-2 rounded-lg transition-colors">Dashboard</a>
+    <div class="hidden lg:flex items-center gap-1">
+      <a href="/#features" class="text-[13px] font-medium text-muted hover:text-white px-3 py-2 rounded-lg hover:bg-white/5 transition-all">Features</a>
+      <a href="/#pricing" class="text-[13px] font-medium text-muted hover:text-white px-3 py-2 rounded-lg hover:bg-white/5 transition-all">Pricing</a>
+      <a href="https://docs.zvault.cloud" class="text-[13px] font-medium text-muted hover:text-white px-3 py-2 rounded-lg hover:bg-white/5 transition-all">Docs</a>
+      <a href="/blog" class="text-[13px] font-medium text-muted hover:text-white px-3 py-2 rounded-lg hover:bg-white/5 transition-all">Blog</a>
+      <a href="/changelog" class="text-[13px] font-medium text-muted hover:text-white px-3 py-2 rounded-lg hover:bg-white/5 transition-all">Changelog</a>
+
+      <div class="w-px h-5 bg-border mx-2"></div>
+
+      <a href="https://github.com/ArcadeLabsInc/zvault" class="text-muted hover:text-white p-2 rounded-lg hover:bg-white/5 transition-all" aria-label="GitHub">
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      </a>
+
+      <a href="/dashboard" class="text-[13px] font-semibold text-bg bg-accent hover:bg-accent/90 px-4 py-2 rounded-lg transition-all hover:shadow-[0_0_20px_rgba(34,211,238,0.15)] ml-1">
+        Dashboard
+      </a>
     </div>
 
     <!-- Mobile menu button -->
-    <button id="mobile-menu-btn" class="md:hidden text-muted hover:text-white p-2" aria-label="Toggle menu">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="3" y1="6" x2="21" y2="6"/>
-        <line x1="3" y1="12" x2="21" y2="12"/>
-        <line x1="3" y1="18" x2="21" y2="18"/>
+    <button id="mobile-menu-btn" class="lg:hidden text-muted hover:text-white p-2 rounded-lg hover:bg-white/5 transition-all" aria-label="Toggle menu">
+      <svg id="menu-icon-open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="4" y1="6" x2="20" y2="6"/>
+        <line x1="4" y1="12" x2="20" y2="12"/>
+        <line x1="4" y1="18" x2="20" y2="18"/>
+      </svg>
+      <svg id="menu-icon-close" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="hidden">
+        <line x1="18" y1="6" x2="6" y2="18"/>
+        <line x1="6" y1="6" x2="18" y2="18"/>
       </svg>
     </button>
   </div>
 
   <!-- Mobile menu -->
-  <div id="mobile-menu" class="hidden md:hidden border-t border-border px-6 py-4 space-y-3 bg-bg/95 backdrop-blur-xl">
-    <a href="/#features" class="block text-sm text-muted hover:text-white">Features</a>
-    <a href="/#pricing" class="block text-sm text-muted hover:text-white">Pricing</a>
-    <a href="https://docs.zvault.cloud" class="block text-sm text-muted hover:text-white">Docs</a>
-    <a href="/blog" class="block text-sm text-muted hover:text-white">Blog</a>
-    <a href="/changelog" class="block text-sm text-muted hover:text-white">Changelog</a>
-    <a href="https://github.com/ArcadeLabsInc/zvault" class="block text-sm text-muted hover:text-white">GitHub</a>
-    <a href="/dashboard" class="block text-sm font-semibold text-accent">Dashboard →</a>
+  <div id="mobile-menu" class="hidden lg:hidden relative">
+    <div class="bg-bg/95 backdrop-blur-xl border-t border-border/50 px-4 sm:px-6 py-4 space-y-1">
+      <a href="/#features" class="block text-sm text-muted hover:text-white px-3 py-2.5 rounded-lg hover:bg-white/5 transition-all">Features</a>
+      <a href="/#pricing" class="block text-sm text-muted hover:text-white px-3 py-2.5 rounded-lg hover:bg-white/5 transition-all">Pricing</a>
+      <a href="https://docs.zvault.cloud" class="block text-sm text-muted hover:text-white px-3 py-2.5 rounded-lg hover:bg-white/5 transition-all">Docs</a>
+      <a href="/blog" class="block text-sm text-muted hover:text-white px-3 py-2.5 rounded-lg hover:bg-white/5 transition-all">Blog</a>
+      <a href="/changelog" class="block text-sm text-muted hover:text-white px-3 py-2.5 rounded-lg hover:bg-white/5 transition-all">Changelog</a>
+      <a href="https://github.com/ArcadeLabsInc/zvault" class="block text-sm text-muted hover:text-white px-3 py-2.5 rounded-lg hover:bg-white/5 transition-all">GitHub</a>
+      <div class="pt-2">
+        <a href="/dashboard" class="block text-center text-sm font-semibold text-bg bg-accent hover:bg-accent/90 px-4 py-2.5 rounded-lg transition-all">
+          Dashboard
+        </a>
+      </div>
+    </div>
   </div>
 </nav>
 
 <script>
-  const nav = document.querySelector('[data-nav]');
+  const navBg = document.getElementById('nav-bg');
   const btn = document.getElementById('mobile-menu-btn');
   const menu = document.getElementById('mobile-menu');
+  const iconOpen = document.getElementById('menu-icon-open');
+  const iconClose = document.getElementById('menu-icon-close');
+  let menuOpen = false;
 
-  // Solid background on scroll
   function updateNav() {
-    if (!nav) return;
-    if (window.scrollY > 20) {
-      nav.classList.add('bg-bg/90', 'backdrop-blur-xl', 'border-border');
-      nav.classList.remove('border-transparent');
+    if (!navBg) return;
+    if (window.scrollY > 10 || menuOpen) {
+      navBg.style.opacity = '1';
     } else {
-      nav.classList.remove('bg-bg/90', 'backdrop-blur-xl', 'border-border');
-      nav.classList.add('border-transparent');
+      navBg.style.opacity = '0';
     }
   }
 
@@ -66,11 +91,20 @@
   updateNav();
 
   btn?.addEventListener('click', () => {
+    menuOpen = !menuOpen;
     menu?.classList.toggle('hidden');
+    iconOpen?.classList.toggle('hidden');
+    iconClose?.classList.toggle('hidden');
+    updateNav();
   });
 
-  // Close mobile menu on link click
   menu?.querySelectorAll('a').forEach(link => {
-    link.addEventListener('click', () => menu?.classList.add('hidden'));
+    link.addEventListener('click', () => {
+      menuOpen = false;
+      menu?.classList.add('hidden');
+      iconOpen?.classList.remove('hidden');
+      iconClose?.classList.add('hidden');
+      updateNav();
+    });
   });
 </script>
