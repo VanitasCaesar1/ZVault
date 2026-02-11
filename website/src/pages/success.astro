@@ -53,13 +53,13 @@ const checkoutId = Astro.url.searchParams.get("checkout_id");
   <div class="card">
     <div class="icon">🎉</div>
     <h1>You're in.</h1>
-    <p class="subtitle">Your ZVault license is on its way. Check your email for the license key.</p>
+    <p class="subtitle">Your ZVault account is ready. Head to your account dashboard to grab your license key and get set up.</p>
 
     <div class="steps">
       <h2>Next steps</h2>
       <div class="step">
         <div class="step-num">1</div>
-        <div class="step-text">Copy the license key from your email</div>
+        <div class="step-text">Go to your <a href="/account">account dashboard</a> to copy your license key</div>
       </div>
       <div class="step">
         <div class="step-num">2</div>
@@ -72,12 +72,12 @@ const checkoutId = Astro.url.searchParams.get("checkout_id");
     </div>
 
     <div class="note">
-      💡 Your license key also appears in your <a href="/api/portal">customer portal</a>.
+      💡 You can always access your license key, subscription, and setup instructions at <a href="/account">zvault.cloud/account</a>.
     </div>
 
     <div class="actions">
-      <a href="https://docs.zvault.cloud/ai-mode/mcp-server" class="btn btn-primary">Setup AI Mode →</a>
-      <a href="/" class="btn btn-secondary">Back to home</a>
+      <a href="/account" class="btn btn-primary">Go to Account →</a>
+      <a href="https://docs.zvault.cloud/ai-mode/mcp-server" class="btn btn-secondary">Setup AI Mode</a>
     </div>
   </div>
 </body>

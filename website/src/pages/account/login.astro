@@ -1,0 +1,135 @@
+---
+export const prerender = false;
+
+// If already logged in, redirect to account
+const customerId = Astro.cookies.get("zvault_customer_id")?.value;
+if (customerId) {
+  return Astro.redirect("/account", 302);
+}
+---
+
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign In — ZVault</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0b; --bg-card: #111113; --border: #27272a;
+      --text: #fafafa; --muted: #a1a1aa; --dim: #71717a;
+      --accent: #22d3ee; --green: #4ade80; --red: #f87171;
+      --font: 'Inter', -apple-system, sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+    }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; -webkit-font-smoothing: antialiased; }
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 48px; max-width: 440px; width: 100%; margin: 24px; }
+    .logo { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 32px; }
+    .logo-icon { width: 36px; height: 36px; border-radius: 10px; background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.2); display: flex; align-items: center; justify-content: center; }
+    .logo-text { font-size: 20px; font-weight: 700; color: var(--accent); }
+    h1 { font-size: 24px; font-weight: 700; text-align: center; margin-bottom: 8px; }
+    .subtitle { text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 32px; line-height: 1.6; }
+    label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+    input { width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: 14px; font-family: var(--font); outline: none; transition: all 0.2s; }
+    input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(34,211,238,0.1); }
+    input::placeholder { color: var(--dim); }
+    .btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; font-family: var(--font); cursor: pointer; transition: all 0.2s; margin-top: 16px; }
+    .btn-primary { background: var(--accent); color: #0a0a0b; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .error { background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.2); color: var(--red); padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 12px; display: none; }
+    .error.show { display: block; }
+    .divider { display: flex; align-items: center; gap: 12px; margin: 24px 0; }
+    .divider span { font-size: 12px; color: var(--dim); white-space: nowrap; }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .links { text-align: center; margin-top: 24px; font-size: 13px; color: var(--dim); }
+    .links a { color: var(--accent); text-decoration: none; font-weight: 500; }
+    .links a:hover { text-decoration: underline; }
+    .free-note { background: rgba(34,211,238,0.05); border: 1px solid rgba(34,211,238,0.1); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--muted); margin-top: 16px; text-align: center; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="text-accent">
+          <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#22d3ee" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M2 17l10 5 10-5" stroke="#22d3ee" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M2 12l10 5 10-5" stroke="#22d3ee" stroke-width="2" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="logo-text">ZVault</span>
+    </div>
+
+    <h1>Sign in to your account</h1>
+    <p class="subtitle">Enter the email you used to purchase ZVault. We'll look up your account from Polar.</p>
+
+    <form id="login-form">
+      <label for="email">Email address</label>
+      <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email" autofocus />
+      <div id="error" class="error"></div>
+      <button type="submit" class="btn btn-primary" id="submit-btn">Sign In</button>
+    </form>
+
+    <div class="free-note">
+      Don't have an account? <a href="/#pricing" style="color: var(--accent); text-decoration: none;">Get ZVault Pro</a> — your account is created automatically at checkout.
+    </div>
+
+    <div class="divider"><span>or</span></div>
+
+    <div class="links">
+      <a href="/">← Back to home</a>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('login-form');
+    const emailInput = document.getElementById('email') as HTMLInputElement;
+    const errorDiv = document.getElementById('error');
+    const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = emailInput.value.trim();
+      if (!email) return;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Looking up…';
+      errorDiv?.classList.remove('show');
+
+      try {
+        const res = await fetch('/api/account/lookup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          if (errorDiv) {
+            errorDiv.textContent = data.error || 'Something went wrong';
+            errorDiv.classList.add('show');
+          }
+          return;
+        }
+
+        // Success — redirect to account dashboard
+        window.location.href = '/account';
+      } catch (err) {
+        if (errorDiv) {
+          errorDiv.textContent = 'Network error. Please try again.';
+          errorDiv.classList.add('show');
+        }
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Sign In';
+      }
+    });
+  </script>
+</body>
+</html>

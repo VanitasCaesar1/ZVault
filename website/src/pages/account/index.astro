@@ -1,0 +1,266 @@
+---
+export const prerender = false;
+
+import { findCustomerById } from "../../lib/polar";
+
+// Auth check
+const customerId = Astro.cookies.get("zvault_customer_id")?.value;
+if (!customerId) {
+  return Astro.redirect("/account/login", 302);
+}
+
+const customer = await findCustomerById(customerId);
+if (!customer) {
+  Astro.cookies.delete("zvault_customer_id", { path: "/" });
+  Astro.cookies.delete("zvault_customer_email", { path: "/" });
+  return Astro.redirect("/account/login", 302);
+}
+
+const activeSub = customer.subscriptions.find((s) => s.status === "active");
+const tierLabel = customer.tier.charAt(0).toUpperCase() + customer.tier.slice(1);
+const tierColor = customer.tier === "enterprise" ? "#a78bfa" : customer.tier === "team" ? "#facc15" : customer.tier === "pro" ? "#22d3ee" : "#71717a";
+const hasLicense = customer.licenseKeys.length > 0;
+const primaryKey = customer.licenseKeys[0];
+---
+
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Account — ZVault</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <!-- Top bar -->
+  <header>
+    <div class="header-inner">
+      <a href="/" class="logo">
+        <div class="logo-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#22d3ee" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M2 17l10 5 10-5" stroke="#22d3ee" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M2 12l10 5 10-5" stroke="#22d3ee" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span>ZVault</span>
+      </a>
+      <div class="header-right">
+        <span class="email">{customer.email}</span>
+        <form method="POST" action="/api/account/logout" style="display:inline">
+          <button type="submit" class="btn-logout">Sign Out</button>
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+      <h1>Your Account</h1>
+
+      <!-- Tier badge -->
+      <div class="tier-section">
+        <div class="tier-badge" style={`border-color: ${tierColor}40; background: ${tierColor}08;`}>
+          <div class="tier-dot" style={`background: ${tierColor};`}></div>
+          <span style={`color: ${tierColor};`}>{tierLabel}</span>
+        </div>
+        {activeSub && !activeSub.cancelAtPeriodEnd && (
+          <span class="renew-info">Renews {activeSub.currentPeriodEnd ? new Date(activeSub.currentPeriodEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'automatically'}</span>
+        )}
+        {activeSub && activeSub.cancelAtPeriodEnd && (
+          <span class="cancel-info">Cancels {activeSub.currentPeriodEnd ? new Date(activeSub.currentPeriodEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'at period end'}</span>
+        )}
+      </div>
+
+      <!-- License Key Card -->
+      <div class="card">
+        <div class="card-header">
+          <h2>License Key</h2>
+          {hasLicense && <span class="status-badge active">Active</span>}
+        </div>
+        {hasLicense ? (
+          <div class="license-section">
+            <div class="license-key-box">
+              <code id="license-key">{primaryKey.key}</code>
+              <button class="copy-btn" id="copy-btn" title="Copy license key">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              </button>
+            </div>
+            <p class="license-meta">
+              {primaryKey.activations} activation{primaryKey.activations !== 1 ? 's' : ''}
+              {primaryKey.maxActivations && ` / ${primaryKey.maxActivations} max`}
+            </p>
+          </div>
+        ) : (
+          <p class="empty-state">No license key found. If you just purchased, it may take a moment to generate.</p>
+        )}
+      </div>
+
+      <!-- Quick Setup Card -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Quick Setup</h2>
+        </div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-content">
+              <div class="step-title">Install ZVault</div>
+              <div class="code-block">
+                <code>curl -fsSL https://zvault.cloud/install.sh | sh</code>
+                <button class="copy-btn small" data-copy="curl -fsSL https://zvault.cloud/install.sh | sh">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          {hasLicense && (
+            <div class="step">
+              <div class="step-num">2</div>
+              <div class="step-content">
+                <div class="step-title">Activate your license</div>
+                <div class="code-block">
+                  <code>zvault activate {primaryKey.key.slice(0, 20)}...</code>
+                  <button class="copy-btn small" id="copy-activate-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          <div class="step">
+            <div class="step-num">{hasLicense ? '3' : '2'}</div>
+            <div class="step-content">
+              <div class="step-title">Set up AI Mode for your IDE</div>
+              <div class="code-block">
+                <code>zvault setup cursor</code>
+                <button class="copy-btn small" data-copy="zvault setup cursor">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                </button>
+              </div>
+              <p class="step-hint">Also available: <code class="inline-code">zvault setup kiro</code>, <code class="inline-code">zvault setup continue</code></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="actions">
+        <a href="/api/portal" class="btn btn-secondary">Manage Subscription</a>
+        <a href="https://docs.zvault.cloud" class="btn btn-ghost">Documentation</a>
+        <a href="https://github.com/ArcadeLabsInc/zvault" class="btn btn-ghost">GitHub</a>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0b; --bg-card: #111113; --border: #27272a;
+    --text: #fafafa; --muted: #a1a1aa; --dim: #71717a;
+    --accent: #22d3ee; --green: #4ade80; --red: #f87171;
+    --font: 'Inter', -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+  header { border-bottom: 1px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 10; }
+  .header-inner { max-width: 800px; margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .logo { display: flex; align-items: center; gap: 8px; text-decoration: none; font-weight: 700; font-size: 16px; color: var(--accent); }
+  .logo-icon { width: 32px; height: 32px; border-radius: 8px; background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.2); display: flex; align-items: center; justify-content: center; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .email { font-size: 13px; color: var(--dim); }
+  .btn-logout { background: none; border: 1px solid var(--border); color: var(--muted); font-size: 12px; font-weight: 500; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-family: var(--font); transition: all 0.15s; }
+  .btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+  main { max-width: 800px; margin: 0 auto; padding: 40px 24px 80px; }
+  .container { }
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: 16px; }
+
+  .tier-section { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+  .tier-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; border: 1px solid; font-size: 13px; font-weight: 600; }
+  .tier-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .renew-info { font-size: 13px; color: var(--dim); }
+  .cancel-info { font-size: 13px; color: var(--red); }
+
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 20px; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .card-header h2 { font-size: 16px; font-weight: 600; }
+  .status-badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .status-badge.active { background: rgba(74,222,128,0.1); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
+
+  .license-section { }
+  .license-key-box { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; overflow: hidden; }
+  .license-key-box code { flex: 1; font-family: var(--mono); font-size: 12px; color: var(--accent); word-break: break-all; line-height: 1.5; max-height: 60px; overflow-y: auto; }
+  .license-meta { font-size: 12px; color: var(--dim); margin-top: 8px; }
+
+  .copy-btn { background: none; border: 1px solid var(--border); color: var(--muted); padding: 6px; border-radius: 6px; cursor: pointer; flex-shrink: 0; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .copy-btn.small { padding: 4px; }
+  .copy-btn.copied { border-color: var(--green); color: var(--green); }
+
+  .empty-state { font-size: 14px; color: var(--dim); line-height: 1.6; }
+
+  .steps { display: flex; flex-direction: column; gap: 20px; }
+  .step { display: flex; gap: 14px; }
+  .step-num { width: 28px; height: 28px; border-radius: 50%; background: rgba(34,211,238,0.1); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+  .step-content { flex: 1; min-width: 0; }
+  .step-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  .code-block { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  .code-block code { flex: 1; font-family: var(--mono); font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .step-hint { font-size: 12px; color: var(--dim); margin-top: 6px; }
+  .inline-code { font-family: var(--mono); font-size: 11px; background: rgba(34,211,238,0.06); color: var(--accent); padding: 2px 6px; border-radius: 4px; }
+
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+  .btn { display: inline-flex; align-items: center; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; transition: all 0.15s; font-family: var(--font); }
+  .btn-secondary { background: var(--bg-card); border: 1px solid var(--border); color: var(--text); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-ghost { color: var(--muted); border: 1px solid transparent; }
+  .btn-ghost:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+
+  @media (max-width: 640px) {
+    .header-inner { padding: 12px 16px; }
+    .email { display: none; }
+    main { padding: 24px 16px 60px; }
+    h1 { font-size: 22px; }
+    .license-key-box code { font-size: 10px; }
+    .actions { flex-direction: column; }
+    .btn { justify-content: center; }
+  }
+</style>
+
+<script define:vars={{ licenseKey: primaryKey?.key ?? "" }}>
+  // Copy license key
+  document.getElementById('copy-btn')?.addEventListener('click', () => {
+    navigator.clipboard.writeText(licenseKey).then(() => {
+      const btn = document.getElementById('copy-btn');
+      btn?.classList.add('copied');
+      setTimeout(() => btn?.classList.remove('copied'), 2000);
+    });
+  });
+
+  // Copy activate command
+  document.getElementById('copy-activate-btn')?.addEventListener('click', () => {
+    navigator.clipboard.writeText(`zvault activate ${licenseKey}`).then(() => {
+      const btn = document.getElementById('copy-activate-btn');
+      btn?.classList.add('copied');
+      setTimeout(() => btn?.classList.remove('copied'), 2000);
+    });
+  });
+
+  // Copy generic commands
+  document.querySelectorAll('.copy-btn[data-copy]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const text = btn.getAttribute('data-copy');
+      if (text) {
+        navigator.clipboard.writeText(text).then(() => {
+          btn.classList.add('copied');
+          setTimeout(() => btn.classList.remove('copied'), 2000);
+        });
+      }
+    });
+  });
+</script>
