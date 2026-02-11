@@ -1,6 +1,10 @@
 [build]
 builder = "RAILPACK"
 
+[build.buildCommand]
+command = "cargo build --release --bin vaultrs-server"
+
 [deploy]
+startCommand = "./target/release/vaultrs-server"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 5
