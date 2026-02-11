@@ -1,0 +1,103 @@
+---
+// Product UI preview — shows the dashboard to give visitors a sense of the real product
+// Includes a subtle typing animation in the activity log to make it feel alive
+---
+
+<section class="pb-8 -mt-4 relative">
+  <div class="container">
+    <div class="relative max-w-4xl mx-auto">
+      <!-- Glow behind the preview -->
+      <div class="absolute -inset-4 bg-gradient-to-b from-accent/10 via-purple/5 to-transparent rounded-3xl blur-2xl"></div>
+
+      <!-- Dashboard mockup -->
+      <div class="relative bg-bg-card border border-border rounded-2xl overflow-hidden shadow-2xl shadow-black/40">
+        <!-- Window chrome -->
+        <div class="flex items-center gap-2 px-4 py-2.5 bg-[#161618] border-b border-border">
+          <div class="w-2.5 h-2.5 rounded-full bg-[#ff5f57]"></div>
+          <div class="w-2.5 h-2.5 rounded-full bg-[#febc2e]"></div>
+          <div class="w-2.5 h-2.5 rounded-full bg-[#28c840]"></div>
+          <span class="flex-1 text-center text-[10px] text-dim font-mono">zvault dashboard — localhost:8300/ui</span>
+        </div>
+
+        <!-- Dashboard content mockup -->
+        <div class="p-4 md:p-6 bg-[#0d0d0f]">
+          <div class="flex gap-4">
+            <!-- Sidebar -->
+            <div class="hidden md:block w-48 flex-shrink-0">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent/10 text-accent text-xs font-medium">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                  Dashboard
+                </div>
+                {['Secrets', 'Policies', 'Audit Log', 'Leases', 'Auth Methods'].map((item) => (
+                  <div class="flex items-center gap-2 px-3 py-2 text-dim text-xs hover:text-muted transition-colors cursor-default">
+                    <div class="w-3.5 h-3.5 rounded bg-border/50"></div>
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <!-- Main content -->
+            <div class="flex-1 min-w-0">
+              <!-- Stat cards -->
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                {[
+                  { label: 'Secrets', value: '47', change: '+3 today', color: 'text-accent', changeColor: 'text-accent' },
+                  { label: 'Policies', value: '12', change: 'All active', color: 'text-purple', changeColor: 'text-green' },
+                  { label: 'Audit Events', value: '1,284', change: '+47 today', color: 'text-green', changeColor: 'text-green' },
+                  { label: 'Active Leases', value: '8', change: '2 expiring', color: 'text-yellow', changeColor: 'text-yellow' },
+                ].map((stat) => (
+                  <div class="bg-[#111113] border border-border/50 rounded-xl p-3">
+                    <div class="text-[10px] text-dim mb-1">{stat.label}</div>
+                    <div class:list={['text-lg font-bold', stat.color]}>{stat.value}</div>
+                    <div class:list={['text-[9px] mt-0.5', stat.changeColor]}>{stat.change}</div>
+                  </div>
+                ))}
+              </div>
+
+              <!-- Recent activity with live indicator -->
+              <div class="bg-[#111113] border border-border/50 rounded-xl p-3">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="text-[10px] text-dim uppercase tracking-wider font-medium">Recent Activity</div>
+                  <div class="flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green animate-pulse"></span>
+                    <span class="text-[9px] text-green">Live</span>
+                  </div>
+                </div>
+                <div id="activity-log" class="space-y-2">
+                  {[
+                    { action: 'kv.read', path: 'env/production/STRIPE_KEY', time: '2s ago', status: 'text-green' },
+                    { action: 'kv.write', path: 'env/staging/DB_URL', time: '1m ago', status: 'text-accent' },
+                    { action: 'transit.encrypt', path: 'transit/keys/user-data', time: '3m ago', status: 'text-purple' },
+                    { action: 'auth.login', path: 'token/create', time: '5m ago', status: 'text-yellow' },
+                  ].map((event) => (
+                    <div class="flex items-center gap-3 text-xs activity-row">
+                      <span class:list={['font-mono text-[10px]', event.status]}>●</span>
+                      <span class="text-muted font-mono">{event.action}</span>
+                      <span class="text-dim font-mono truncate flex-1">{event.path}</span>
+                      <span class="text-dim text-[10px] flex-shrink-0">{event.time}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Caption under preview -->
+      <p class="text-center text-dim text-xs mt-4">The ZVault web dashboard — manage secrets, policies, and audit logs from your browser.</p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .activity-row {
+    animation: fadeRow 0.3s ease-out forwards;
+  }
+  @keyframes fadeRow {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+</style>

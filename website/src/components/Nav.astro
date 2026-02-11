@@ -1,0 +1,57 @@
+---
+---
+
+<nav id="nav" class="fixed top-0 left-0 right-0 z-50 glass transition-all duration-300">
+  <div class="max-w-content mx-auto px-6 flex items-center justify-between h-16">
+    <a href="/" class="flex items-center gap-2 font-bold text-lg text-white hover:no-underline">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="text-accent">
+        <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+      </svg>
+      <span class="text-accent">ZVault</span>
+    </a>
+
+    <!-- Desktop links -->
+    <div class="hidden md:flex items-center gap-8">
+      <a href="#features" class="text-sm font-medium text-muted hover:text-white transition-colors">Features</a>
+      <a href="#pricing" class="text-sm font-medium text-muted hover:text-white transition-colors">Pricing</a>
+      <a href="https://docs.zvault.cloud" class="text-sm font-medium text-muted hover:text-white transition-colors">Docs</a>
+      <a href="/blog/stop-leaking-secrets-to-llms" class="text-sm font-medium text-muted hover:text-white transition-colors">Blog</a>
+      <a href="https://github.com/ArcadeLabsInc/zvault" class="text-sm font-medium text-muted hover:text-white transition-colors">GitHub</a>
+      <a href="/dashboard" class="text-sm font-semibold text-bg bg-accent hover:bg-accent/90 px-4 py-2 rounded-lg transition-colors">Dashboard</a>
+    </div>
+
+    <!-- Mobile menu button -->
+    <button id="mobile-menu-btn" class="md:hidden text-muted hover:text-white p-2" aria-label="Toggle menu">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Mobile menu -->
+  <div id="mobile-menu" class="hidden md:hidden border-t border-border px-6 py-4 space-y-3">
+    <a href="#features" class="block text-sm text-muted hover:text-white">Features</a>
+    <a href="#pricing" class="block text-sm text-muted hover:text-white">Pricing</a>
+    <a href="https://docs.zvault.cloud" class="block text-sm text-muted hover:text-white">Docs</a>
+    <a href="/blog/stop-leaking-secrets-to-llms" class="block text-sm text-muted hover:text-white">Blog</a>
+    <a href="https://github.com/ArcadeLabsInc/zvault" class="block text-sm text-muted hover:text-white">GitHub</a>
+    <a href="/dashboard" class="block text-sm font-semibold text-accent">Dashboard →</a>
+  </div>
+</nav>
+
+<script>
+  const btn = document.getElementById('mobile-menu-btn');
+  const menu = document.getElementById('mobile-menu');
+  btn?.addEventListener('click', () => {
+    menu?.classList.toggle('hidden');
+  });
+
+  // Close mobile menu on link click
+  menu?.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => menu?.classList.add('hidden'));
+  });
+</script>

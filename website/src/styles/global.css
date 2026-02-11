@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-bg text-white font-sans leading-relaxed;
+  }
+
+  ::selection {
+    background: rgba(34, 211, 238, 0.3);
+    color: white;
+  }
+}
+
+@layer components {
+  .container {
+    @apply max-w-content mx-auto px-6;
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #22d3ee, #a78bfa);
+  }
+
+  .glass {
+    @apply bg-bg/80 backdrop-blur-xl border border-border;
+  }
+
+  .glow-border {
+    position: relative;
+  }
+  .glow-border::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(34, 211, 238, 0.15), rgba(167, 139, 250, 0.15));
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .glow-border:hover::after {
+    opacity: 1;
+  }
+}
+
+/* Smooth scroll with Lenis */
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}

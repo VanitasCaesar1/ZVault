@@ -1,0 +1,134 @@
+---
+const plans = [
+  {
+    tier: 'Free',
+    price: '$0',
+    period: '',
+    desc: 'For individual developers',
+    features: [
+      { text: 'Local encrypted vault', included: true },
+      { text: 'CLI (init, import, run)', included: true },
+      { text: '.env import/export', included: true },
+      { text: 'Web dashboard', included: true },
+      { text: 'KV, Transit, PKI engines', included: true },
+      { text: 'AI Mode (MCP server)', included: false },
+      { text: 'IDE setup', included: false },
+    ],
+    cta: 'Install Free',
+    href: 'https://docs.zvault.cloud/getting-started/installation',
+    featured: false,
+  },
+  {
+    tier: 'Pro',
+    price: '$8',
+    period: '/dev/mo',
+    desc: 'For AI-powered development',
+    features: [
+      { text: 'Everything in Free', included: true },
+      { text: 'AI Mode (MCP server)', included: true },
+      { text: 'zvault:// references', included: true },
+      { text: 'IDE setup (Cursor, Kiro, Continue)', included: true },
+      { text: 'llms.txt generation', included: true },
+      { text: '5 projects', included: true },
+      { text: 'Priority support', included: true },
+    ],
+    cta: 'Get Pro',
+    href: '/api/checkout?products=49f34606-431c-4215-a0c9-19ea745e5a93',
+    featured: true,
+  },
+  {
+    tier: 'Team',
+    price: '$19',
+    period: '/dev/mo',
+    desc: 'For startups and small teams',
+    features: [
+      { text: 'Everything in Pro', included: true },
+      { text: 'Shared vault', included: true },
+      { text: 'OIDC SSO', included: true },
+      { text: 'Audit log export', included: true },
+      { text: 'Slack/Discord alerts', included: true },
+      { text: 'Unlimited projects', included: true },
+    ],
+    cta: 'Get Team',
+    href: '/api/checkout?products=c42a3bec-5db8-4cf2-b9c6-48416604353e',
+    featured: false,
+  },
+  {
+    tier: 'Enterprise',
+    price: '$49',
+    period: '/dev/mo',
+    desc: 'For security-conscious orgs',
+    features: [
+      { text: 'Everything in Team', included: true },
+      { text: 'HA clustering (Raft)', included: true },
+      { text: 'Kubernetes operator', included: true },
+      { text: 'Namespaces', included: true },
+      { text: 'SLA', included: true },
+      { text: 'Dedicated support', included: true },
+    ],
+    cta: 'Contact Sales',
+    href: 'mailto:sales@zvault.cloud',
+    featured: false,
+  },
+];
+---
+
+<section class="py-24" id="pricing">
+  <div class="container">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">Simple, developer-friendly pricing</h2>
+      <p class="text-muted text-lg max-w-xl mx-auto">Start free. Upgrade when you need AI Mode.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
+      {plans.map((plan) => (
+        <div
+          class:list={[
+            'relative bg-bg-card border rounded-2xl p-6 flex flex-col transition-all duration-300',
+            plan.featured
+              ? 'border-accent shadow-[0_0_40px_rgba(34,211,238,0.08)] scale-[1.02]'
+              : 'border-border hover:border-muted/30',
+          ]}
+        >
+          {plan.featured && (
+            <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-accent text-bg text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">
+              Most Popular
+            </div>
+          )}
+
+          <div class="text-xs font-semibold text-muted uppercase tracking-wider mb-2">{plan.tier}</div>
+          <div class="text-4xl font-extrabold mb-1">
+            {plan.price}
+            {plan.period && <span class="text-base font-normal text-muted">{plan.period}</span>}
+          </div>
+          <p class="text-muted text-sm mb-6">{plan.desc}</p>
+
+          <ul class="space-y-2.5 mb-8 flex-1">
+            {plan.features.map((f) => (
+              <li class="flex items-start gap-2 text-sm">
+                {f.included ? (
+                  <span class="text-green mt-0.5 flex-shrink-0">✓</span>
+                ) : (
+                  <span class="text-dim mt-0.5 flex-shrink-0">—</span>
+                )}
+                <span class:list={[f.included ? 'text-muted' : 'text-dim']}>{f.text}</span>
+              </li>
+            ))}
+          </ul>
+
+          <a
+            href={plan.href}
+            class:list={[
+              'block w-full text-center py-2.5 rounded-xl font-semibold text-sm transition-all',
+              plan.featured
+                ? 'bg-accent text-bg hover:bg-accent/90 hover:shadow-[0_0_20px_rgba(34,211,238,0.15)]'
+                : 'bg-bg-card-hover border border-border text-white hover:border-accent/30',
+            ]}
+          >
+            {plan.cta}
+          </a>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

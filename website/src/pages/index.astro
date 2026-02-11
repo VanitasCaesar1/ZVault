@@ -1,499 +1,68 @@
 ---
-const title = "ZVault — Stop leaking secrets to LLMs";
-const description = "The AI-native secrets manager. Let Cursor, Copilot, and Kiro build your app without seeing your API keys.";
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Hero from '../components/Hero.astro';
+import ProductPreview from '../components/ProductPreview.astro';
+import SocialProof from '../components/SocialProof.astro';
+import ProblemViz from '../components/ProblemViz.astro';
+import ScrollTerminal from '../components/ScrollTerminal.astro';
+import HowItWorks from '../components/HowItWorks.astro';
+import EncryptionViz from '../components/EncryptionViz.astro';
+import FeatureGrid from '../components/FeatureGrid.astro';
+import SecurityBlock from '../components/SecurityBlock.astro';
+import AIModeSection from '../components/AIModeSection.astro';
+import Integrations from '../components/Integrations.astro';
+import ComparisonTable from '../components/ComparisonTable.astro';
+import Testimonials from '../components/Testimonials.astro';
+import Pricing from '../components/Pricing.astro';
+import FAQ from '../components/FAQ.astro';
+import CTA from '../components/CTA.astro';
+import Footer from '../components/Footer.astro';
+
+/*
+  Section order (Evil Martians study + developer marketing research):
+  1. Hero — problem agitation + value prop + CTAs
+  2. Product Preview — dashboard mockup (proves the product is real)
+  3. Social Proof Bar — verifiable trust badges
+  4. Problem Viz — side-by-side before/after (the "oh no" moment)
+  5. Scroll Terminal — interactive demo (the "oh shit, that's easy" moment)
+  6. How It Works — 3-step conceptual flow
+  7. Encryption Viz — character scramble animation
+  8. Feature Grid — capabilities
+  9. Security Block — trust signals (critical for security product)
+  10. AI Mode — upsell to Pro (the differentiator)
+  11. Integrations — compatibility ("works with your stack")
+  12. Comparison Table — differentiation vs competitors
+  13. Testimonials — honest early-stage social proof
+  14. Pricing — conversion
+  15. FAQ — objection handling
+  16. CTA — final conversion
+*/
 ---
 
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{title}</title>
-  <meta name="description" content={description} />
-  <meta property="og:title" content={title} />
-  <meta property="og:description" content={description} />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://zvault.cloud" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #0a0a0b;
-      --bg-card: #111113;
-      --bg-card-hover: #18181b;
-      --border: #27272a;
-      --text: #fafafa;
-      --text-muted: #a1a1aa;
-      --text-dim: #71717a;
-      --accent: #22d3ee;
-      --accent-dim: rgba(34, 211, 238, 0.1);
-      --green: #4ade80;
-      --red: #f87171;
-      --yellow: #facc15;
-      --purple: #a78bfa;
-      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      --mono: 'JetBrains Mono', 'SF Mono', monospace;
-    }
-    html { scroll-behavior: smooth; }
-    body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; }
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+<Base title="ZVault — Stop leaking secrets to LLMs">
+  <Nav />
+  <main>
+    <Hero />
+    <ProductPreview />
+    <SocialProof />
+    <ProblemViz />
+    <ScrollTerminal />
+    <HowItWorks />
+    <EncryptionViz />
+    <FeatureGrid />
+    <SecurityBlock />
+    <AIModeSection />
+    <Integrations />
+    <ComparisonTable />
+    <Testimonials />
+    <Pricing />
+    <FAQ />
+    <CTA />
+  </main>
+  <Footer />
 
-    /* Nav */
-    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 50; background: rgba(10,10,11,0.8); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
-    .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; max-width: 1100px; margin: 0 auto; padding: 0 24px; }
-    .nav-logo { font-weight: 700; font-size: 1.25rem; color: var(--text); display: flex; align-items: center; gap: 8px; }
-    .nav-logo span { color: var(--accent); }
-    .nav-links { display: flex; align-items: center; gap: 32px; }
-    .nav-links a { color: var(--text-muted); font-size: 0.875rem; font-weight: 500; }
-    .nav-links a:hover { color: var(--text); text-decoration: none; }
-
-    /* Hero */
-    .hero { padding: 160px 0 80px; text-align: center; }
-    .hero-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-card); font-size: 0.8rem; color: var(--text-muted); margin-bottom: 24px; }
-    .hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
-    .hero h1 { font-size: clamp(2.5rem, 6vw, 4rem); font-weight: 800; line-height: 1.1; letter-spacing: -0.03em; max-width: 800px; margin: 0 auto 24px; }
-    .hero h1 .highlight { background: linear-gradient(135deg, var(--accent), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .hero p { font-size: 1.2rem; color: var(--text-muted); max-width: 600px; margin: 0 auto 40px; line-height: 1.7; }
-    .hero-actions { display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; }
-
-    /* Buttons */
-    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 10px; font-weight: 600; font-size: 0.95rem; border: none; cursor: pointer; transition: all 0.15s; }
-    .btn-primary { background: var(--accent); color: #000; }
-    .btn-primary:hover { opacity: 0.9; text-decoration: none; }
-    .btn-secondary { background: var(--bg-card); color: var(--text); border: 1px solid var(--border); }
-    .btn-secondary:hover { background: var(--bg-card-hover); text-decoration: none; }
-
-    /* Install box */
-    .install-box { display: inline-flex; align-items: center; gap: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 20px; margin-top: 24px; font-family: var(--mono); font-size: 0.9rem; color: var(--text-muted); }
-    .install-box code { color: var(--accent); }
-    .install-box button { background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 4px; }
-    .install-box button:hover { color: var(--text); }
-
-    /* Terminal */
-    .terminal-section { padding: 80px 0; }
-    .terminal { background: #0d0d0f; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; max-width: 720px; margin: 0 auto; }
-    .terminal-bar { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #161618; border-bottom: 1px solid var(--border); }
-    .terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
-    .terminal-dot.r { background: #ff5f57; }
-    .terminal-dot.y { background: #febc2e; }
-    .terminal-dot.g { background: #28c840; }
-    .terminal-title { flex: 1; text-align: center; font-size: 0.75rem; color: var(--text-dim); }
-    .terminal-body { padding: 20px; font-family: var(--mono); font-size: 0.82rem; line-height: 1.8; overflow-x: auto; }
-    .terminal-body .comment { color: var(--text-dim); }
-    .terminal-body .cmd { color: var(--green); }
-    .terminal-body .output { color: var(--text-muted); }
-    .terminal-body .accent { color: var(--accent); }
-    .terminal-body .warn { color: var(--yellow); }
-    .terminal-body .uri { color: var(--purple); }
-
-    /* Section headers */
-    .section-header { text-align: center; margin-bottom: 48px; }
-    .section-header h2 { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 12px; }
-    .section-header p { color: var(--text-muted); font-size: 1.05rem; max-width: 560px; margin: 0 auto; }
-
-    /* Features */
-    .features { padding: 80px 0; }
-    .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-    .feature-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 28px; transition: border-color 0.2s; }
-    .feature-card:hover { border-color: var(--accent); }
-    .feature-icon { font-size: 1.5rem; margin-bottom: 12px; }
-    .feature-card h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 8px; }
-    .feature-card p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; }
-
-    /* How it works */
-    .how-it-works { padding: 80px 0; }
-    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; }
-    .step { text-align: center; padding: 24px; }
-    .step-num { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: var(--accent-dim); color: var(--accent); font-weight: 700; font-size: 1rem; margin-bottom: 16px; }
-    .step h3 { font-size: 1rem; font-weight: 600; margin-bottom: 8px; }
-    .step p { color: var(--text-muted); font-size: 0.875rem; }
-
-    /* Pricing */
-    .pricing { padding: 80px 0; }
-    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
-    .price-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 32px 24px; position: relative; }
-    .price-card.featured { border-color: var(--accent); }
-    .price-card.featured::before { content: 'Most Popular'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #000; font-size: 0.7rem; font-weight: 700; padding: 4px 12px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.05em; }
-    .price-tier { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
-    .price-amount { font-size: 2.5rem; font-weight: 800; margin-bottom: 4px; }
-    .price-amount span { font-size: 1rem; font-weight: 400; color: var(--text-muted); }
-    .price-desc { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 24px; }
-    .price-features { list-style: none; margin-bottom: 24px; }
-    .price-features li { padding: 6px 0; font-size: 0.875rem; color: var(--text-muted); display: flex; align-items: flex-start; gap: 8px; }
-    .price-features li::before { content: '✓'; color: var(--green); font-weight: 700; flex-shrink: 0; }
-    .price-features li.locked::before { content: '—'; color: var(--text-dim); }
-    .price-btn { display: block; width: 100%; text-align: center; padding: 10px; border-radius: 8px; font-weight: 600; font-size: 0.875rem; border: 1px solid var(--border); background: var(--bg-card-hover); color: var(--text); cursor: pointer; transition: all 0.15s; }
-    .price-btn:hover { border-color: var(--accent); text-decoration: none; }
-    .price-card.featured .price-btn { background: var(--accent); color: #000; border-color: var(--accent); }
-
-    /* Comparison */
-    .comparison { padding: 80px 0; }
-    .comparison table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-    .comparison th, .comparison td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
-    .comparison th { color: var(--text-muted); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
-    .comparison td:first-child { font-weight: 500; }
-    .comparison .yes { color: var(--green); }
-    .comparison .no { color: var(--text-dim); }
-    .comparison .highlight-col { background: rgba(34, 211, 238, 0.04); }
-    .comparison-wrapper { overflow-x: auto; }
-
-    /* CTA */
-    .cta { padding: 80px 0; text-align: center; }
-    .cta h2 { font-size: 2rem; font-weight: 700; margin-bottom: 16px; }
-    .cta p { color: var(--text-muted); font-size: 1.05rem; margin-bottom: 32px; max-width: 500px; margin-left: auto; margin-right: auto; }
-
-    /* Footer */
-    footer { border-top: 1px solid var(--border); padding: 40px 0; }
-    .footer-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
-    .footer-inner p { color: var(--text-dim); font-size: 0.8rem; }
-    .footer-links { display: flex; gap: 24px; }
-    .footer-links a { color: var(--text-dim); font-size: 0.8rem; }
-    .footer-links a:hover { color: var(--text-muted); }
-
-    @media (max-width: 640px) {
-      .nav-links { gap: 16px; }
-      .hero { padding: 120px 0 60px; }
-      .pricing-grid { grid-template-columns: 1fr; }
-      .feature-grid { grid-template-columns: 1fr; }
-    }
-  </style>
-</head>
-<body>
-
-<!-- Nav -->
-<nav>
-  <div class="nav-inner">
-    <a href="/" class="nav-logo">⟐ <span>ZVault</span></a>
-    <div class="nav-links">
-      <a href="#features">Features</a>
-      <a href="#pricing">Pricing</a>
-      <a href="https://docs.zvault.cloud">Docs</a>
-      <a href="/blog/stop-leaking-secrets-to-llms">Blog</a>
-      <a href="https://github.com/zvault/zvault">GitHub</a>
-      <a href="/dashboard">Dashboard</a>
-    </div>
-  </div>
-</nav>
-
-<main>
-
-<!-- Hero -->
-<section class="hero">
-  <div class="container">
-    <div class="hero-badge"><span class="dot"></span> Open source · Written in Rust</div>
-    <h1>Stop leaking secrets to <span class="highlight">LLMs</span></h1>
-    <p>ZVault sits between your AI coding assistant and your secrets. Cursor, Copilot, and Kiro see references — never real values.</p>
-    <div class="hero-actions">
-      <a href="https://docs.zvault.cloud/getting-started/quickstart" class="btn btn-primary">Get Started</a>
-      <a href="https://github.com/zvault/zvault" class="btn btn-secondary">⭐ Star on GitHub</a>
-    </div>
-    <div class="install-box">
-      <code>curl -fsSL https://zvault.cloud/install.sh | sh</code>
-    </div>
-  </div>
-</section>
-
-<!-- Terminal Demo -->
-<section class="terminal-section">
-  <div class="container">
-    <div class="terminal">
-      <div class="terminal-bar">
-        <div class="terminal-dot r"></div>
-        <div class="terminal-dot y"></div>
-        <div class="terminal-dot g"></div>
-        <div class="terminal-title">Terminal</div>
-      </div>
-      <div class="terminal-body">
-        <div class="comment"># Your .env file has real secrets — visible to every AI tool</div>
-        <div class="cmd">$ cat .env</div>
-        <div class="output">STRIPE_KEY=sk_live_51J3xKpQR7mN...</div>
-        <div class="output">DATABASE_URL=postgres://admin:s3cret@db:5432/app</div>
-        <br/>
-        <div class="comment"># Import into ZVault — one command</div>
-        <div class="cmd">$ zvault import .env</div>
-        <div class="output"><span class="accent">✓</span> Imported 12 secrets into vault</div>
-        <div class="output"><span class="accent">✓</span> Created .env.zvault (safe for git)</div>
-        <div class="output"><span class="accent">✓</span> Added .env to .gitignore</div>
-        <br/>
-        <div class="comment"># Now your AI sees references, not values</div>
-        <div class="cmd">$ cat .env.zvault</div>
-        <div class="output">STRIPE_KEY=<span class="uri">zvault://env/myapp/STRIPE_KEY</span></div>
-        <div class="output">DATABASE_URL=<span class="uri">zvault://env/myapp/DATABASE_URL</span></div>
-        <br/>
-        <div class="comment"># Run your app — secrets injected at runtime</div>
-        <div class="cmd">$ zvault run -- npm run dev</div>
-        <div class="output"><span class="accent">✓</span> 12 secrets resolved · <span class="accent">▶</span> npm run dev</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- How it works -->
-<section class="how-it-works">
-  <div class="container">
-    <div class="section-header">
-      <h2>Three commands. Zero code changes.</h2>
-      <p>ZVault works with any language, any framework. Your app reads normal env vars — no SDK needed.</p>
-    </div>
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <h3>Import</h3>
-        <p>zvault import .env encrypts your secrets and generates safe zvault:// references.</p>
-      </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <h3>Code with AI</h3>
-        <p>Your AI assistant sees references, not values. It knows what secrets exist without seeing them.</p>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <h3>Run</h3>
-        <p>zvault run injects real values at runtime. Your app works normally. Nothing leaked.</p>
-      </div>
-      <div class="step">
-        <div class="step-num">+</div>
-        <h3>MCP Server</h3>
-        <p>Connect your IDE's AI to ZVault via MCP. It can query metadata without seeing values.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Features -->
-<section class="features" id="features">
-  <div class="container">
-    <div class="section-header">
-      <h2>Built for the AI coding era</h2>
-      <p>Everything you need to manage secrets safely when AI is writing your code.</p>
-    </div>
-    <div class="feature-grid">
-      <div class="feature-card">
-        <div class="feature-icon">🤖</div>
-        <h3>MCP Server</h3>
-        <p>AI tools query secret metadata through the Model Context Protocol. They know what exists without seeing values.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🔗</div>
-        <h3>zvault:// URIs</h3>
-        <p>Replace real values with references. Safe for git, safe for AI, resolved at runtime.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🔐</div>
-        <h3>AES-256-GCM</h3>
-        <p>Military-grade encryption at rest. Fresh nonce per operation. Pure Rust cryptography.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🔑</div>
-        <h3>Shamir's Secret Sharing</h3>
-        <p>Split your master key across multiple holders. No single point of compromise.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">📦</div>
-        <h3>Single Binary</h3>
-        <p>No Docker, no Java, no runtime dependencies. One binary, runs anywhere.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🛡️</div>
-        <h3>Zero-Trust</h3>
-        <p>Sealed by default. Explicit unseal required. Full audit trail. Fail-closed audit logging.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Pricing -->
-<section class="pricing" id="pricing">
-  <div class="container">
-    <div class="section-header">
-      <h2>Simple, developer-friendly pricing</h2>
-      <p>Start free. Upgrade when you need AI Mode.</p>
-    </div>
-    <div class="pricing-grid">
-      <div class="price-card">
-        <div class="price-tier">Free</div>
-        <div class="price-amount">$0</div>
-        <div class="price-desc">For individual developers</div>
-        <ul class="price-features">
-          <li>Local encrypted vault</li>
-          <li>CLI (init, import, run)</li>
-          <li>.env import/export</li>
-          <li>Web dashboard</li>
-          <li>KV, Transit, PKI engines</li>
-          <li class="locked">AI Mode (MCP server)</li>
-          <li class="locked">IDE setup</li>
-        </ul>
-        <a href="https://docs.zvault.cloud/getting-started/installation" class="price-btn">Install Free</a>
-      </div>
-      <div class="price-card featured">
-        <div class="price-tier">Pro</div>
-        <div class="price-amount">$8<span>/dev/mo</span></div>
-        <div class="price-desc">For AI-powered development</div>
-        <ul class="price-features">
-          <li>Everything in Free</li>
-          <li>AI Mode (MCP server)</li>
-          <li>zvault:// references</li>
-          <li>IDE setup (Cursor, Kiro, Continue)</li>
-          <li>llms.txt generation</li>
-          <li>5 projects</li>
-          <li>Priority support</li>
-        </ul>
-        <a href="/api/checkout?products=49f34606-431c-4215-a0c9-19ea745e5a93" class="price-btn">Get Pro</a>
-      </div>
-      <div class="price-card">
-        <div class="price-tier">Team</div>
-        <div class="price-amount">$19<span>/dev/mo</span></div>
-        <div class="price-desc">For startups and small teams</div>
-        <ul class="price-features">
-          <li>Everything in Pro</li>
-          <li>Shared vault</li>
-          <li>OIDC SSO</li>
-          <li>Audit log export</li>
-          <li>Slack/Discord alerts</li>
-          <li>Unlimited projects</li>
-        </ul>
-        <a href="/api/checkout?products=c42a3bec-5db8-4cf2-b9c6-48416604353e" class="price-btn">Get Team</a>
-      </div>
-      <div class="price-card">
-        <div class="price-tier">Enterprise</div>
-        <div class="price-amount">$49<span>/dev/mo</span></div>
-        <div class="price-desc">For security-conscious orgs</div>
-        <ul class="price-features">
-          <li>Everything in Team</li>
-          <li>HA clustering (Raft)</li>
-          <li>Kubernetes operator</li>
-          <li>Namespaces</li>
-          <li>SLA</li>
-          <li>Dedicated support</li>
-        </ul>
-        <a href="mailto:sales@zvault.cloud" class="price-btn">Contact Sales</a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Comparison -->
-<section class="comparison" id="comparison">
-  <div class="container">
-    <div class="section-header">
-      <h2>How ZVault compares</h2>
-      <p>The only secrets manager with native AI/LLM integration.</p>
-    </div>
-    <div class="comparison-wrapper">
-    <table>
-      <thead>
-        <tr>
-          <th>Feature</th>
-          <th class="highlight-col">ZVault</th>
-          <th>HashiCorp Vault</th>
-          <th>Infisical</th>
-          <th>Doppler</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>AI Mode (MCP)</td>
-          <td class="highlight-col yes">✓</td>
-          <td class="no">✗</td>
-          <td class="no">✗</td>
-          <td class="no">✗</td>
-        </tr>
-        <tr>
-          <td>zvault:// references</td>
-          <td class="highlight-col yes">✓</td>
-          <td class="no">✗</td>
-          <td class="no">✗</td>
-          <td class="no">✗</td>
-        </tr>
-        <tr>
-          <td>Single binary</td>
-          <td class="highlight-col yes">✓</td>
-          <td class="no">✗</td>
-          <td class="no">✗</td>
-          <td class="no">✗</td>
-        </tr>
-        <tr>
-          <td>Self-hosted</td>
-          <td class="highlight-col yes">✓</td>
-          <td class="yes">✓</td>
-          <td class="yes">✓</td>
-          <td class="no">✗</td>
-        </tr>
-        <tr>
-          <td>Local-first</td>
-          <td class="highlight-col yes">✓</td>
-          <td class="no">✗</td>
-          <td class="no">✗</td>
-          <td class="no">✗</td>
-        </tr>
-        <tr>
-          <td>Open source</td>
-          <td class="highlight-col yes">✓</td>
-          <td>BSL</td>
-          <td class="yes">✓</td>
-          <td class="no">✗</td>
-        </tr>
-        <tr>
-          <td>Shamir seal</td>
-          <td class="highlight-col yes">✓</td>
-          <td class="yes">✓</td>
-          <td class="no">✗</td>
-          <td class="no">✗</td>
-        </tr>
-        <tr>
-          <td>Setup time</td>
-          <td class="highlight-col">2 min</td>
-          <td>Hours</td>
-          <td>~15 min</td>
-          <td>~5 min</td>
-        </tr>
-        <tr>
-          <td>Free tier</td>
-          <td class="highlight-col yes">✓</td>
-          <td class="no">✗</td>
-          <td class="yes">✓</td>
-          <td class="yes">✓</td>
-        </tr>
-      </tbody>
-    </table>
-    </div>
-  </div>
-</section>
-
-<!-- CTA -->
-<section class="cta">
-  <div class="container">
-    <h2>Your .env file is a liability. Fix it in 2 minutes.</h2>
-    <p>Install ZVault, import your secrets, and never leak a key to an LLM again.</p>
-    <div class="install-box">
-      <code>curl -fsSL https://zvault.cloud/install.sh | sh</code>
-    </div>
-    <div style="margin-top: 24px;">
-      <a href="https://docs.zvault.cloud/getting-started/quickstart" class="btn btn-primary">Read the Quick Start →</a>
-    </div>
-  </div>
-</section>
-
-</main>
-
-<!-- Footer -->
-<footer>
-  <div class="container">
-    <div class="footer-inner">
-      <p>© 2026 ZVault. Open source under MIT.</p>
-      <div class="footer-links">
-        <a href="https://docs.zvault.cloud">Docs</a>
-        <a href="https://github.com/zvault/zvault">GitHub</a>
-        <a href="mailto:sales@zvault.cloud">Contact</a>
-      </div>
-    </div>
-  </div>
-</footer>
-
-</body>
-</html>
+  <script>
+    import '../scripts/animations.ts';
+  </script>
+</Base>

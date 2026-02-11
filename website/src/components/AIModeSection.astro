@@ -1,0 +1,79 @@
+---
+const tools = [
+  {
+    tool: 'list_secrets',
+    desc: 'Browse secret paths and metadata without exposing values',
+    icon: '<path d="M3 6h18M3 12h18M3 18h12"/>',
+  },
+  {
+    tool: 'get_secret_metadata',
+    desc: 'Check version, created date, engine type — no plaintext',
+    icon: '<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>',
+  },
+  {
+    tool: 'resolve_reference',
+    desc: 'Resolve zvault:// URIs to inject values at runtime only',
+    icon: '<path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>',
+  },
+  {
+    tool: 'list_engines',
+    desc: 'See available engines — KV, Transit, PKI',
+    icon: '<circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>',
+  },
+  {
+    tool: 'check_health',
+    desc: 'Verify vault status, seal state, and uptime',
+    icon: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  },
+];
+---
+
+<section class="py-24 relative overflow-hidden">
+  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-purple/5 rounded-full blur-[120px]"></div>
+
+  <div class="container relative z-10">
+    <div class="text-center mb-16">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-purple/30 bg-purple/5 text-xs text-purple font-medium mb-6">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        Pro Feature
+      </div>
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">AI Mode — the reason to upgrade</h2>
+      <p class="text-muted text-lg max-w-2xl mx-auto">Connect your IDE's AI to ZVault via MCP. It can list secrets, check metadata, and resolve references — without ever seeing the actual values.</p>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-8 items-start max-w-5xl mx-auto">
+      <div class="bg-bg-card border border-border rounded-2xl overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-border bg-[#161618]">
+          <span class="text-xs text-dim font-mono">.cursor/mcp.json</span>
+          <span class="text-[9px] text-purple/60 font-mono">Works with Kiro, Continue, VS Code</span>
+        </div>
+        <pre class="p-5 font-mono text-sm leading-relaxed overflow-x-auto"><code><span class="text-dim">&#123;</span>
+  <span class="text-accent">"mcpServers"</span>: &#123;
+    <span class="text-accent">"zvault"</span>: &#123;
+      <span class="text-purple">"command"</span>: <span class="text-green">"zvault"</span>,
+      <span class="text-purple">"args"</span>: [<span class="text-green">"mcp"</span>, <span class="text-green">"serve"</span>]
+    &#125;
+  &#125;
+<span class="text-dim">&#125;</span></code></pre>
+        <div class="px-5 pb-4">
+          <p class="text-[10px] text-dim leading-relaxed">One config block. Your AI assistant now has secure access to vault metadata.</p>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <div class="text-xs text-dim uppercase tracking-wider font-medium mb-1 px-1">Available MCP Tools</div>
+        {tools.map((t) => (
+          <div class="flex items-start gap-4 bg-bg-card border border-border rounded-xl p-4 hover:border-purple/30 transition-colors">
+            <div class="w-8 h-8 rounded-lg bg-purple/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={t.icon} />
+            </div>
+            <div>
+              <code class="text-sm font-mono text-purple">{t.tool}</code>
+              <p class="text-muted text-sm mt-1">{t.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,88 @@
+---
+const features = [
+  {
+    title: 'MCP Server',
+    desc: 'AI tools query secret metadata through the Model Context Protocol. They know what exists without seeing values.',
+    icon: '<circle cx="12" cy="12" r="3"/><path d="M12 1v4m0 14v4M4.22 4.22l2.83 2.83m9.9 9.9l2.83 2.83M1 12h4m14 0h4M4.22 19.78l2.83-2.83m9.9-9.9l2.83-2.83"/>',
+    large: true,
+    color: 'accent',
+  },
+  {
+    title: 'zvault:// URIs',
+    desc: 'Replace real values with references. Safe for git, safe for AI, resolved at runtime.',
+    icon: '<path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>',
+    color: 'purple',
+  },
+  {
+    title: 'AES-256-GCM',
+    desc: 'Military-grade encryption at rest. Fresh nonce per operation. Pure Rust cryptography.',
+    icon: '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>',
+    color: 'green',
+  },
+  {
+    title: "Shamir's Secret Sharing",
+    desc: 'Split your master key across multiple holders. No single point of compromise.',
+    icon: '<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>',
+    color: 'yellow',
+  },
+  {
+    title: 'Single Binary',
+    desc: 'No Docker, no Java, no runtime dependencies. One binary, runs anywhere.',
+    icon: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/>',
+    color: 'accent',
+  },
+  {
+    title: 'Zero-Trust Audit',
+    desc: 'Sealed by default. Explicit unseal required. Full audit trail. Fail-closed logging.',
+    icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+    color: 'red',
+  },
+  {
+    title: 'Transit Engine',
+    desc: 'Encrypt and decrypt data without storing it. Perfect for encrypting user data in your database.',
+    icon: '<path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/>',
+    color: 'purple',
+  },
+  {
+    title: 'PKI Engine',
+    desc: 'Generate and manage X.509 certificates. Built-in certificate authority for your infrastructure.',
+    icon: '<path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>',
+    color: 'green',
+  },
+];
+
+const colorMap = {
+  accent: 'text-accent border-accent/20',
+  purple: 'text-purple border-purple/20',
+  green: 'text-green border-green/20',
+  yellow: 'text-yellow border-yellow/20',
+  red: 'text-red border-red/20',
+};
+---
+
+<section class="py-24" id="features">
+  <div class="container">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">Built for the AI coding era</h2>
+      <p class="text-muted text-lg max-w-xl mx-auto">Everything you need to manage secrets safely when AI is writing your code.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {features.map((f) => (
+        <div
+          class:list={[
+            'group bg-bg-card border border-border rounded-2xl p-6 transition-all duration-300 hover:border-accent/30 hover:bg-bg-card-hover',
+            f.large && 'md:col-span-2 lg:col-span-1',
+          ]}
+          data-animate
+        >
+          <div class:list={['w-10 h-10 rounded-xl flex items-center justify-center mb-4 bg-bg border', colorMap[f.color]]}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={f.icon} />
+          </div>
+          <h3 class="text-base font-semibold mb-2">{f.title}</h3>
+          <p class="text-muted text-sm leading-relaxed">{f.desc}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

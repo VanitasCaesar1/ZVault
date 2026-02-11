@@ -1,0 +1,113 @@
+---
+---
+
+<section class="py-24" id="terminal-demo">
+  <div class="container">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">See it in action</h2>
+      <p class="text-muted text-lg max-w-xl mx-auto">Three commands. Your secrets are encrypted, your AI is safe, your app just works.</p>
+    </div>
+
+    <div id="scroll-terminal" class="max-w-3xl mx-auto">
+      <div class="bg-[#0d0d0f] border border-border rounded-2xl overflow-hidden shadow-2xl shadow-black/50">
+        <!-- Terminal bar -->
+        <div class="flex items-center gap-2 px-4 py-3 bg-[#161618] border-b border-border">
+          <div class="w-3 h-3 rounded-full bg-[#ff5f57]"></div>
+          <div class="w-3 h-3 rounded-full bg-[#febc2e]"></div>
+          <div class="w-3 h-3 rounded-full bg-[#28c840]"></div>
+          <span class="flex-1 text-center text-xs text-dim">Terminal — zvault demo</span>
+        </div>
+
+        <!-- Terminal body -->
+        <div class="p-6 font-mono text-sm leading-[2] min-h-[380px]">
+          <div class="terminal-line" data-step="1">
+            <span class="text-dim"># Your .env has real secrets — visible to every AI tool</span>
+          </div>
+          <div class="terminal-line" data-step="2">
+            <span class="text-green">$</span> <span class="text-white">cat .env</span>
+          </div>
+          <div class="terminal-line" data-step="3">
+            <span class="text-muted">STRIPE_KEY=sk_live_51J3xKpQR7mN...</span>
+          </div>
+          <div class="terminal-line" data-step="4">
+            <span class="text-muted">DATABASE_URL=postgres://admin:s3cret@db:5432/app</span>
+          </div>
+          <div class="terminal-line mt-4" data-step="5">
+            <span class="text-dim"># Import into ZVault — one command</span>
+          </div>
+          <div class="terminal-line" data-step="6">
+            <span class="text-green">$</span> <span class="text-white">zvault import .env</span>
+          </div>
+          <div class="terminal-line" data-step="7">
+            <span class="text-accent">✓</span> <span class="text-muted">Imported 12 secrets into vault</span>
+          </div>
+          <div class="terminal-line" data-step="8">
+            <span class="text-accent">✓</span> <span class="text-muted">Created .env.zvault (safe for git)</span>
+          </div>
+          <div class="terminal-line" data-step="9">
+            <span class="text-accent">✓</span> <span class="text-muted">Added .env to .gitignore</span>
+          </div>
+          <div class="terminal-line mt-4" data-step="10">
+            <span class="text-dim"># Now your AI sees references, not values</span>
+          </div>
+          <div class="terminal-line" data-step="11">
+            <span class="text-green">$</span> <span class="text-white">cat .env.zvault</span>
+          </div>
+          <div class="terminal-line" data-step="12">
+            <span class="text-muted">STRIPE_KEY=</span><span class="text-purple">zvault://env/myapp/STRIPE_KEY</span>
+          </div>
+          <div class="terminal-line" data-step="13">
+            <span class="text-muted">DATABASE_URL=</span><span class="text-purple">zvault://env/myapp/DATABASE_URL</span>
+          </div>
+          <div class="terminal-line mt-4" data-step="14">
+            <span class="text-dim"># Run your app — secrets injected at runtime</span>
+          </div>
+          <div class="terminal-line" data-step="15">
+            <span class="text-green">$</span> <span class="text-white">zvault run -- npm run dev</span>
+          </div>
+          <div class="terminal-line" data-step="16">
+            <span class="text-accent">✓</span> <span class="text-muted">12 secrets resolved ·</span> <span class="text-accent">▶</span> <span class="text-muted">npm run dev</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .terminal-line {
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  .terminal-line.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+</style>
+
+<script>
+  import { gsap } from 'gsap';
+  import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  const lines = document.querySelectorAll('.terminal-line');
+
+  ScrollTrigger.create({
+    trigger: '#scroll-terminal',
+    start: 'top 80%',
+    end: 'bottom 20%',
+    onUpdate: (self) => {
+      const progress = self.progress;
+      const totalLines = lines.length;
+      const visibleCount = Math.floor(progress * (totalLines + 2));
+
+      lines.forEach((line, i) => {
+        if (i < visibleCount) {
+          line.classList.add('visible');
+        }
+      });
+    },
+  });
+</script>

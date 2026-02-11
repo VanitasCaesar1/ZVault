@@ -1,0 +1,45 @@
+---
+---
+
+<section class="py-24 relative overflow-hidden">
+  <!-- Background -->
+  <div class="absolute inset-0 bg-gradient-to-b from-transparent via-accent/[0.02] to-transparent"></div>
+
+  <div class="container relative z-10 text-center">
+    <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">
+      Your <code class="font-mono text-red">.env</code> file is a liability.
+    </h2>
+    <p class="text-muted text-lg mb-8 max-w-lg mx-auto">Fix it in 2 minutes. Install ZVault, import your secrets, and never leak a key to an LLM again.</p>
+
+    <div class="inline-flex items-center gap-3 bg-bg-card border border-border rounded-xl px-5 py-3 mb-6">
+      <span class="text-dim text-sm">$</span>
+      <code class="text-accent font-mono text-sm">curl -fsSL https://zvault.cloud/install.sh | sh</code>
+      <button id="copy-cta-install" class="text-dim hover:text-white transition-colors p-1" aria-label="Copy install command">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="5" y="5" width="9" height="9" rx="2"/>
+          <path d="M3 11V3a2 2 0 012-2h8"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="block">
+      <a href="https://docs.zvault.cloud/getting-started/quickstart" class="inline-flex items-center gap-2 text-accent hover:text-accent/80 font-medium text-sm transition-colors">
+        Read the Quick Start
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10m0 0L9 4m4 4L9 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<script>
+  document.getElementById('copy-cta-install')?.addEventListener('click', async () => {
+    await navigator.clipboard.writeText('curl -fsSL https://zvault.cloud/install.sh | sh');
+    const btn = document.getElementById('copy-cta-install');
+    if (btn) {
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#4ade80" stroke-width="2"><path d="M3 8l3 3 7-7"/></svg>';
+      setTimeout(() => {
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M3 11V3a2 2 0 012-2h8"/></svg>';
+      }, 2000);
+    }
+  });
+</script>

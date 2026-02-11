@@ -1,0 +1,79 @@
+---
+const rows = [
+  { feature: 'AI Mode (MCP)', zvault: true, hashicorp: false, infisical: false, doppler: false },
+  { feature: 'zvault:// references', zvault: true, hashicorp: false, infisical: false, doppler: false },
+  { feature: 'Single binary', zvault: true, hashicorp: false, infisical: false, doppler: false },
+  { feature: 'Self-hosted', zvault: true, hashicorp: true, infisical: true, doppler: false },
+  { feature: 'Local-first', zvault: true, hashicorp: false, infisical: false, doppler: false },
+  { feature: 'Open source (MIT)', zvault: true, hashicorp: 'BSL', infisical: true, doppler: false },
+  { feature: 'Shamir seal', zvault: true, hashicorp: true, infisical: false, doppler: false },
+  { feature: 'Setup time', zvault: '2 min', hashicorp: 'Hours', infisical: '~15 min', doppler: '~5 min' },
+  { feature: 'Free tier', zvault: true, hashicorp: false, infisical: true, doppler: true },
+];
+---
+
+<section class="py-24" id="comparison">
+  <div class="container">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">How ZVault compares</h2>
+      <p class="text-muted text-lg max-w-xl mx-auto">The only secrets manager with native AI/LLM integration.</p>
+    </div>
+
+    <div class="overflow-x-auto rounded-2xl border border-border">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-border">
+            <th class="text-left px-5 py-4 text-xs text-dim uppercase tracking-wider font-semibold">Feature</th>
+            <th class="px-5 py-4 text-xs uppercase tracking-wider font-semibold text-accent bg-accent/5">ZVault</th>
+            <th class="px-5 py-4 text-xs text-dim uppercase tracking-wider font-semibold">HashiCorp</th>
+            <th class="px-5 py-4 text-xs text-dim uppercase tracking-wider font-semibold">Infisical</th>
+            <th class="px-5 py-4 text-xs text-dim uppercase tracking-wider font-semibold">Doppler</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr class="border-b border-border/50 hover:bg-bg-card/50 transition-colors">
+              <td class="px-5 py-3.5 font-medium text-white">{row.feature}</td>
+              <td class="px-5 py-3.5 text-center bg-accent/5">
+                {row.zvault === true ? (
+                  <span class="text-green font-bold">✓</span>
+                ) : typeof row.zvault === 'string' ? (
+                  <span class="text-accent font-medium">{row.zvault}</span>
+                ) : (
+                  <span class="text-dim">✗</span>
+                )}
+              </td>
+              <td class="px-5 py-3.5 text-center">
+                {row.hashicorp === true ? (
+                  <span class="text-green">✓</span>
+                ) : typeof row.hashicorp === 'string' ? (
+                  <span class="text-dim">{row.hashicorp}</span>
+                ) : (
+                  <span class="text-dim">✗</span>
+                )}
+              </td>
+              <td class="px-5 py-3.5 text-center">
+                {row.infisical === true ? (
+                  <span class="text-green">✓</span>
+                ) : typeof row.infisical === 'string' ? (
+                  <span class="text-dim">{row.infisical}</span>
+                ) : (
+                  <span class="text-dim">✗</span>
+                )}
+              </td>
+              <td class="px-5 py-3.5 text-center">
+                {row.doppler === true ? (
+                  <span class="text-green">✓</span>
+                ) : typeof row.doppler === 'string' ? (
+                  <span class="text-dim">{row.doppler}</span>
+                ) : (
+                  <span class="text-dim">✗</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

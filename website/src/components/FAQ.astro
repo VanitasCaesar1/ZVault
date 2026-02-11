@@ -1,0 +1,57 @@
+---
+const faqs = [
+  {
+    q: 'Is ZVault really free?',
+    a: 'Yes. The CLI, local vault, encryption, all engines (KV, Transit, PKI), and the web dashboard are completely free and open source under MIT. You only pay if you want AI Mode (MCP server + IDE integration).',
+  },
+  {
+    q: 'Where are my secrets stored?',
+    a: 'On your machine, encrypted with AES-256-GCM. ZVault is local-first — your secrets never leave your device unless you explicitly self-host a remote server. There is no cloud service that holds your data.',
+  },
+  {
+    q: 'What if I lose my unseal keys?',
+    a: "If you lose all unseal key shares and don't have a recovery key, your vault data is unrecoverable by design. This is a security feature, not a bug. We recommend storing shares in separate secure locations.",
+  },
+  {
+    q: 'How does the MCP server work?',
+    a: 'The MCP (Model Context Protocol) server runs locally alongside your vault. Your IDE\'s AI connects to it and can list secret paths, check metadata, and understand your secret structure — but it never receives the actual secret values.',
+  },
+  {
+    q: 'Can I use ZVault in CI/CD?',
+    a: 'Absolutely. Use `zvault run` in your CI pipeline to inject secrets at runtime. No secrets in environment variables, no secrets in config files. Works with GitHub Actions, CircleCI, GitLab CI, and any other CI system.',
+  },
+  {
+    q: 'How is this different from HashiCorp Vault?',
+    a: "HashiCorp Vault is an enterprise-grade tool that requires significant setup and operational overhead. ZVault is designed for developers — install in 2 minutes, import your .env, and you're done. Plus, ZVault has native AI integration that Vault doesn't offer.",
+  },
+  {
+    q: 'Is it production-ready?',
+    a: 'ZVault uses battle-tested cryptography (AES-256-GCM, Shamir\'s Secret Sharing) implemented in pure Rust with the RustCrypto ecosystem. The encryption barrier, seal mechanism, and audit logging are all production-grade.',
+  },
+];
+---
+
+<section class="py-24">
+  <div class="container">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">Frequently asked questions</h2>
+      <p class="text-muted text-lg">Everything you need to know.</p>
+    </div>
+
+    <div class="max-w-2xl mx-auto space-y-2">
+      {faqs.map((faq, i) => (
+        <details class="group bg-bg-card border border-border rounded-xl overflow-hidden" data-faq>
+          <summary class="flex items-center justify-between px-6 py-4 cursor-pointer list-none text-sm font-medium hover:bg-bg-card-hover transition-colors">
+            {faq.q}
+            <svg class="w-4 h-4 text-dim flex-shrink-0 ml-4 transition-transform group-open:rotate-45" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 3v10M3 8h10"/>
+            </svg>
+          </summary>
+          <div class="px-6 pb-4 text-sm text-muted leading-relaxed">
+            {faq.a}
+          </div>
+        </details>
+      ))}
+    </div>
+  </div>
+</section>

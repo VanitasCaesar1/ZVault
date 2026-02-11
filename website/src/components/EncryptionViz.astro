@@ -1,0 +1,95 @@
+---
+---
+
+<section class="py-24 overflow-hidden" id="encryption-viz">
+  <div class="container">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">From exposed to encrypted</h2>
+      <p class="text-muted text-lg max-w-xl mx-auto">Watch your plaintext secrets transform into safe references — character by character.</p>
+    </div>
+
+    <div class="max-w-3xl mx-auto">
+      <!-- Before -->
+      <div class="mb-6">
+        <div class="text-xs text-dim uppercase tracking-wider mb-2 font-medium">Before — visible to AI</div>
+        <div class="bg-bg-card border border-red/20 rounded-xl p-5 font-mono text-sm">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-dim">STRIPE_KEY=</span>
+            <span id="scramble-text" class="text-red">sk_live_51J3xKpQR7mN8vWZ</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-dim">DB_PASSWORD=</span>
+            <span class="text-red">s3cret_pr0d_p@ssw0rd</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div class="flex justify-center my-6">
+        <div id="transform-arrow" class="w-10 h-10 rounded-full bg-accent-dim border border-accent/20 flex items-center justify-center opacity-0 transition-all duration-500">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linecap="round">
+            <path d="M10 4v12m0 0l-4-4m4 4l4-4"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- After -->
+      <div>
+        <div class="text-xs text-dim uppercase tracking-wider mb-2 font-medium">After — safe for AI, safe for git</div>
+        <div id="after-box" class="bg-bg-card border border-green/20 rounded-xl p-5 font-mono text-sm opacity-30 transition-opacity duration-700">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-dim">STRIPE_KEY=</span>
+            <span class="text-purple">zvault://env/myapp/STRIPE_KEY</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-dim">DB_PASSWORD=</span>
+            <span class="text-purple">zvault://env/myapp/DB_PASSWORD</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { gsap } from 'gsap';
+  import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+  const target = 'sk_live_51J3xKpQR7mN8vWZ';
+  const el = document.getElementById('scramble-text');
+  const arrow = document.getElementById('transform-arrow');
+  const afterBox = document.getElementById('after-box');
+
+  let scrambleInterval: ReturnType<typeof setInterval> | null = null;
+
+  ScrollTrigger.create({
+    trigger: '#encryption-viz',
+    start: 'top 60%',
+    end: 'bottom 40%',
+    onEnter: () => {
+      // Start scramble
+      let iterations = 0;
+      scrambleInterval = setInterval(() => {
+        if (!el) return;
+        el.textContent = target
+          .split('')
+          .map((char, i) => {
+            if (i < iterations) return char;
+            return chars[Math.floor(Math.random() * chars.length)];
+          })
+          .join('');
+        iterations += 0.5;
+        if (iterations >= target.length) {
+          if (scrambleInterval) clearInterval(scrambleInterval);
+          // Show arrow and after state
+          if (arrow) arrow.style.opacity = '1';
+          if (afterBox) afterBox.style.opacity = '1';
+        }
+      }, 40);
+    },
+    once: true,
+  });
+</script>

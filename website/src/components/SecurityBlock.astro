@@ -1,0 +1,62 @@
+---
+// Security credibility block — essential for a secrets manager
+// Developers evaluating a security tool need to see you take it seriously
+const points = [
+  {
+    title: 'AES-256-GCM encryption at rest',
+    desc: 'Every secret is encrypted with a unique nonce. Pure Rust cryptography from the audited RustCrypto ecosystem.',
+    icon: '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>',
+  },
+  {
+    title: "Shamir's Secret Sharing seal",
+    desc: 'Master key is split into shares using Shamir\'s algorithm. No single person can unseal the vault alone.',
+    icon: '<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>',
+  },
+  {
+    title: 'Fail-closed audit logging',
+    desc: 'Every operation is logged before execution. If the audit log fails, the operation is denied. No silent failures.',
+    icon: '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>',
+  },
+  {
+    title: 'Zero plaintext storage',
+    desc: 'Secrets pass through an encryption barrier before touching storage. The storage backend never sees plaintext.',
+    icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  },
+  {
+    title: 'Memory-safe by design',
+    desc: 'Written in Rust — no buffer overflows, no use-after-free, no garbage collector pauses. Memory safety without compromise.',
+    icon: '<path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M12 6v6l4 2"/>',
+  },
+  {
+    title: 'Fully open source (MIT)',
+    desc: 'Every line of code is auditable. No proprietary crypto, no trust-us-bro security. Read the source, verify the claims.',
+    icon: '<path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/>',
+  },
+];
+---
+
+<section class="py-24 relative">
+  <div class="absolute inset-0 bg-gradient-to-b from-transparent via-green/[0.015] to-transparent"></div>
+
+  <div class="container relative z-10">
+    <div class="text-center mb-16">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-green/30 bg-green/5 text-xs text-green font-medium mb-6">
+        Security First
+      </div>
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">Built by paranoids, for paranoids</h2>
+      <p class="text-muted text-lg max-w-2xl mx-auto">A secrets manager that isn't secure is worse than useless. Here's why you can trust ZVault with your most sensitive data.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
+      {points.map((p) => (
+        <div class="bg-bg-card border border-border rounded-2xl p-5 hover:border-green/20 transition-colors" data-animate>
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center mb-3 bg-bg border border-green/20 text-green">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={p.icon} />
+          </div>
+          <h3 class="text-sm font-semibold mb-1.5">{p.title}</h3>
+          <p class="text-muted text-xs leading-relaxed">{p.desc}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
