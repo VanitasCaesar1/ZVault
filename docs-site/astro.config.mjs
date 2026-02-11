@@ -7,9 +7,8 @@ export default defineConfig({
     starlight({
       title: 'ZVault Docs',
       description: 'Documentation for ZVault — the AI-native secrets manager.',
-      // logo: { src: './src/assets/logo.svg', alt: 'ZVault', replacesTitle: false },
       social: [
-        { icon: 'github', label: 'GitHub', href: 'https://github.com/nicosalm/zvault' },
+        { icon: 'github', label: 'GitHub', href: 'https://github.com/VanitasCaesar1/ZVault' },
       ],
       sidebar: [
         {
@@ -37,8 +36,11 @@ export default defineConfig({
           autogenerate: { directory: 'security' },
         },
       ],
+      components: {
+        Head: './src/components/starlight/Head.astro',
+      },
       customCss: ['./src/styles/custom.css'],
-      editLink: { baseUrl: 'https://github.com/nicosalm/zvault/edit/main/docs-site/' },
+      editLink: { baseUrl: 'https://github.com/VanitasCaesar1/ZVault/edit/main/docs-site/' },
     }),
   ],
 });

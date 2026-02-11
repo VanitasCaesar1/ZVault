@@ -11,5 +11,8 @@
     "@astrojs/starlight": "^0.34",
     "astro": "^5.10",
     "sharp": "^0.33.0"
+  },
+  "devDependencies": {
+    "astro-vtbot": "^2.1.11"
   }
 }
