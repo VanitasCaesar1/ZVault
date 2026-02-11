@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "steps": {
+    "build": {
+      "commands": [
+        "...",
+        "cargo build --release --bin vaultrs-server"
+      ]
+    }
+  },
+  "deploy": {
+    "startCommand": "./bin/vaultrs-server"
+  }
+}

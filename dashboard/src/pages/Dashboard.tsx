@@ -176,7 +176,7 @@ function StatCard({ label, value, valueClass, sub }: { label: string; value: str
   );
 }
 
-function EngineRow({ name, path, description }: { name: string; path: string; description?: string }) {
+function EngineRow({ name, path, description: _description }: { name: string; path: string; description?: string }) {
   return (
     <div className="flex items-center justify-between py-3.5 border-b border-stone-200/60 last:border-b-0">
       <div className="flex items-center gap-3">
