@@ -1,18 +1,15 @@
 {
   "name": "zvault-docs",
+  "private": true,
   "type": "module",
-  "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview"
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview"
   },
   "dependencies": {
-    "@astrojs/starlight": "^0.34",
-    "astro": "^5.10",
-    "sharp": "^0.33.0"
-  },
-  "devDependencies": {
-    "astro-vtbot": "^2.1.11"
+    "docus": "^5",
+    "nuxt": "^4"
   }
 }

@@ -1,9 +1,13 @@
 [build]
-builder = "RAILPACK"
+builder = "NIXPACKS"
 buildCommand = "npm install && npm run build"
 
 [deploy]
-# Starlight builds to pure static HTML — serve with a lightweight static server.
-startCommand = "npx serve dist --listen ${PORT:-3000}"
+startCommand = "node .output/server/index.mjs"
+healthcheckPath = "/"
+healthcheckTimeout = 10
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
+
+[variables]
+NUXT_SITE_URL = "https://docs.zvault.cloud"
