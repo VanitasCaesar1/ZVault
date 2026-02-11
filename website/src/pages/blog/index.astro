@@ -1,0 +1,77 @@
+---
+import Base from '../../layouts/Base.astro';
+import Nav from '../../components/Nav.astro';
+import Footer from '../../components/Footer.astro';
+
+const posts = [
+  {
+    title: 'Stop Leaking Secrets to LLMs',
+    description: 'Every AI coding tool reads your .env file. That means your Stripe keys, database passwords, and AWS credentials are sitting in someone else\'s context window. We built ZVault to fix this.',
+    slug: 'stop-leaking-secrets-to-llms',
+    date: '2026-02-11',
+    readTime: '5 min read',
+    tags: ['Security', 'AI', 'Launch'],
+  },
+];
+
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+---
+
+<Base title="Blog | ZVault" description="Engineering insights, product updates, and security best practices from the ZVault team.">
+  <Nav />
+
+  <main class="pt-32 pb-24">
+    <div class="max-w-[820px] mx-auto px-6">
+      <!-- Header -->
+      <div class="mb-16">
+        <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight mb-4">Blog</h1>
+        <p class="text-muted text-lg max-w-xl">Engineering insights, product updates, and security best practices from the ZVault team.</p>
+      </div>
+
+      <!-- Posts -->
+      <div class="space-y-6">
+        {posts.map((post) => (
+          <a
+            href={`/blog/${post.slug}`}
+            class="group block bg-bg-card border border-border rounded-2xl p-6 md:p-8 hover:border-accent/30 transition-all duration-300 hover:shadow-[0_0_40px_rgba(34,211,238,0.04)]"
+          >
+            <div class="flex items-center gap-3 text-xs text-dim mb-3">
+              <time datetime={post.date}>{formatDate(post.date)}</time>
+              <span class="w-1 h-1 rounded-full bg-dim/50"></span>
+              <span>{post.readTime}</span>
+            </div>
+
+            <h2 class="text-xl md:text-2xl font-bold text-white group-hover:text-accent transition-colors mb-3">
+              {post.title}
+            </h2>
+
+            <p class="text-muted text-sm leading-relaxed mb-4 line-clamp-2">
+              {post.description}
+            </p>
+
+            <div class="flex items-center gap-2">
+              {post.tags.map((tag) => (
+                <span class="text-[10px] font-semibold uppercase tracking-wider text-accent/70 bg-accent/5 border border-accent/10 px-2 py-0.5 rounded-full">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </a>
+        ))}
+      </div>
+
+      <!-- Empty state hint -->
+      <div class="mt-16 text-center">
+        <p class="text-dim text-sm">More posts coming soon. Follow us on <a href="https://github.com/ArcadeLabsInc/zvault" class="text-accent hover:underline">GitHub</a> for updates.</p>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Base>

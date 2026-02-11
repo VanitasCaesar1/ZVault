@@ -1,7 +1,7 @@
 ---
 ---
 
-<nav id="nav" class="fixed top-0 left-0 right-0 z-50 glass transition-all duration-300">
+<nav id="nav" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b border-transparent" data-nav>
   <div class="max-w-content mx-auto px-6 flex items-center justify-between h-16">
     <a href="/" class="flex items-center gap-2 font-bold text-lg text-white hover:no-underline">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="text-accent">
@@ -14,10 +14,11 @@
 
     <!-- Desktop links -->
     <div class="hidden md:flex items-center gap-8">
-      <a href="#features" class="text-sm font-medium text-muted hover:text-white transition-colors">Features</a>
-      <a href="#pricing" class="text-sm font-medium text-muted hover:text-white transition-colors">Pricing</a>
+      <a href="/#features" class="text-sm font-medium text-muted hover:text-white transition-colors">Features</a>
+      <a href="/#pricing" class="text-sm font-medium text-muted hover:text-white transition-colors">Pricing</a>
       <a href="https://docs.zvault.cloud" class="text-sm font-medium text-muted hover:text-white transition-colors">Docs</a>
-      <a href="/blog/stop-leaking-secrets-to-llms" class="text-sm font-medium text-muted hover:text-white transition-colors">Blog</a>
+      <a href="/blog" class="text-sm font-medium text-muted hover:text-white transition-colors">Blog</a>
+      <a href="/changelog" class="text-sm font-medium text-muted hover:text-white transition-colors">Changelog</a>
       <a href="https://github.com/ArcadeLabsInc/zvault" class="text-sm font-medium text-muted hover:text-white transition-colors">GitHub</a>
       <a href="/dashboard" class="text-sm font-semibold text-bg bg-accent hover:bg-accent/90 px-4 py-2 rounded-lg transition-colors">Dashboard</a>
     </div>
@@ -33,19 +34,37 @@
   </div>
 
   <!-- Mobile menu -->
-  <div id="mobile-menu" class="hidden md:hidden border-t border-border px-6 py-4 space-y-3">
-    <a href="#features" class="block text-sm text-muted hover:text-white">Features</a>
-    <a href="#pricing" class="block text-sm text-muted hover:text-white">Pricing</a>
+  <div id="mobile-menu" class="hidden md:hidden border-t border-border px-6 py-4 space-y-3 bg-bg/95 backdrop-blur-xl">
+    <a href="/#features" class="block text-sm text-muted hover:text-white">Features</a>
+    <a href="/#pricing" class="block text-sm text-muted hover:text-white">Pricing</a>
     <a href="https://docs.zvault.cloud" class="block text-sm text-muted hover:text-white">Docs</a>
-    <a href="/blog/stop-leaking-secrets-to-llms" class="block text-sm text-muted hover:text-white">Blog</a>
+    <a href="/blog" class="block text-sm text-muted hover:text-white">Blog</a>
+    <a href="/changelog" class="block text-sm text-muted hover:text-white">Changelog</a>
     <a href="https://github.com/ArcadeLabsInc/zvault" class="block text-sm text-muted hover:text-white">GitHub</a>
     <a href="/dashboard" class="block text-sm font-semibold text-accent">Dashboard →</a>
   </div>
 </nav>
 
 <script>
+  const nav = document.querySelector('[data-nav]');
   const btn = document.getElementById('mobile-menu-btn');
   const menu = document.getElementById('mobile-menu');
+
+  // Solid background on scroll
+  function updateNav() {
+    if (!nav) return;
+    if (window.scrollY > 20) {
+      nav.classList.add('bg-bg/90', 'backdrop-blur-xl', 'border-border');
+      nav.classList.remove('border-transparent');
+    } else {
+      nav.classList.remove('bg-bg/90', 'backdrop-blur-xl', 'border-border');
+      nav.classList.add('border-transparent');
+    }
+  }
+
+  window.addEventListener('scroll', updateNav, { passive: true });
+  updateNav();
+
   btn?.addEventListener('click', () => {
     menu?.classList.toggle('hidden');
   });

@@ -1,79 +1,239 @@
 ---
-const rows = [
-  { feature: 'AI Mode (MCP)', zvault: true, hashicorp: false, infisical: false, doppler: false },
-  { feature: 'zvault:// references', zvault: true, hashicorp: false, infisical: false, doppler: false },
-  { feature: 'Single binary', zvault: true, hashicorp: false, infisical: false, doppler: false },
-  { feature: 'Self-hosted', zvault: true, hashicorp: true, infisical: true, doppler: false },
-  { feature: 'Local-first', zvault: true, hashicorp: false, infisical: false, doppler: false },
-  { feature: 'Open source (MIT)', zvault: true, hashicorp: 'BSL', infisical: true, doppler: false },
-  { feature: 'Shamir seal', zvault: true, hashicorp: true, infisical: false, doppler: false },
-  { feature: 'Setup time', zvault: '2 min', hashicorp: 'Hours', infisical: '~15 min', doppler: '~5 min' },
-  { feature: 'Free tier', zvault: true, hashicorp: false, infisical: true, doppler: true },
+interface Row {
+  feature: string;
+  zvault: boolean | string;
+  hashicorp: boolean | string;
+  infisical: boolean | string;
+  doppler: boolean | string;
+}
+
+interface Category {
+  name: string;
+  icon: string;
+  rows: Row[];
+}
+
+const categories: Category[] = [
+  {
+    name: 'AI & Developer Experience',
+    icon: '⚡',
+    rows: [
+      { feature: 'AI Mode (MCP server)', zvault: true, hashicorp: false, infisical: false, doppler: false },
+      { feature: 'zvault:// secret references', zvault: true, hashicorp: false, infisical: false, doppler: false },
+      { feature: 'IDE setup (Cursor, Kiro, Continue)', zvault: '1 command', hashicorp: false, infisical: false, doppler: false },
+      { feature: 'llms.txt generation', zvault: true, hashicorp: false, infisical: false, doppler: false },
+      { feature: '.env import → encrypted vault', zvault: true, hashicorp: false, infisical: true, doppler: true },
+      { feature: 'zvault run (inject at runtime)', zvault: true, hashicorp: false, infisical: true, doppler: true },
+      { feature: 'CLI experience', zvault: 'Ergonomic', hashicorp: 'Complex', infisical: 'Good', doppler: 'Good' },
+      { feature: 'Setup time', zvault: '2 min', hashicorp: 'Hours', infisical: '~15 min', doppler: '~5 min' },
+      { feature: '.env.example generation', zvault: 'AI-powered', hashicorp: false, infisical: false, doppler: false },
+      { feature: 'Secret search from IDE', zvault: true, hashicorp: false, infisical: false, doppler: false },
+    ],
+  },
+  {
+    name: 'Security & Encryption',
+    icon: '🔒',
+    rows: [
+      { feature: 'Encryption at rest', zvault: 'AES-256-GCM', hashicorp: 'AES-256-GCM', infisical: 'AES-256-GCM', doppler: 'AES-256' },
+      { feature: 'Shamir\'s Secret Sharing', zvault: true, hashicorp: true, infisical: false, doppler: false },
+      { feature: 'Key zeroization (memory wipe)', zvault: true, hashicorp: false, infisical: false, doppler: 'N/A' },
+      { feature: 'Constant-time token comparison', zvault: true, hashicorp: true, infisical: false, doppler: 'N/A' },
+      { feature: 'Core dump prevention', zvault: true, hashicorp: false, infisical: false, doppler: 'N/A' },
+      { feature: 'Memory locking (mlockall)', zvault: true, hashicorp: true, infisical: false, doppler: 'N/A' },
+      { feature: 'Fail-closed audit logging', zvault: true, hashicorp: true, infisical: false, doppler: false },
+      { feature: 'No unsafe code', zvault: true, hashicorp: false, infisical: 'N/A', doppler: 'N/A' },
+      { feature: 'Pure Rust crypto (no OpenSSL)', zvault: true, hashicorp: false, infisical: false, doppler: false },
+      { feature: 'Seal/unseal lifecycle', zvault: true, hashicorp: true, infisical: false, doppler: false },
+    ],
+  },
+  {
+    name: 'Architecture & Deployment',
+    icon: '🏗️',
+    rows: [
+      { feature: 'Single binary', zvault: true, hashicorp: true, infisical: false, doppler: false },
+      { feature: 'Self-hosted option', zvault: true, hashicorp: true, infisical: true, doppler: false },
+      { feature: 'Local-first (no cloud required)', zvault: true, hashicorp: false, infisical: false, doppler: false },
+      { feature: 'Cloud option', zvault: 'Coming', hashicorp: true, infisical: true, doppler: 'Only' },
+      { feature: 'Docker required', zvault: false, hashicorp: false, infisical: true, doppler: 'N/A' },
+      { feature: 'Runtime dependencies', zvault: 'None', hashicorp: 'None', infisical: 'Node + DB + Redis', doppler: 'N/A' },
+      { feature: 'Language', zvault: 'Rust', hashicorp: 'Go', infisical: 'TypeScript', doppler: 'Unknown' },
+      { feature: 'Railway one-click deploy', zvault: true, hashicorp: false, infisical: false, doppler: false },
+      { feature: 'Binary size', zvault: '~15 MB', hashicorp: '~200 MB', infisical: '~500 MB+', doppler: 'N/A' },
+    ],
+  },
+  {
+    name: 'Secrets Engines',
+    icon: '🔑',
+    rows: [
+      { feature: 'KV secrets engine', zvault: true, hashicorp: true, infisical: true, doppler: true },
+      { feature: 'Transit encryption engine', zvault: true, hashicorp: true, infisical: false, doppler: false },
+      { feature: 'PKI / certificate authority', zvault: true, hashicorp: true, infisical: true, doppler: false },
+      { feature: 'Dynamic database credentials', zvault: 'Planned', hashicorp: true, infisical: true, doppler: 'Limited' },
+      { feature: 'Secret rotation', zvault: 'Planned', hashicorp: true, infisical: true, doppler: true },
+      { feature: 'SSH certificate signing', zvault: 'Planned', hashicorp: true, infisical: true, doppler: false },
+      { feature: 'TOTP engine', zvault: 'Planned', hashicorp: true, infisical: false, doppler: false },
+    ],
+  },
+  {
+    name: 'Operations & Integrations',
+    icon: '⚙️',
+    rows: [
+      { feature: 'Secret versioning', zvault: true, hashicorp: true, infisical: true, doppler: true },
+      { feature: 'Environment sync', zvault: true, hashicorp: false, infisical: true, doppler: true },
+      { feature: 'Web dashboard', zvault: true, hashicorp: true, infisical: true, doppler: true },
+      { feature: 'REST API', zvault: true, hashicorp: true, infisical: true, doppler: true },
+      { feature: 'CI/CD integrations', zvault: 'CLI-based', hashicorp: '50+', infisical: '20+', doppler: '15+' },
+      { feature: 'Kubernetes operator', zvault: 'Planned', hashicorp: true, infisical: true, doppler: true },
+      { feature: 'Terraform provider', zvault: 'Planned', hashicorp: true, infisical: true, doppler: true },
+      { feature: 'HA clustering (Raft)', zvault: 'Planned', hashicorp: true, infisical: false, doppler: 'N/A' },
+      { feature: 'Homebrew install', zvault: true, hashicorp: true, infisical: false, doppler: true },
+      { feature: 'npm/npx install', zvault: true, hashicorp: false, infisical: true, doppler: false },
+    ],
+  },
+  {
+    name: 'Auth & Access Control',
+    icon: '🛡️',
+    rows: [
+      { feature: 'Token-based auth', zvault: true, hashicorp: true, infisical: true, doppler: true },
+      { feature: 'Path-based ACL policies', zvault: true, hashicorp: true, infisical: false, doppler: false },
+      { feature: 'RBAC', zvault: true, hashicorp: true, infisical: true, doppler: true },
+      { feature: 'OIDC / SSO', zvault: 'Team plan', hashicorp: true, infisical: true, doppler: true },
+      { feature: 'LDAP auth', zvault: 'Planned', hashicorp: true, infisical: false, doppler: false },
+      { feature: 'SAML', zvault: 'Planned', hashicorp: 'Enterprise', infisical: 'Enterprise', doppler: true },
+    ],
+  },
+  {
+    name: 'Compliance & Licensing',
+    icon: '📋',
+    rows: [
+      { feature: 'License', zvault: 'MIT', hashicorp: 'BSL 1.1', infisical: 'MIT Expat', doppler: 'Proprietary' },
+      { feature: 'Truly open source', zvault: true, hashicorp: false, infisical: true, doppler: false },
+      { feature: 'Audit log export', zvault: true, hashicorp: true, infisical: true, doppler: true },
+      { feature: 'SOC 2 certified', zvault: 'Planned', hashicorp: true, infisical: true, doppler: true },
+      { feature: 'GDPR compliant', zvault: true, hashicorp: true, infisical: true, doppler: true },
+      { feature: 'HIPAA ready', zvault: 'Planned', hashicorp: 'Enterprise', infisical: 'Enterprise', doppler: 'Enterprise' },
+    ],
+  },
+  {
+    name: 'Pricing',
+    icon: '💰',
+    rows: [
+      { feature: 'Free tier', zvault: true, hashicorp: false, infisical: true, doppler: true },
+      { feature: 'Starting price', zvault: '$8/dev/mo', hashicorp: '$1.58/hr', infisical: '$9/user/mo', doppler: '$7/user/mo' },
+      { feature: 'Pricing model', zvault: 'Per developer', hashicorp: 'Per hour', infisical: 'Per user', doppler: 'Per user' },
+      { feature: 'Self-host free', zvault: true, hashicorp: 'BSL limits', infisical: true, doppler: false },
+      { feature: 'No credit card for free tier', zvault: true, hashicorp: 'N/A', infisical: true, doppler: true },
+    ],
+  },
 ];
+
+function renderCell(value: boolean | string, isZvault: boolean = false) {
+  if (value === true) return { text: '✓', class: isZvault ? 'text-accent font-bold text-base' : 'text-green font-semibold' };
+  if (value === false) return { text: '✗', class: 'text-dim/50' };
+  if (value === 'N/A') return { text: '—', class: 'text-dim/40' };
+  if (value === 'Planned') return { text: value, class: 'text-purple text-xs font-medium' };
+  return { text: String(value), class: isZvault ? 'text-accent font-medium text-xs' : 'text-muted text-xs' };
+}
 ---
 
-<section class="py-24" id="comparison">
-  <div class="container">
+<section class="py-24 relative overflow-hidden" id="comparison">
+  <!-- Subtle background glow -->
+  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-accent/[0.02] rounded-full blur-[120px] pointer-events-none"></div>
+
+  <div class="container relative">
     <div class="text-center mb-16">
-      <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">How ZVault compares</h2>
-      <p class="text-muted text-lg max-w-xl mx-auto">The only secrets manager with native AI/LLM integration.</p>
+      <div class="inline-flex items-center gap-2 text-xs font-semibold text-accent uppercase tracking-wider mb-4 px-3 py-1.5 rounded-full border border-accent/20 bg-accent/5">
+        <span>⚔️</span> Detailed Comparison
+      </div>
+      <h2 class="text-3xl md:text-5xl font-bold tracking-tight mb-4">How ZVault stacks up</h2>
+      <p class="text-muted text-lg max-w-2xl mx-auto">
+        The only secrets manager with native AI/LLM integration. Compare across 60+ features.
+      </p>
     </div>
 
-    <div class="overflow-x-auto rounded-2xl border border-border">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-border">
-            <th class="text-left px-5 py-4 text-xs text-dim uppercase tracking-wider font-semibold">Feature</th>
-            <th class="px-5 py-4 text-xs uppercase tracking-wider font-semibold text-accent bg-accent/5">ZVault</th>
-            <th class="px-5 py-4 text-xs text-dim uppercase tracking-wider font-semibold">HashiCorp</th>
-            <th class="px-5 py-4 text-xs text-dim uppercase tracking-wider font-semibold">Infisical</th>
-            <th class="px-5 py-4 text-xs text-dim uppercase tracking-wider font-semibold">Doppler</th>
+    <!-- Sticky header hint for mobile -->
+    <p class="text-dim text-xs text-center mb-4 md:hidden">← Scroll horizontally to compare →</p>
+
+    <div class="overflow-x-auto rounded-2xl border border-border bg-bg-card/30 backdrop-blur-sm">
+      <table class="w-full text-sm min-w-[700px]">
+        <thead class="sticky top-0 z-10">
+          <tr class="border-b border-border bg-bg-card/95 backdrop-blur-sm">
+            <th class="text-left px-5 py-4 text-xs text-dim uppercase tracking-wider font-semibold w-[280px]">Feature</th>
+            <th class="px-5 py-4 text-center w-[130px]">
+              <div class="flex flex-col items-center gap-1">
+                <span class="text-accent font-bold text-sm">ZVault</span>
+                <span class="text-[10px] text-accent/60 font-normal">MIT · Rust</span>
+              </div>
+            </th>
+            <th class="px-5 py-4 text-center w-[130px]">
+              <div class="flex flex-col items-center gap-1">
+                <span class="text-muted font-semibold text-sm">HashiCorp</span>
+                <span class="text-[10px] text-dim font-normal">BSL · Go</span>
+              </div>
+            </th>
+            <th class="px-5 py-4 text-center w-[130px]">
+              <div class="flex flex-col items-center gap-1">
+                <span class="text-muted font-semibold text-sm">Infisical</span>
+                <span class="text-[10px] text-dim font-normal">MIT · TS</span>
+              </div>
+            </th>
+            <th class="px-5 py-4 text-center w-[130px]">
+              <div class="flex flex-col items-center gap-1">
+                <span class="text-muted font-semibold text-sm">Doppler</span>
+                <span class="text-[10px] text-dim font-normal">Proprietary</span>
+              </div>
+            </th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr class="border-b border-border/50 hover:bg-bg-card/50 transition-colors">
-              <td class="px-5 py-3.5 font-medium text-white">{row.feature}</td>
-              <td class="px-5 py-3.5 text-center bg-accent/5">
-                {row.zvault === true ? (
-                  <span class="text-green font-bold">✓</span>
-                ) : typeof row.zvault === 'string' ? (
-                  <span class="text-accent font-medium">{row.zvault}</span>
-                ) : (
-                  <span class="text-dim">✗</span>
-                )}
-              </td>
-              <td class="px-5 py-3.5 text-center">
-                {row.hashicorp === true ? (
-                  <span class="text-green">✓</span>
-                ) : typeof row.hashicorp === 'string' ? (
-                  <span class="text-dim">{row.hashicorp}</span>
-                ) : (
-                  <span class="text-dim">✗</span>
-                )}
-              </td>
-              <td class="px-5 py-3.5 text-center">
-                {row.infisical === true ? (
-                  <span class="text-green">✓</span>
-                ) : typeof row.infisical === 'string' ? (
-                  <span class="text-dim">{row.infisical}</span>
-                ) : (
-                  <span class="text-dim">✗</span>
-                )}
-              </td>
-              <td class="px-5 py-3.5 text-center">
-                {row.doppler === true ? (
-                  <span class="text-green">✓</span>
-                ) : typeof row.doppler === 'string' ? (
-                  <span class="text-dim">{row.doppler}</span>
-                ) : (
-                  <span class="text-dim">✗</span>
-                )}
-              </td>
-            </tr>
+          {categories.map((cat) => (
+            <>
+              {/* Category header */}
+              <tr class="bg-bg/80">
+                <td colspan="5" class="px-5 py-3 border-t border-border">
+                  <div class="flex items-center gap-2">
+                    <span class="text-base">{cat.icon}</span>
+                    <span class="text-xs font-bold text-white uppercase tracking-wider">{cat.name}</span>
+                    <span class="text-[10px] text-dim">({cat.rows.length})</span>
+                  </div>
+                </td>
+              </tr>
+              {/* Feature rows */}
+              {cat.rows.map((row) => {
+                const zv = renderCell(row.zvault, true);
+                const hc = renderCell(row.hashicorp);
+                const inf = renderCell(row.infisical);
+                const dop = renderCell(row.doppler);
+                return (
+                  <tr class="border-t border-border/30 hover:bg-accent/[0.02] transition-colors">
+                    <td class="px-5 py-2.5 text-muted font-medium text-[13px]">{row.feature}</td>
+                    <td class={`px-5 py-2.5 text-center bg-accent/[0.03] ${zv.class}`}>{zv.text}</td>
+                    <td class={`px-5 py-2.5 text-center ${hc.class}`}>{hc.text}</td>
+                    <td class={`px-5 py-2.5 text-center ${inf.class}`}>{inf.text}</td>
+                    <td class={`px-5 py-2.5 text-center ${dop.class}`}>{dop.text}</td>
+                  </tr>
+                );
+              })}
+            </>
           ))}
         </tbody>
       </table>
+    </div>
+
+    <!-- Summary callout -->
+    <div class="mt-8 grid md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+      <div class="bg-bg-card border border-border rounded-xl p-5 text-center">
+        <div class="text-3xl font-bold text-accent mb-1">60+</div>
+        <div class="text-xs text-muted">Features compared</div>
+      </div>
+      <div class="bg-bg-card border border-border rounded-xl p-5 text-center">
+        <div class="text-3xl font-bold text-green mb-1">10</div>
+        <div class="text-xs text-muted">AI features only in ZVault</div>
+      </div>
+      <div class="bg-bg-card border border-border rounded-xl p-5 text-center">
+        <div class="text-3xl font-bold text-purple mb-1">MIT</div>
+        <div class="text-xs text-muted">Truly open source license</div>
+      </div>
     </div>
   </div>
 </section>

@@ -4,17 +4,33 @@ const plans = [
     tier: 'Free',
     price: '$0',
     period: '',
-    desc: 'For individual developers',
-    features: [
-      { text: 'Local encrypted vault', included: true },
-      { text: 'CLI (init, import, run)', included: true },
-      { text: '.env import/export', included: true },
-      { text: 'Web dashboard', included: true },
-      { text: 'KV, Transit, PKI engines', included: true },
-      { text: 'AI Mode (MCP server)', included: false },
-      { text: 'IDE setup', included: false },
-    ],
+    desc: 'For individual developers exploring ZVault',
+    badge: null,
+    features: {
+      'Core': [
+        { text: 'Local encrypted vault', included: true },
+        { text: 'CLI (init, import, run, seal/unseal)', included: true },
+        { text: '.env import/export', included: true },
+        { text: 'Web dashboard', included: true },
+      ],
+      'Engines': [
+        { text: 'KV secrets engine', included: true },
+        { text: 'Transit encryption engine', included: true },
+        { text: 'PKI engine (root + intermediate CA)', included: true },
+      ],
+      'Security': [
+        { text: 'AES-256-GCM encryption', included: true },
+        { text: 'Shamir seal', included: true },
+        { text: 'Audit logging', included: true },
+      ],
+      'AI': [
+        { text: 'AI Mode (MCP server)', included: false },
+        { text: 'zvault:// references', included: false },
+        { text: 'IDE setup', included: false },
+      ],
+    },
     cta: 'Install Free',
+    ctaSecondary: false,
     href: 'https://docs.zvault.cloud/getting-started/installation',
     featured: false,
   },
@@ -22,17 +38,25 @@ const plans = [
     tier: 'Pro',
     price: '$8',
     period: '/dev/mo',
-    desc: 'For AI-powered development',
-    features: [
-      { text: 'Everything in Free', included: true },
-      { text: 'AI Mode (MCP server)', included: true },
-      { text: 'zvault:// references', included: true },
-      { text: 'IDE setup (Cursor, Kiro, Continue)', included: true },
-      { text: 'llms.txt generation', included: true },
-      { text: '5 projects', included: true },
-      { text: 'Priority support', included: true },
-    ],
+    desc: 'For developers using AI coding tools daily',
+    badge: 'Most Popular',
+    features: {
+      'Everything in Free, plus': [],
+      'AI Mode': [
+        { text: 'MCP server (7 tools)', included: true },
+        { text: 'zvault:// secret references', included: true },
+        { text: 'IDE setup (Cursor, Kiro, Continue)', included: true },
+        { text: 'llms.txt generation', included: true },
+        { text: '.env.example AI generation', included: true },
+        { text: 'Secret search from IDE', included: true },
+      ],
+      'Limits': [
+        { text: '5 projects', included: true },
+        { text: 'Priority email support', included: true },
+      ],
+    },
     cta: 'Get Pro',
+    ctaSecondary: false,
     href: '/api/checkout?products=49f34606-431c-4215-a0c9-19ea745e5a93',
     featured: true,
   },
@@ -40,16 +64,24 @@ const plans = [
     tier: 'Team',
     price: '$19',
     period: '/dev/mo',
-    desc: 'For startups and small teams',
-    features: [
-      { text: 'Everything in Pro', included: true },
-      { text: 'Shared vault', included: true },
-      { text: 'OIDC SSO', included: true },
-      { text: 'Audit log export', included: true },
-      { text: 'Slack/Discord alerts', included: true },
-      { text: 'Unlimited projects', included: true },
-    ],
+    desc: 'For startups and teams sharing secrets',
+    badge: null,
+    features: {
+      'Everything in Pro, plus': [],
+      'Collaboration': [
+        { text: 'Shared vaults', included: true },
+        { text: 'OIDC / SSO', included: true },
+        { text: 'RBAC with path-based policies', included: true },
+        { text: 'Audit log export (JSON, CSV)', included: true },
+      ],
+      'Integrations': [
+        { text: 'Slack / Discord alerts', included: true },
+        { text: 'Webhook notifications', included: true },
+        { text: 'Unlimited projects', included: true },
+      ],
+    },
     cta: 'Get Team',
+    ctaSecondary: false,
     href: '/api/checkout?products=c42a3bec-5db8-4cf2-b9c6-48416604353e',
     featured: false,
   },
@@ -57,64 +89,118 @@ const plans = [
     tier: 'Enterprise',
     price: '$49',
     period: '/dev/mo',
-    desc: 'For security-conscious orgs',
-    features: [
-      { text: 'Everything in Team', included: true },
-      { text: 'HA clustering (Raft)', included: true },
-      { text: 'Kubernetes operator', included: true },
-      { text: 'Namespaces', included: true },
-      { text: 'SLA', included: true },
-      { text: 'Dedicated support', included: true },
-    ],
+    desc: 'For security-conscious organizations',
+    badge: null,
+    features: {
+      'Everything in Team, plus': [],
+      'Infrastructure': [
+        { text: 'HA clustering (Raft consensus)', included: true },
+        { text: 'Kubernetes operator', included: true },
+        { text: 'Namespaces & multi-tenancy', included: true },
+        { text: 'Terraform provider', included: true },
+      ],
+      'Support': [
+        { text: 'SLA guarantee', included: true },
+        { text: 'Dedicated support engineer', included: true },
+        { text: 'Custom integrations', included: true },
+        { text: 'Security review assistance', included: true },
+      ],
+    },
     cta: 'Contact Sales',
+    ctaSecondary: true,
     href: 'mailto:sales@zvault.cloud',
     featured: false,
   },
 ];
+
+const faqs = [
+  {
+    q: 'Can I use ZVault for free forever?',
+    a: 'Yes. The free tier includes the full vault (KV, Transit, PKI engines), CLI, web dashboard, and Shamir seal. No credit card, no time limit. AI Mode is the paid upgrade.',
+  },
+  {
+    q: 'What is AI Mode?',
+    a: 'AI Mode includes the MCP server that connects to your IDE\'s AI (Cursor, Kiro, Continue). It lets AI see what secrets exist without seeing values, using zvault:// references instead of raw .env files.',
+  },
+  {
+    q: 'Can I self-host for free?',
+    a: 'Absolutely. ZVault is MIT licensed. Self-host the vault, CLI, and dashboard for free. AI Mode (MCP server) requires a Pro license key, validated locally via Ed25519 signatures.',
+  },
+  {
+    q: 'How does billing work?',
+    a: 'Per developer, per month. A "developer" is anyone who uses AI Mode. Team members who only access the vault via CLI or API don\'t need a paid seat.',
+  },
+  {
+    q: 'What if I cancel?',
+    a: 'Your vault and secrets remain intact. You just lose AI Mode features. The vault itself is always free and open source.',
+  },
+];
 ---
 
-<section class="py-24" id="pricing">
-  <div class="container">
+<section class="py-24 relative overflow-hidden" id="pricing">
+  <!-- Background glow -->
+  <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-accent/[0.03] rounded-full blur-[100px] pointer-events-none"></div>
+
+  <div class="container relative">
     <div class="text-center mb-16">
-      <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">Simple, developer-friendly pricing</h2>
-      <p class="text-muted text-lg max-w-xl mx-auto">Start free. Upgrade when you need AI Mode.</p>
+      <div class="inline-flex items-center gap-2 text-xs font-semibold text-accent uppercase tracking-wider mb-4 px-3 py-1.5 rounded-full border border-accent/20 bg-accent/5">
+        <span>💎</span> Pricing
+      </div>
+      <h2 class="text-3xl md:text-5xl font-bold tracking-tight mb-4">Start free. Pay when AI Mode clicks.</h2>
+      <p class="text-muted text-lg max-w-2xl mx-auto">
+        The vault is free and open source forever. AI Mode unlocks the MCP server for $8/dev/month.
+      </p>
     </div>
 
-    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
+    <!-- Pricing cards -->
+    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto mb-16">
       {plans.map((plan) => (
         <div
           class:list={[
             'relative bg-bg-card border rounded-2xl p-6 flex flex-col transition-all duration-300',
             plan.featured
-              ? 'border-accent shadow-[0_0_40px_rgba(34,211,238,0.08)] scale-[1.02]'
+              ? 'border-accent/50 shadow-[0_0_60px_rgba(34,211,238,0.06)] lg:scale-[1.03]'
               : 'border-border hover:border-muted/30',
           ]}
         >
-          {plan.featured && (
-            <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-accent text-bg text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">
-              Most Popular
+          {plan.badge && (
+            <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-accent text-bg text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full whitespace-nowrap">
+              {plan.badge}
             </div>
           )}
 
-          <div class="text-xs font-semibold text-muted uppercase tracking-wider mb-2">{plan.tier}</div>
-          <div class="text-4xl font-extrabold mb-1">
-            {plan.price}
-            {plan.period && <span class="text-base font-normal text-muted">{plan.period}</span>}
+          <div class="mb-5">
+            <div class="text-xs font-semibold text-muted uppercase tracking-wider mb-2">{plan.tier}</div>
+            <div class="text-4xl font-extrabold mb-1">
+              {plan.price}
+              {plan.period && <span class="text-base font-normal text-muted">{plan.period}</span>}
+            </div>
+            <p class="text-dim text-sm">{plan.desc}</p>
           </div>
-          <p class="text-muted text-sm mb-6">{plan.desc}</p>
 
-          <ul class="space-y-2.5 mb-8 flex-1">
-            {plan.features.map((f) => (
-              <li class="flex items-start gap-2 text-sm">
-                {f.included ? (
-                  <span class="text-green mt-0.5 flex-shrink-0">✓</span>
+          <div class="flex-1 space-y-4 mb-6">
+            {Object.entries(plan.features).map(([category, items]) => (
+              <div>
+                <div class="text-[10px] font-semibold text-dim uppercase tracking-wider mb-1.5">{category}</div>
+                {(items as any[]).length > 0 ? (
+                  <ul class="space-y-1.5">
+                    {(items as any[]).map((f: any) => (
+                      <li class="flex items-start gap-2 text-[13px]">
+                        {f.included ? (
+                          <span class="text-green mt-0.5 flex-shrink-0 text-xs">✓</span>
+                        ) : (
+                          <span class="text-dim/40 mt-0.5 flex-shrink-0 text-xs">—</span>
+                        )}
+                        <span class:list={[f.included ? 'text-muted' : 'text-dim/60']}>{f.text}</span>
+                      </li>
+                    ))}
+                  </ul>
                 ) : (
-                  <span class="text-dim mt-0.5 flex-shrink-0">—</span>
+                  <div class="h-px bg-border/30 my-1"></div>
                 )}
-                <span class:list={[f.included ? 'text-muted' : 'text-dim']}>{f.text}</span>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
 
           <a
             href={plan.href}
@@ -122,13 +208,51 @@ const plans = [
               'block w-full text-center py-2.5 rounded-xl font-semibold text-sm transition-all',
               plan.featured
                 ? 'bg-accent text-bg hover:bg-accent/90 hover:shadow-[0_0_20px_rgba(34,211,238,0.15)]'
-                : 'bg-bg-card-hover border border-border text-white hover:border-accent/30',
+                : plan.ctaSecondary
+                  ? 'bg-transparent border border-border text-muted hover:border-accent/30 hover:text-white'
+                  : 'bg-bg-card-hover border border-border text-white hover:border-accent/30',
             ]}
           >
             {plan.cta}
           </a>
         </div>
       ))}
+    </div>
+
+    <!-- Trust signals -->
+    <div class="flex flex-wrap items-center justify-center gap-6 mb-16 text-dim text-xs">
+      <div class="flex items-center gap-1.5">
+        <span class="text-green">✓</span> No credit card required
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="text-green">✓</span> MIT licensed — self-host free
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="text-green">✓</span> Cancel anytime, keep your vault
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="text-green">✓</span> Secrets never leave your machine
+      </div>
+    </div>
+
+    <!-- FAQ -->
+    <div class="max-w-2xl mx-auto">
+      <h3 class="text-xl font-bold text-center mb-8">Frequently asked questions</h3>
+      <div class="space-y-4">
+        {faqs.map((faq) => (
+          <details class="group bg-bg-card border border-border rounded-xl overflow-hidden">
+            <summary class="flex items-center justify-between px-5 py-4 cursor-pointer text-sm font-medium text-white hover:text-accent transition-colors list-none">
+              {faq.q}
+              <svg class="w-4 h-4 text-dim group-open:rotate-180 transition-transform flex-shrink-0 ml-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path d="M19 9l-7 7-7-7" />
+              </svg>
+            </summary>
+            <div class="px-5 pb-4 text-sm text-muted leading-relaxed">
+              {faq.a}
+            </div>
+          </details>
+        ))}
+      </div>
     </div>
   </div>
 </section>

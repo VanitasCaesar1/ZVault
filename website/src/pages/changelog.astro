@@ -1,0 +1,143 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+
+const releases = [
+  {
+    version: '0.1.0',
+    date: '2026-02-11',
+    tag: 'Latest',
+    sections: [
+      {
+        title: 'Added',
+        icon: '+',
+        color: 'text-green',
+        items: [
+          'Core vault with AES-256-GCM barrier encryption',
+          'Shamir\'s Secret Sharing for root key protection (configurable shares/threshold)',
+          'Seal/unseal lifecycle with key zeroization',
+          'KV secrets engine (put, get, list, delete)',
+          'Transit encryption engine (create-key, encrypt, decrypt, rotate)',
+          'PKI engine (root CA, intermediate CA, certificate issuance)',
+          'Token-based authentication with policies',
+          'ACL policy engine (path-based, capabilities: create/read/update/delete/list)',
+          'HMAC-based audit logging with fail-closed semantics',
+          'Storage backends: RocksDB (default), redb, in-memory',
+          'HTTP API server (Axum) with full REST endpoints',
+          'Web dashboard (React SPA served at /ui)',
+          'CLI client (zvault) with all vault operations',
+          'zvault import .env — import .env files, generate .env.zvault references',
+          'zvault run -- cmd — resolve zvault:// URIs and inject as env vars',
+          'AI Mode (Pro): MCP server with 7 tools (list, describe, check, generate, stats, search, run)',
+          'IDE setup: zvault setup cursor|kiro|continue|generic with smart config merge',
+          'License system: Ed25519-signed keys + Polar.sh API validation',
+          'zvault activate and zvault license commands',
+          'Security hardening: RLIMIT_CORE=0, mlockall, constant-time token comparison',
+          'Pure Rust cryptography (RustCrypto ecosystem, no OpenSSL)',
+          'Docker support with Dockerfile',
+          'Railway one-click deploy with railway.toml',
+          'Landing page at zvault.cloud (Astro)',
+          'Documentation site at docs.zvault.cloud (18 pages)',
+          'Install script (curl -fsSL https://zvault.cloud/install.sh | sh)',
+          'npm wrapper (npx zvault)',
+          'Homebrew formula',
+          'GitHub Actions CI (fmt, clippy, test, audit) and Release workflows',
+        ],
+      },
+      {
+        title: 'Security',
+        icon: '!',
+        color: 'text-accent',
+        items: [
+          'AES-256-GCM with fresh nonce per operation',
+          'Shamir\'s Secret Sharing (RFC-compatible)',
+          'Key material zeroized on drop (Zeroize + ZeroizeOnDrop)',
+          'Constant-time token comparison (subtle::ConstantTimeEq)',
+          'Core dump prevention (RLIMIT_CORE=0)',
+          'Memory locking (mlockall) to prevent swap',
+          'Fail-closed audit logging',
+          'No unsafe code (#![deny(unsafe_code)])',
+        ],
+      },
+    ],
+  },
+];
+
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+---
+
+<Base title="Changelog | ZVault" description="All notable changes to ZVault, documented release by release.">
+  <Nav />
+
+  <main class="pt-32 pb-24">
+    <div class="max-w-[820px] mx-auto px-6">
+      <!-- Header -->
+      <div class="mb-16">
+        <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight mb-4">Changelog</h1>
+        <p class="text-muted text-lg max-w-xl">All notable changes to ZVault, documented release by release.</p>
+        <a href="https://github.com/ArcadeLabsInc/zvault/releases" class="inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:text-accent/80 transition-colors mt-3">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+          View on GitHub
+        </a>
+      </div>
+
+      <!-- Timeline -->
+      <div class="relative">
+        <!-- Timeline line -->
+        <div class="absolute left-[11px] top-6 bottom-0 w-px bg-border"></div>
+
+        {releases.map((release) => (
+          <div class="relative pl-10 pb-12">
+            <!-- Timeline dot -->
+            <div class="absolute left-0 top-1.5 w-[23px] h-[23px] rounded-full bg-bg-card border-2 border-accent flex items-center justify-center">
+              <div class="w-2 h-2 rounded-full bg-accent"></div>
+            </div>
+
+            <!-- Release header -->
+            <div class="flex items-center gap-3 mb-6">
+              <h2 class="text-2xl font-bold text-white">v{release.version}</h2>
+              {release.tag && (
+                <span class="text-[10px] font-bold uppercase tracking-wider text-accent bg-accent/10 border border-accent/20 px-2 py-0.5 rounded-full">
+                  {release.tag}
+                </span>
+              )}
+              <span class="text-sm text-dim">{formatDate(release.date)}</span>
+            </div>
+
+            <!-- Sections -->
+            <div class="space-y-6">
+              {release.sections.map((section) => (
+                <div>
+                  <div class="flex items-center gap-2 mb-3">
+                    <span class={`w-5 h-5 rounded flex items-center justify-center text-xs font-bold ${section.color} bg-current/10`}>
+                      <span class={section.color}>{section.icon}</span>
+                    </span>
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wider">{section.title}</h3>
+                    <span class="text-[10px] text-dim">({section.items.length})</span>
+                  </div>
+                  <ul class="space-y-1.5 ml-7">
+                    {section.items.map((item) => (
+                      <li class="text-sm text-muted leading-relaxed flex items-start gap-2">
+                        <span class="text-dim/40 mt-1.5 flex-shrink-0 text-[6px]">●</span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Base>
