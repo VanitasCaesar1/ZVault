@@ -4,13 +4,14 @@ description: The AI-native secrets manager built in Rust. Secure, fast, and deve
 navigation: false
 ---
 
-::hero
+::u-page-hero
 ---
-actions:
+title: ZVault Documentation
+description: A secure, high-performance secrets manager built entirely in Rust. AES-256-GCM encryption, Shamir unseal, zero unsafe crypto.
+links:
   - label: Get Started
     to: /getting-started/introduction
     icon: i-lucide-arrow-right
-    color: primary
   - label: View on GitHub
     to: https://github.com/ArcadeLabsInc/zvault
     icon: i-lucide-external-link
@@ -18,12 +19,6 @@ actions:
     color: neutral
     variant: outline
 ---
-
-#title
-ZVault Documentation
-
-#description
-A secure, high-performance secrets manager built entirely in Rust. AES-256-GCM encryption, Shamir unseal, zero unsafe crypto.
 ::
 
 ::card-group
