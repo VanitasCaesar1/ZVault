@@ -67,12 +67,18 @@ const tools = [
             <div class="w-8 h-8 rounded-lg bg-purple/10 flex items-center justify-center flex-shrink-0 mt-0.5">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={t.icon} />
             </div>
-            <div>
+            <div class="min-w-0">
               <code class="text-sm font-mono text-purple">{t.tool}</code>
               <p class="text-muted text-sm mt-1">{t.desc}</p>
             </div>
           </div>
         ))}
+
+        <!-- Upgrade CTA -->
+        <a href="/#pricing" class="flex items-center justify-center gap-2 mt-4 px-5 py-3 rounded-xl bg-gradient-to-r from-purple/20 to-accent/20 border border-purple/30 text-white font-semibold text-sm hover:from-purple/30 hover:to-accent/30 transition-all">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          Upgrade to Pro — $8/dev/mo
+        </a>
       </div>
     </div>
   </div>

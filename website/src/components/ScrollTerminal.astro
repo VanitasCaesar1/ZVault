@@ -92,22 +92,28 @@
 
   gsap.registerPlugin(ScrollTrigger);
 
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const lines = document.querySelectorAll('.terminal-line');
 
-  ScrollTrigger.create({
-    trigger: '#scroll-terminal',
-    start: 'top 80%',
-    end: 'bottom 20%',
-    onUpdate: (self) => {
-      const progress = self.progress;
-      const totalLines = lines.length;
-      const visibleCount = Math.floor(progress * (totalLines + 2));
+  if (prefersReducedMotion) {
+    // Show all lines immediately
+    lines.forEach((line) => line.classList.add('visible'));
+  } else {
+    ScrollTrigger.create({
+      trigger: '#scroll-terminal',
+      start: 'top 80%',
+      end: 'bottom 20%',
+      onUpdate: (self) => {
+        const progress = self.progress;
+        const totalLines = lines.length;
+        const visibleCount = Math.floor(progress * (totalLines + 2));
 
-      lines.forEach((line, i) => {
-        if (i < visibleCount) {
-          line.classList.add('visible');
-        }
-      });
-    },
-  });
+        lines.forEach((line, i) => {
+          if (i < visibleCount) {
+            line.classList.add('visible');
+          }
+        });
+      },
+    });
+  }
 </script>

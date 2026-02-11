@@ -51,11 +51,11 @@ const faqs = [
     </div>
 
     <div class="max-w-2xl mx-auto space-y-2">
-      {faqs.map((faq) => (
-        <details class="group bg-bg-card border border-border rounded-xl overflow-hidden">
+      {faqs.map((faq, i) => (
+        <details class="group bg-bg-card border border-border rounded-xl overflow-hidden" open={i < 2}>
           <summary class="flex items-center justify-between px-5 py-4 cursor-pointer list-none text-sm font-medium hover:bg-bg-card-hover transition-colors">
             {faq.q}
-            <svg class="w-4 h-4 text-dim flex-shrink-0 ml-4 transition-transform group-open:rotate-45" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+            <svg class="w-4 h-4 text-dim flex-shrink-0 ml-4 transition-transform duration-200 group-open:rotate-[135deg]" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M8 3v10M3 8h10"/>
             </svg>
           </summary>

@@ -3,9 +3,31 @@ interface Props {
   title: string;
   description?: string;
   ogImage?: string;
+  canonicalPath?: string;
 }
 
-const { title, description = "The AI-native secrets manager. Let Cursor, Copilot, and Kiro build your app without seeing your API keys.", ogImage } = Astro.props;
+const { title, description = "The AI-native secrets manager. Let Cursor, Copilot, and Kiro build your app without seeing your API keys.", ogImage, canonicalPath = "" } = Astro.props;
+const canonicalURL = `https://zvault.cloud${canonicalPath}`;
+
+const jsonLd = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "ZVault",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "macOS, Linux, Windows",
+  "description": description,
+  "url": "https://zvault.cloud",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "description": "Free tier with unlimited secrets, all engines, and web dashboard"
+  },
+  "author": {
+    "@type": "Organization",
+    "name": "Arcade Labs Inc"
+  }
+});
 ---
 
 <!DOCTYPE html>
@@ -15,35 +37,43 @@ const { title, description = "The AI-native secrets manager. Let Cursor, Copilot
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{title}</title>
   <meta name="description" content={description} />
+  <link rel="canonical" href={canonicalURL} />
   <meta property="og:title" content={title} />
   <meta property="og:description" content={description} />
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://zvault.cloud" />
+  <meta property="og:url" content={canonicalURL} />
   {ogImage && <meta property="og:image" content={ogImage} />}
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={title} />
+  <meta name="twitter:description" content={description} />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script type="application/ld+json" set:html={jsonLd} />
 </head>
 <body class="bg-bg text-white font-sans antialiased">
   <slot />
 
   <script>
-    // Lenis smooth scroll
-    import Lenis from 'lenis';
+    // Lenis smooth scroll — skip if user prefers reduced motion
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    const lenis = new Lenis({
-      duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      smoothWheel: true,
-    });
+    if (!prefersReducedMotion) {
+      import('lenis').then(({ default: Lenis }) => {
+        const lenis = new Lenis({
+          duration: 1.2,
+          easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+          smoothWheel: true,
+        });
 
-    function raf(time) {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
+        function raf(time) {
+          lenis.raf(time);
+          requestAnimationFrame(raf);
+        }
+        requestAnimationFrame(raf);
+      });
     }
-    requestAnimationFrame(raf);
   </script>
 </body>
 </html>

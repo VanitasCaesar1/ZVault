@@ -57,6 +57,8 @@
 
   gsap.registerPlugin(ScrollTrigger);
 
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
   const target = 'sk_live_51J3xKpQR7mN8vWZ';
   const el = document.getElementById('scramble-text');
@@ -64,32 +66,47 @@
   const afterBox = document.getElementById('after-box');
 
   let scrambleInterval: ReturnType<typeof setInterval> | null = null;
+  let hasPlayed = false;
 
-  ScrollTrigger.create({
-    trigger: '#encryption-viz',
-    start: 'top 60%',
-    end: 'bottom 40%',
-    onEnter: () => {
-      // Start scramble
-      let iterations = 0;
-      scrambleInterval = setInterval(() => {
-        if (!el) return;
-        el.textContent = target
-          .split('')
-          .map((char, i) => {
-            if (i < iterations) return char;
-            return chars[Math.floor(Math.random() * chars.length)];
-          })
-          .join('');
-        iterations += 0.5;
-        if (iterations >= target.length) {
-          if (scrambleInterval) clearInterval(scrambleInterval);
-          // Show arrow and after state
-          if (arrow) arrow.style.opacity = '1';
-          if (afterBox) afterBox.style.opacity = '1';
-        }
-      }, 40);
-    },
-    once: true,
-  });
+  function showResult() {
+    if (arrow) arrow.style.opacity = '1';
+    if (afterBox) afterBox.style.opacity = '1';
+  }
+
+  if (prefersReducedMotion) {
+    // Skip animation, show final state immediately when in view
+    ScrollTrigger.create({
+      trigger: '#encryption-viz',
+      start: 'top 70%',
+      onEnter: () => { showResult(); },
+      once: true,
+    });
+  } else {
+    ScrollTrigger.create({
+      trigger: '#encryption-viz',
+      start: 'top 60%',
+      end: 'bottom 40%',
+      onEnter: () => {
+        if (hasPlayed) return;
+        hasPlayed = true;
+        let iterations = 0;
+        scrambleInterval = setInterval(() => {
+          if (!el) return;
+          el.textContent = target
+            .split('')
+            .map((char, i) => {
+              if (i < iterations) return char;
+              return chars[Math.floor(Math.random() * chars.length)];
+            })
+            .join('');
+          iterations += 0.5;
+          if (iterations >= target.length) {
+            if (scrambleInterval) clearInterval(scrambleInterval);
+            showResult();
+          }
+        }, 40);
+      },
+      once: true,
+    });
+  }
 </script>

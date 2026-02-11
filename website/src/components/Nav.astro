@@ -110,4 +110,33 @@
       updateNav();
     });
   });
+
+  // Active link highlighting based on scroll position
+  const sections = ['features', 'pricing', 'faq'];
+  const navLinks = document.querySelectorAll('#nav a[href^="/#"]');
+
+  function updateActiveLink() {
+    let current = '';
+    for (const id of sections) {
+      const section = document.getElementById(id);
+      if (section) {
+        const rect = section.getBoundingClientRect();
+        if (rect.top <= 150 && rect.bottom > 150) {
+          current = id;
+        }
+      }
+    }
+    navLinks.forEach(link => {
+      const href = link.getAttribute('href');
+      if (href === `/#${current}`) {
+        link.classList.add('text-white');
+        link.classList.remove('text-muted');
+      } else {
+        link.classList.remove('text-white');
+        link.classList.add('text-muted');
+      }
+    });
+  }
+
+  window.addEventListener('scroll', updateActiveLink, { passive: true });
 </script>
