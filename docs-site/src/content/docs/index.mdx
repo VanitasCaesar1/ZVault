@@ -1,0 +1,46 @@
+---
+title: ZVault Documentation
+description: The AI-native secrets manager built in Rust. Secure, fast, and developer-friendly.
+template: splash
+hero:
+  tagline: A secure, high-performance secrets manager built entirely in Rust. AES-256-GCM encryption, Shamir unseal, zero unsafe crypto.
+  image:
+    file: ../../assets/zvault-logo.svg
+  actions:
+    - text: Get Started
+      link: /getting-started/introduction/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/VanitasCaesar1/ZVault
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<CardGrid stagger>
+  <Card title="Quick Start" icon="rocket">
+    Initialize your vault, store your first secret, and retrieve it — all in under a minute.
+    [Get started →](/getting-started/quickstart/)
+  </Card>
+  <Card title="CLI Reference" icon="terminal">
+    Full command reference for the `zvault` CLI. KV operations, import, status, and more.
+    [CLI docs →](/cli/overview/)
+  </Card>
+  <Card title="AI Mode" icon="star">
+    Use `zvault://` URIs in your IDE to reference secrets without exposing them. MCP server included.
+    [Learn more →](/ai-mode/overview/)
+  </Card>
+  <Card title="Self-Hosting" icon="server">
+    Deploy ZVault on Railway, Docker, or bare metal. Production-ready with PostgreSQL storage.
+    [Deploy →](/self-hosting/railway/)
+  </Card>
+  <Card title="API Reference" icon="document">
+    RESTful API for KV secrets, system operations, and authentication.
+    [API docs →](/api/kv/)
+  </Card>
+  <Card title="Security" icon="shield">
+    Encryption barrier, Shamir's Secret Sharing, audit logging, and threat model.
+    [Security →](/security/architecture/)
+  </Card>
+</CardGrid>
