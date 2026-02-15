@@ -5,9 +5,9 @@
 //! manager. This crate depends on `zvault-storage` for the storage backend
 //! trait and knows nothing about specific secrets engines or auth methods.
 
+pub mod approle;
 pub mod audit;
 pub mod audit_file;
-pub mod approle;
 pub mod barrier;
 pub mod crypto;
 pub mod database;

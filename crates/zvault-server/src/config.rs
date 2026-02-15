@@ -52,7 +52,7 @@ pub enum StorageBackendType {
     RocksDb { path: String },
     /// Redb persistent storage.
     Redb { path: String },
-    /// PostgreSQL persistent storage (recommended for Railway / cloud).
+    /// `PostgreSQL` persistent storage (recommended for Railway / cloud).
     Postgres { url: String },
 }
 
@@ -64,7 +64,7 @@ impl ServerConfig {
     /// - `ZVAULT_BIND_ADDR` — full bind address (overrides `PORT`, default: `127.0.0.1:8200`)
     /// - `ZVAULT_STORAGE` — `memory`, `rocksdb`, `redb`, or `postgres` (default: `memory`)
     /// - `ZVAULT_STORAGE_PATH` — path for persistent backends (default: `./data`)
-    /// - `DATABASE_URL` — PostgreSQL connection string (required when `ZVAULT_STORAGE=postgres`)
+    /// - `DATABASE_URL` — `PostgreSQL` connection string (required when `ZVAULT_STORAGE=postgres`)
     /// - `ZVAULT_STORAGE_PATH` — path for persistent backends (default: `./data`)
     /// - `ZVAULT_LOG_LEVEL` — log filter (default: `info`)
     /// - `ZVAULT_AUDIT_FILE` — path to audit log file (optional)
@@ -84,8 +84,8 @@ impl ServerConfig {
             SocketAddr::from(([127, 0, 0, 1], 8200))
         };
 
-        let storage_path = std::env::var("ZVAULT_STORAGE_PATH")
-            .unwrap_or_else(|_| "./data".to_owned());
+        let storage_path =
+            std::env::var("ZVAULT_STORAGE_PATH").unwrap_or_else(|_| "./data".to_owned());
 
         let storage_backend = match std::env::var("ZVAULT_STORAGE")
             .unwrap_or_else(|_| "memory".to_owned())
@@ -102,8 +102,7 @@ impl ServerConfig {
             _ => StorageBackendType::Memory,
         };
 
-        let log_level = std::env::var("ZVAULT_LOG_LEVEL")
-            .unwrap_or_else(|_| "info".to_owned());
+        let log_level = std::env::var("ZVAULT_LOG_LEVEL").unwrap_or_else(|_| "info".to_owned());
 
         let audit_file_path = std::env::var("ZVAULT_AUDIT_FILE").ok();
 
@@ -121,20 +120,20 @@ impl ServerConfig {
             .unwrap_or(false);
 
         // Spring OAuth — enabled when SPRING_AUTH_URL is set.
-        let spring_oauth = std::env::var("SPRING_AUTH_URL").ok().map(|auth_url| {
-            SpringOAuthConfig {
-                auth_url,
-                client_id: std::env::var("SPRING_CLIENT_ID")
-                    .unwrap_or_else(|_| "zvault-dashboard".to_owned()),
-                client_secret: std::env::var("SPRING_CLIENT_SECRET")
-                    .unwrap_or_default(),
-                redirect_uri: std::env::var("SPRING_REDIRECT_URI").ok(),
-                default_policy: std::env::var("SPRING_DEFAULT_POLICY")
-                    .unwrap_or_else(|_| "default".to_owned()),
-                admin_policy: std::env::var("SPRING_ADMIN_POLICY")
-                    .unwrap_or_else(|_| "root".to_owned()),
-            }
-        });
+        let spring_oauth =
+            std::env::var("SPRING_AUTH_URL")
+                .ok()
+                .map(|auth_url| SpringOAuthConfig {
+                    auth_url,
+                    client_id: std::env::var("SPRING_CLIENT_ID")
+                        .unwrap_or_else(|_| "zvault-dashboard".to_owned()),
+                    client_secret: std::env::var("SPRING_CLIENT_SECRET").unwrap_or_default(),
+                    redirect_uri: std::env::var("SPRING_REDIRECT_URI").ok(),
+                    default_policy: std::env::var("SPRING_DEFAULT_POLICY")
+                        .unwrap_or_else(|_| "default".to_owned()),
+                    admin_policy: std::env::var("SPRING_ADMIN_POLICY")
+                        .unwrap_or_else(|_| "root".to_owned()),
+                });
 
         Self {
             bind_addr,

@@ -127,10 +127,7 @@ async fn renew_lease(
         .await?;
 
     let increment = body.increment.unwrap_or(3600);
-    let lease = state
-        .lease_manager
-        .renew(&body.lease_id, increment)
-        .await?;
+    let lease = state.lease_manager.renew(&body.lease_id, increment).await?;
     let expired = lease.is_expired();
 
     Ok(Json(LeaseResponse {

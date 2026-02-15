@@ -533,11 +533,7 @@ mod tests {
             "admin",
             vec![PolicyRule {
                 path: "secret/**".to_owned(),
-                capabilities: vec![
-                    Capability::Read,
-                    Capability::Create,
-                    Capability::Delete,
-                ],
+                capabilities: vec![Capability::Read, Capability::Create, Capability::Delete],
             }],
         );
         store.put(&policy).await.unwrap();
@@ -684,11 +680,7 @@ mod tests {
             Capability::Sudo,
         ] {
             let result = store
-                .check(
-                    &["root".to_owned()],
-                    "any/arbitrary/path/here",
-                    cap,
-                )
+                .check(&["root".to_owned()], "any/arbitrary/path/here", cap)
                 .await;
             assert!(result.is_ok(), "root should grant {cap:?}");
         }

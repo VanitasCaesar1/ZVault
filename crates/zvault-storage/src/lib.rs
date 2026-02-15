@@ -13,10 +13,10 @@
 
 mod error;
 mod memory;
-#[cfg(feature = "redb-backend")]
-mod redb_backend;
 #[cfg(feature = "postgres-backend")]
 mod postgres_backend;
+#[cfg(feature = "redb-backend")]
+mod redb_backend;
 #[cfg(feature = "rocksdb-backend")]
 mod rocksdb_backend;
 

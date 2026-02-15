@@ -71,7 +71,10 @@ pub async fn auth_middleware(
         }
         Err(_) => (
             StatusCode::UNAUTHORIZED,
-            axum::Json(serde_json::json!({"error": "unauthorized", "message": "invalid or expired token"})),
-        ).into_response(),
+            axum::Json(
+                serde_json::json!({"error": "unauthorized", "message": "invalid or expired token"}),
+            ),
+        )
+            .into_response(),
     }
 }

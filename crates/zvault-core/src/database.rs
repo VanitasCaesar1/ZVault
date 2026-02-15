@@ -1,7 +1,7 @@
 //! Database secrets engine for `ZVault`.
 //!
-//! Generates short-lived database credentials on demand. Supports PostgreSQL
-//! and MySQL connection configurations with role-based credential generation.
+//! Generates short-lived database credentials on demand. Supports `PostgreSQL`
+//! and `MySQL` connection configurations with role-based credential generation.
 //! Credentials are tracked via the lease system and revoked on expiry.
 
 use std::collections::HashMap;
@@ -110,7 +110,10 @@ impl DatabaseEngine {
         }
         if config.plugin != "postgresql" && config.plugin != "mysql" {
             return Err(DatabaseError::InvalidConfig {
-                reason: format!("unsupported plugin '{}', expected 'postgresql' or 'mysql'", config.plugin),
+                reason: format!(
+                    "unsupported plugin '{}', expected 'postgresql' or 'mysql'",
+                    config.plugin
+                ),
             });
         }
 
@@ -120,7 +123,10 @@ impl DatabaseEngine {
         self.barrier
             .put(&self.config_key(&config.name), &data)
             .await?;
-        self.configs.write().await.insert(config.name.clone(), config);
+        self.configs
+            .write()
+            .await
+            .insert(config.name.clone(), config);
         Ok(())
     }
 
@@ -145,7 +151,10 @@ impl DatabaseEngine {
             serde_json::from_slice(&data).map_err(|e| DatabaseError::Internal {
                 reason: format!("deserialization failed: {e}"),
             })?;
-        self.configs.write().await.insert(name.to_owned(), config.clone());
+        self.configs
+            .write()
+            .await
+            .insert(name.to_owned(), config.clone());
         Ok(config)
     }
 
@@ -226,7 +235,10 @@ impl DatabaseEngine {
             serde_json::from_slice(&data).map_err(|e| DatabaseError::Internal {
                 reason: format!("deserialization failed: {e}"),
             })?;
-        self.roles.write().await.insert(name.to_owned(), role.clone());
+        self.roles
+            .write()
+            .await
+            .insert(name.to_owned(), role.clone());
         Ok(role)
     }
 

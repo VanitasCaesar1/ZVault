@@ -276,9 +276,7 @@ async fn audit_log(
             }));
         }
         Err(e) => {
-            return Err(AppError::Internal(format!(
-                "failed to read audit log: {e}"
-            )));
+            return Err(AppError::Internal(format!("failed to read audit log: {e}")));
         }
     };
 
@@ -317,9 +315,7 @@ pub struct LicenseResponse {
 /// Get the current license status.
 ///
 /// No auth required — returns only tier info, no secrets.
-async fn license_status(
-    State(_state): State<Arc<AppState>>,
-) -> Json<LicenseResponse> {
+async fn license_status(State(_state): State<Arc<AppState>>) -> Json<LicenseResponse> {
     // The license is a CLI-side concept stored in ~/.zvault/license.key.
     // The server doesn't have direct access to it, so we return a basic
     // "server edition" response. The dashboard can also check the CLI
@@ -348,7 +344,7 @@ pub struct BackupResponse {
     pub entry_count: usize,
     /// ISO 8601 timestamp of when the backup was taken.
     pub created_at: String,
-    /// ZVault version that created the backup.
+    /// `ZVault` version that created the backup.
     pub version: String,
 }
 
@@ -365,9 +361,7 @@ struct BackupEntry {
 /// No auth middleware on `/v1/sys`, but the data is ciphertext — useless
 /// without the unseal key. Still, this should be protected in production
 /// (e.g., via network policy or reverse proxy auth).
-async fn backup(
-    State(state): State<Arc<AppState>>,
-) -> Result<Json<BackupResponse>, AppError> {
+async fn backup(State(state): State<Arc<AppState>>) -> Result<Json<BackupResponse>, AppError> {
     // List all keys in the barrier.
     let keys = state.barrier.list("").await?;
 
@@ -376,10 +370,7 @@ async fn backup(
         if let Ok(Some(data)) = state.barrier.get_raw(key).await {
             entries.push(BackupEntry {
                 key: key.clone(),
-                value: base64::Engine::encode(
-                    &base64::engine::general_purpose::STANDARD,
-                    &data,
-                ),
+                value: base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &data),
             });
         }
     }
@@ -388,10 +379,8 @@ async fn backup(
     let snapshot_json = serde_json::to_vec(&entries)
         .map_err(|e| AppError::Internal(format!("backup serialization failed: {e}")))?;
 
-    let snapshot = base64::Engine::encode(
-        &base64::engine::general_purpose::STANDARD,
-        &snapshot_json,
-    );
+    let snapshot =
+        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &snapshot_json);
 
     let created_at = chrono::Utc::now().to_rfc3339();
 
@@ -427,11 +416,9 @@ async fn restore(
     State(state): State<Arc<AppState>>,
     Json(body): Json<RestoreRequest>,
 ) -> Result<Json<RestoreResponse>, AppError> {
-    let snapshot_bytes = base64::Engine::decode(
-        &base64::engine::general_purpose::STANDARD,
-        &body.snapshot,
-    )
-    .map_err(|_| AppError::BadRequest("invalid base64 snapshot".to_owned()))?;
+    let snapshot_bytes =
+        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &body.snapshot)
+            .map_err(|_| AppError::BadRequest("invalid base64 snapshot".to_owned()))?;
 
     let entries: Vec<BackupEntry> = serde_json::from_slice(&snapshot_bytes)
         .map_err(|e| AppError::BadRequest(format!("invalid snapshot format: {e}")))?;
@@ -439,13 +426,11 @@ async fn restore(
     let entry_count = entries.len();
 
     for entry in &entries {
-        let value = base64::Engine::decode(
-            &base64::engine::general_purpose::STANDARD,
-            &entry.value,
-        )
-        .map_err(|_| {
-            AppError::BadRequest(format!("invalid base64 value for key: {}", entry.key))
-        })?;
+        let value =
+            base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &entry.value)
+                .map_err(|_| {
+                    AppError::BadRequest(format!("invalid base64 value for key: {}", entry.key))
+                })?;
 
         state.barrier.put_raw(&entry.key, &value).await?;
     }

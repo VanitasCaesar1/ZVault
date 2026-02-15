@@ -270,10 +270,10 @@ pub enum PkiError {
     Barrier(#[from] BarrierError),
 }
 
-/// Errors from the AppRole auth method.
+/// Errors from the `AppRole` auth method.
 #[derive(Debug, thiserror::Error)]
 pub enum AppRoleError {
-    /// AppRole role not found.
+    /// `AppRole` role not found.
     #[error("approle role not found: {name}")]
     RoleNotFound { name: String },
 

@@ -2,7 +2,7 @@
 //!
 //! Integrates with Spring (or any OIDC provider) to allow users to
 //! authenticate via OAuth 2.0 Authorization Code + PKCE flow.
-//! On successful callback, a ZVault token is minted with the configured
+//! On successful callback, a `ZVault` token is minted with the configured
 //! default policy.
 
 use std::collections::HashMap;
@@ -52,7 +52,7 @@ struct TokenResponse {
     id_token: Option<String>,
 }
 
-/// UserInfo response from the OIDC provider.
+/// `UserInfo` response from the OIDC provider.
 #[derive(Debug, Deserialize)]
 struct UserInfoResponse {
     sub: String,
@@ -73,9 +73,7 @@ pub struct OidcConfigResponse {
 // ── Handlers ─────────────────────────────────────────────────────────
 
 /// `GET /v1/auth/oidc/config` — Check if OIDC is enabled and get login URL.
-async fn oidc_config(
-    State(state): State<Arc<AppState>>,
-) -> Json<OidcConfigResponse> {
+async fn oidc_config(State(state): State<Arc<AppState>>) -> Json<OidcConfigResponse> {
     match &state.spring_oauth {
         Some(_) => Json(OidcConfigResponse {
             enabled: true,
@@ -94,12 +92,11 @@ async fn oidc_config(
 ///
 /// Constructs the authorization URL with PKCE (S256) and redirects the user.
 /// The `state` parameter carries a CSRF nonce + code verifier (base64-encoded).
-async fn oidc_login(
-    State(state): State<Arc<AppState>>,
-) -> Result<Response, AppError> {
-    let cfg = state.spring_oauth.as_ref().ok_or_else(|| {
-        AppError::BadRequest("OIDC authentication is not configured".to_owned())
-    })?;
+async fn oidc_login(State(state): State<Arc<AppState>>) -> Result<Response, AppError> {
+    let cfg = state
+        .spring_oauth
+        .as_ref()
+        .ok_or_else(|| AppError::BadRequest("OIDC authentication is not configured".to_owned()))?;
 
     // Generate PKCE code verifier (64 hex chars from two UUIDs).
     let code_verifier = uuid::Uuid::new_v4().to_string().replace('-', "")
@@ -114,13 +111,14 @@ async fn oidc_login(
     // CSRF nonce.
     let csrf_state = uuid::Uuid::new_v4().to_string();
 
-    let redirect_uri = cfg.redirect_uri.clone().unwrap_or_else(|| {
-        "/v1/auth/oidc/callback".to_owned()
-    });
+    let redirect_uri = cfg
+        .redirect_uri
+        .clone()
+        .unwrap_or_else(|| "/v1/auth/oidc/callback".to_owned());
 
     // Pack (csrf_state, code_verifier) into the OAuth state parameter.
-    let combined_state = base64::engine::general_purpose::STANDARD
-        .encode(format!("{csrf_state}|{code_verifier}"));
+    let combined_state =
+        base64::engine::general_purpose::STANDARD.encode(format!("{csrf_state}|{code_verifier}"));
 
     let authorize_url = format!(
         "{}/authorize?response_type=code\
@@ -141,59 +139,29 @@ async fn oidc_login(
     Ok(Redirect::temporary(&authorize_url).into_response())
 }
 
-/// `GET /v1/auth/oidc/callback` — Handle the OIDC provider's callback.
-///
-/// Exchanges the authorization code for tokens, fetches user info,
-/// and mints a ZVault token with the appropriate policies.
-async fn oidc_callback(
-    State(state): State<Arc<AppState>>,
-    Query(query): Query<OidcCallbackQuery>,
-) -> Result<Response, AppError> {
-    // Check for errors from the provider.
-    if let Some(err) = &query.error {
-        let desc = query.error_description.as_deref().unwrap_or("unknown error");
-        warn!(error = %err, description = %desc, "OIDC provider returned error");
-        let dashboard_url = std::env::var("DASHBOARD_URL")
-            .unwrap_or_else(|_| "http://localhost:5173".to_owned());
-        let redirect_url = format!(
-            "{}/login?error={}",
-            dashboard_url,
-            urlencoding::encode(&format!("{err}: {desc}"))
-        );
-        return Ok(Redirect::temporary(&redirect_url).into_response());
-    }
+/// Build a redirect URL to the dashboard login page with an error message.
+fn dashboard_error_redirect(message: &str) -> Response {
+    let dashboard_url =
+        std::env::var("DASHBOARD_URL").unwrap_or_else(|_| "http://localhost:5173".to_owned());
+    let url = format!(
+        "{}/login?error={}",
+        dashboard_url,
+        urlencoding::encode(message)
+    );
+    Redirect::temporary(&url).into_response()
+}
 
-    let code = query.code.as_deref().ok_or_else(|| {
-        AppError::BadRequest("missing authorization code".to_owned())
-    })?;
+/// Exchange the OIDC authorization code for tokens and fetch user info.
+async fn exchange_and_fetch_userinfo(
+    cfg: &crate::config::SpringOAuthConfig,
+    code: &str,
+    code_verifier: &str,
+) -> Result<(TokenResponse, UserInfoResponse), AppError> {
+    let redirect_uri = cfg
+        .redirect_uri
+        .clone()
+        .unwrap_or_else(|| "/v1/auth/oidc/callback".to_owned());
 
-    let combined_state = query.state.as_deref().ok_or_else(|| {
-        AppError::BadRequest("missing state parameter".to_owned())
-    })?;
-
-    let cfg = state.spring_oauth.as_ref().ok_or_else(|| {
-        AppError::Internal("OIDC not configured".to_owned())
-    })?;
-
-    // Decode the combined state to extract code_verifier.
-    let decoded_state = base64::engine::general_purpose::STANDARD
-        .decode(combined_state)
-        .map_err(|_| AppError::BadRequest("invalid state parameter".to_owned()))?;
-
-    let decoded_str = String::from_utf8(decoded_state)
-        .map_err(|_| AppError::BadRequest("invalid state encoding".to_owned()))?;
-
-    let parts: Vec<&str> = decoded_str.splitn(2, '|').collect();
-    if parts.len() != 2 {
-        return Err(AppError::BadRequest("malformed state parameter".to_owned()));
-    }
-    let code_verifier = parts[1];
-
-    let redirect_uri = cfg.redirect_uri.clone().unwrap_or_else(|| {
-        "/v1/auth/oidc/callback".to_owned()
-    });
-
-    // Exchange authorization code for tokens.
     let http_client = reqwest::Client::new();
     let token_resp = http_client
         .post(format!("{}/token", cfg.auth_url))
@@ -213,14 +181,7 @@ async fn oidc_callback(
         let status = token_resp.status();
         let body = token_resp.text().await.unwrap_or_default();
         warn!(status = %status, body = %body, "OIDC token exchange failed");
-        let dashboard_url = std::env::var("DASHBOARD_URL")
-            .unwrap_or_else(|_| "http://localhost:5173".to_owned());
-        let redirect_url = format!(
-            "{}/login?error={}",
-            dashboard_url,
-            urlencoding::encode("Authentication failed")
-        );
-        return Ok(Redirect::temporary(&redirect_url).into_response());
+        return Err(AppError::Internal("token exchange failed".to_owned()));
     }
 
     let tokens: TokenResponse = token_resp
@@ -228,7 +189,6 @@ async fn oidc_callback(
         .await
         .map_err(|e| AppError::Internal(format!("failed to parse token response: {e}")))?;
 
-    // Fetch user info from the OIDC provider.
     let userinfo_resp = http_client
         .get(format!("{}/userinfo", cfg.auth_url))
         .header("Authorization", format!("Bearer {}", tokens.access_token))
@@ -250,10 +210,67 @@ async fn oidc_callback(
         }
     };
 
+    Ok((tokens, userinfo))
+}
+
+/// `GET /v1/auth/oidc/callback` — Handle the OIDC provider's callback.
+///
+/// Exchanges the authorization code for tokens, fetches user info,
+/// and mints a `ZVault` token with the appropriate policies.
+async fn oidc_callback(
+    State(state): State<Arc<AppState>>,
+    Query(query): Query<OidcCallbackQuery>,
+) -> Result<Response, AppError> {
+    // Check for errors from the provider.
+    if let Some(err) = &query.error {
+        let desc = query
+            .error_description
+            .as_deref()
+            .unwrap_or("unknown error");
+        warn!(error = %err, description = %desc, "OIDC provider returned error");
+        return Ok(dashboard_error_redirect(&format!("{err}: {desc}")));
+    }
+
+    let code = query
+        .code
+        .as_deref()
+        .ok_or_else(|| AppError::BadRequest("missing authorization code".to_owned()))?;
+
+    let combined_state = query
+        .state
+        .as_deref()
+        .ok_or_else(|| AppError::BadRequest("missing state parameter".to_owned()))?;
+
+    let cfg = state
+        .spring_oauth
+        .as_ref()
+        .ok_or_else(|| AppError::Internal("OIDC not configured".to_owned()))?;
+
+    // Decode the combined state to extract code_verifier.
+    let decoded_state = base64::engine::general_purpose::STANDARD
+        .decode(combined_state)
+        .map_err(|_| AppError::BadRequest("invalid state parameter".to_owned()))?;
+
+    let decoded_str = String::from_utf8(decoded_state)
+        .map_err(|_| AppError::BadRequest("invalid state encoding".to_owned()))?;
+
+    let parts: Vec<&str> = decoded_str.splitn(2, '|').collect();
+    if parts.len() != 2 {
+        return Err(AppError::BadRequest("malformed state parameter".to_owned()));
+    }
+    let code_verifier = parts[1];
+
+    // Exchange code for tokens and fetch user info.
+    let Ok((_tokens, userinfo)) = exchange_and_fetch_userinfo(cfg, code, code_verifier).await
+    else {
+        return Ok(dashboard_error_redirect("Authentication failed"));
+    };
+
     // Determine policies based on user roles.
-    let is_admin = userinfo.roles.iter().any(|r| {
-        r.eq_ignore_ascii_case("admin") || r.eq_ignore_ascii_case("superadmin")
-    });
+    let is_admin = userinfo
+        .roles
+        .iter()
+        .any(|r| r.eq_ignore_ascii_case("admin") || r.eq_ignore_ascii_case("superadmin"));
 
     let policies = if is_admin {
         vec![cfg.admin_policy.clone(), cfg.default_policy.clone()]
@@ -298,13 +315,13 @@ async fn oidc_callback(
 
     // Redirect to dashboard with the token as a query parameter.
     // The dashboard JS will store it in a cookie and redirect to /.
-    let dashboard_url = std::env::var("DASHBOARD_URL")
-        .unwrap_or_else(|_| "http://localhost:5173".to_owned());
-    let redirect_url = format!(
+    let dashboard_url =
+        std::env::var("DASHBOARD_URL").unwrap_or_else(|_| "http://localhost:5173".to_owned());
+    let token_redirect = format!(
         "{}/?token={}",
         dashboard_url,
         urlencoding::encode(&vault_token),
     );
 
-    Ok(Redirect::temporary(&redirect_url).into_response())
+    Ok(Redirect::temporary(&token_redirect).into_response())
 }

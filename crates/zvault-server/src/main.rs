@@ -9,16 +9,16 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context;
+use axum::Router;
 use axum::http::HeaderValue;
 use axum::middleware as axum_mw;
-use axum::Router;
 use tokio::net::TcpListener;
-use tokio::sync::{watch, RwLock};
+use tokio::sync::{RwLock, watch};
 use tracing::{info, warn};
 
+use zvault_core::approle::AppRoleStore;
 use zvault_core::audit::AuditManager;
 use zvault_core::audit_file::FileAuditBackend;
-use zvault_core::approle::AppRoleStore;
 use zvault_core::barrier::Barrier;
 use zvault_core::database::DatabaseEngine;
 use zvault_core::engine::KvEngine;
@@ -37,9 +37,9 @@ use zvault_server::middleware::auth_middleware;
 use zvault_server::routes;
 use zvault_server::state::AppState;
 
+use tower_http::cors::{Any, CorsLayer};
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
-use tower_http::cors::{Any, CorsLayer};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -98,24 +98,22 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Build the shared application state and return it along with the lease manager.
-async fn build_app_state(
-    config: &ServerConfig,
-) -> anyhow::Result<(Arc<AppState>, Arc<LeaseManager>)> {
-
-    // Bootstrap storage backend.
-    let storage: Arc<dyn zvault_storage::StorageBackend> = match &config.storage_backend {
+/// Create the storage backend based on configuration.
+async fn create_storage_backend(
+    backend_type: &StorageBackendType,
+) -> anyhow::Result<Arc<dyn zvault_storage::StorageBackend>> {
+    match backend_type {
         StorageBackendType::Memory => {
             info!("using in-memory storage (data will not persist)");
-            Arc::new(MemoryBackend::new())
+            Ok(Arc::new(MemoryBackend::new()) as Arc<dyn zvault_storage::StorageBackend>)
         }
         #[cfg(feature = "rocksdb-backend")]
         StorageBackendType::RocksDb { path } => {
             info!(path = %path, "using RocksDB storage");
-            Arc::new(
+            Ok(Arc::new(
                 zvault_storage::RocksDbBackend::open(path)
                     .context("failed to open RocksDB storage")?,
-            )
+            ) as Arc<dyn zvault_storage::StorageBackend>)
         }
         #[cfg(not(feature = "rocksdb-backend"))]
         StorageBackendType::RocksDb { .. } => {
@@ -124,10 +122,9 @@ async fn build_app_state(
         #[cfg(feature = "redb-backend")]
         StorageBackendType::Redb { path } => {
             info!(path = %path, "using redb storage");
-            Arc::new(
-                zvault_storage::RedbBackend::open(path)
-                    .context("failed to open redb storage")?,
-            )
+            Ok(Arc::new(
+                zvault_storage::RedbBackend::open(path).context("failed to open redb storage")?,
+            ) as Arc<dyn zvault_storage::StorageBackend>)
         }
         #[cfg(not(feature = "redb-backend"))]
         StorageBackendType::Redb { .. } => {
@@ -136,17 +133,110 @@ async fn build_app_state(
         #[cfg(feature = "postgres-backend")]
         StorageBackendType::Postgres { url } => {
             info!(url = %"[redacted]", "using PostgreSQL storage");
-            Arc::new(
+            Ok(Arc::new(
                 zvault_storage::PostgresBackend::connect(url)
                     .await
                     .context("failed to connect to PostgreSQL storage")?,
-            )
+            ) as Arc<dyn zvault_storage::StorageBackend>)
         }
         #[cfg(not(feature = "postgres-backend"))]
         StorageBackendType::Postgres { .. } => {
-            anyhow::bail!("PostgreSQL backend requested but feature 'postgres-backend' is not enabled");
+            anyhow::bail!(
+                "PostgreSQL backend requested but feature 'postgres-backend' is not enabled"
+            );
         }
-    };
+    }
+}
+
+/// Register default engine mounts (KV, transit, database, PKI).
+async fn register_default_engines(
+    config: &ServerConfig,
+    barrier: &Arc<Barrier>,
+    mount_manager: &Arc<MountManager>,
+) -> (
+    HashMap<String, Arc<KvEngine>>,
+    HashMap<String, Arc<TransitEngine>>,
+    HashMap<String, Arc<DatabaseEngine>>,
+    HashMap<String, Arc<PkiEngine>>,
+) {
+    // KV engine.
+    let default_kv = Arc::new(KvEngine::new(Arc::clone(barrier), "kv/secret/".to_owned()));
+    let mut kv_engines = HashMap::new();
+    kv_engines.insert("secret/".to_owned(), default_kv);
+
+    let _ = mount_manager
+        .mount(MountEntry {
+            path: "secret/".to_owned(),
+            engine_type: "kv".to_owned(),
+            description: "Default KV v2 secrets engine".to_owned(),
+            config: serde_json::Value::Null,
+        })
+        .await;
+
+    // Transit engine.
+    let mut transit_engines = HashMap::new();
+    if config.enable_transit {
+        let transit = Arc::new(TransitEngine::new(
+            Arc::clone(barrier),
+            "transit/transit/".to_owned(),
+        ));
+        transit_engines.insert("transit/".to_owned(), transit);
+
+        let _ = mount_manager
+            .mount(MountEntry {
+                path: "transit/".to_owned(),
+                engine_type: "transit".to_owned(),
+                description: "Default transit encryption engine".to_owned(),
+                config: serde_json::Value::Null,
+            })
+            .await;
+
+        info!("transit engine mounted at transit/");
+    }
+
+    // Database engine.
+    let mut database_engines = HashMap::new();
+    let db_engine = Arc::new(DatabaseEngine::new(
+        Arc::clone(barrier),
+        "db/database/".to_owned(),
+    ));
+    database_engines.insert("database/".to_owned(), db_engine);
+
+    let _ = mount_manager
+        .mount(MountEntry {
+            path: "database/".to_owned(),
+            engine_type: "database".to_owned(),
+            description: "Database dynamic credentials engine".to_owned(),
+            config: serde_json::Value::Null,
+        })
+        .await;
+
+    info!("database engine mounted at database/");
+
+    // PKI engine.
+    let mut pki_engines = HashMap::new();
+    let pki_engine = Arc::new(PkiEngine::new(Arc::clone(barrier), "pki/pki/".to_owned()));
+    pki_engines.insert("pki/".to_owned(), pki_engine);
+
+    let _ = mount_manager
+        .mount(MountEntry {
+            path: "pki/".to_owned(),
+            engine_type: "pki".to_owned(),
+            description: "PKI certificate authority engine".to_owned(),
+            config: serde_json::Value::Null,
+        })
+        .await;
+
+    info!("PKI engine mounted at pki/");
+
+    (kv_engines, transit_engines, database_engines, pki_engines)
+}
+
+/// Build the shared application state and return it along with the lease manager.
+async fn build_app_state(
+    config: &ServerConfig,
+) -> anyhow::Result<(Arc<AppState>, Arc<LeaseManager>)> {
+    let storage = create_storage_backend(&config.storage_backend).await?;
 
     // Build core subsystems.
     let barrier = Arc::new(Barrier::new(storage));
@@ -182,82 +272,8 @@ async fn build_app_state(
         Err(_) => MountManager::empty(Arc::clone(&barrier)),
     });
 
-    // Pre-register the default `secret/` KV engine.
-    let default_kv = Arc::new(KvEngine::new(
-        Arc::clone(&barrier),
-        "kv/secret/".to_owned(),
-    ));
-    let mut kv_engines = HashMap::new();
-    kv_engines.insert("secret/".to_owned(), default_kv);
-
-    // Register the default KV mount (ignore error if sealed).
-    let _ = mount_manager
-        .mount(MountEntry {
-            path: "secret/".to_owned(),
-            engine_type: "kv".to_owned(),
-            description: "Default KV v2 secrets engine".to_owned(),
-            config: serde_json::Value::Null,
-        })
-        .await;
-
-    // Pre-register the default `transit/` engine.
-    let mut transit_engines = HashMap::new();
-    if config.enable_transit {
-        let transit = Arc::new(TransitEngine::new(
-            Arc::clone(&barrier),
-            "transit/transit/".to_owned(),
-        ));
-        transit_engines.insert("transit/".to_owned(), transit);
-
-        let _ = mount_manager
-            .mount(MountEntry {
-                path: "transit/".to_owned(),
-                engine_type: "transit".to_owned(),
-                description: "Default transit encryption engine".to_owned(),
-                config: serde_json::Value::Null,
-            })
-            .await;
-
-        info!("transit engine mounted at transit/");
-    }
-
-    // Pre-register the default `database/` engine.
-    let mut database_engines = HashMap::new();
-    let db_engine = Arc::new(DatabaseEngine::new(
-        Arc::clone(&barrier),
-        "db/database/".to_owned(),
-    ));
-    database_engines.insert("database/".to_owned(), db_engine);
-
-    let _ = mount_manager
-        .mount(MountEntry {
-            path: "database/".to_owned(),
-            engine_type: "database".to_owned(),
-            description: "Database dynamic credentials engine".to_owned(),
-            config: serde_json::Value::Null,
-        })
-        .await;
-
-    info!("database engine mounted at database/");
-
-    // Pre-register the default `pki/` engine.
-    let mut pki_engines = HashMap::new();
-    let pki_engine = Arc::new(PkiEngine::new(
-        Arc::clone(&barrier),
-        "pki/pki/".to_owned(),
-    ));
-    pki_engines.insert("pki/".to_owned(), pki_engine);
-
-    let _ = mount_manager
-        .mount(MountEntry {
-            path: "pki/".to_owned(),
-            engine_type: "pki".to_owned(),
-            description: "PKI certificate authority engine".to_owned(),
-            config: serde_json::Value::Null,
-        })
-        .await;
-
-    info!("PKI engine mounted at pki/");
+    let (kv_engines, transit_engines, database_engines, pki_engines) =
+        register_default_engines(config, &barrier, &mount_manager).await;
 
     // Initialize AppRole auth store.
     let approle_store = Arc::new(AppRoleStore::new(
@@ -327,8 +343,7 @@ fn build_router(state: Arc<AppState>) -> Router {
 
     // OIDC login routes (unauthenticated — these are the login flow).
     #[cfg(feature = "spring-oauth")]
-    let oidc_routes = Router::new()
-        .nest("/v1/auth/oidc", routes::oidc::router());
+    let oidc_routes = Router::new().nest("/v1/auth/oidc", routes::oidc::router());
 
     let mut app = Router::new()
         .merge(sys_routes)
@@ -467,7 +482,7 @@ async fn retry_scan(
                 tracing::debug!(
                     attempt = attempt.saturating_add(1),
                     max = LEASE_SCAN_MAX_RETRIES.saturating_add(1),
-                    backoff_ms = backoff.as_millis() as u64,
+                    backoff_ms = u64::try_from(backoff.as_millis()).unwrap_or(u64::MAX),
                     error = %e,
                     "lease scan failed, retrying"
                 );
@@ -523,7 +538,9 @@ fn apply_hardening(config: &ServerConfig) {
     }
 
     if config.disable_mlock {
-        eprintln!("WARNING: mlock disabled via ZVAULT_DISABLE_MLOCK — secrets may be swapped to disk");
+        eprintln!(
+            "WARNING: mlock disabled via ZVAULT_DISABLE_MLOCK — secrets may be swapped to disk"
+        );
     } else if let Err(e) = hardening::lock_memory() {
         eprintln!("WARNING: failed to lock memory: {e} (set ZVAULT_DISABLE_MLOCK=true for dev)");
     }

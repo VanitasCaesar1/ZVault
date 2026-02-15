@@ -39,16 +39,18 @@ struct GenerateRootRequest {
     ttl_hours: u64,
 }
 
-fn default_ca_ttl() -> u64 { 87600 } // 10 years
+fn default_ca_ttl() -> u64 {
+    87600
+} // 10 years
 
 async fn generate_root(
     State(state): State<Arc<AppState>>,
     Json(body): Json<GenerateRootRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let engines = state.pki_engines.read().await;
-    let engine = engines.get("pki/").ok_or_else(|| {
-        AppError::NotFound("PKI engine not mounted".to_owned())
-    })?;
+    let engine = engines
+        .get("pki/")
+        .ok_or_else(|| AppError::NotFound("PKI engine not mounted".to_owned()))?;
     let ca = engine
         .generate_root(&body.common_name, body.ttl_hours)
         .await
@@ -60,13 +62,11 @@ async fn generate_root(
     })))
 }
 
-async fn get_ca(
-    State(state): State<Arc<AppState>>,
-) -> Result<Json<serde_json::Value>, AppError> {
+async fn get_ca(State(state): State<Arc<AppState>>) -> Result<Json<serde_json::Value>, AppError> {
     let engines = state.pki_engines.read().await;
-    let engine = engines.get("pki/").ok_or_else(|| {
-        AppError::NotFound("PKI engine not mounted".to_owned())
-    })?;
+    let engine = engines
+        .get("pki/")
+        .ok_or_else(|| AppError::NotFound("PKI engine not mounted".to_owned()))?;
     let ca = engine.get_ca().await.map_err(AppError::from)?;
     Ok(Json(serde_json::json!({
         "certificate": ca.certificate_pem,
@@ -90,10 +90,18 @@ struct CreatePkiRoleRequest {
     key_bits: u32,
 }
 
-fn default_role_ttl() -> u64 { 720 } // 30 days
-fn default_true() -> bool { true }
-fn default_key_type() -> String { "ec".to_owned() }
-fn default_key_bits() -> u32 { 256 }
+fn default_role_ttl() -> u64 {
+    720
+} // 30 days
+fn default_true() -> bool {
+    true
+}
+fn default_key_type() -> String {
+    "ec".to_owned()
+}
+fn default_key_bits() -> u32 {
+    256
+}
 
 async fn create_role(
     State(state): State<Arc<AppState>>,
@@ -101,9 +109,9 @@ async fn create_role(
     Json(body): Json<CreatePkiRoleRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let engines = state.pki_engines.read().await;
-    let engine = engines.get("pki/").ok_or_else(|| {
-        AppError::NotFound("PKI engine not mounted".to_owned())
-    })?;
+    let engine = engines
+        .get("pki/")
+        .ok_or_else(|| AppError::NotFound("PKI engine not mounted".to_owned()))?;
     engine
         .create_role(PkiRole {
             name,
@@ -124,9 +132,9 @@ async fn get_role(
     Path(name): Path<String>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let engines = state.pki_engines.read().await;
-    let engine = engines.get("pki/").ok_or_else(|| {
-        AppError::NotFound("PKI engine not mounted".to_owned())
-    })?;
+    let engine = engines
+        .get("pki/")
+        .ok_or_else(|| AppError::NotFound("PKI engine not mounted".to_owned()))?;
     let role = engine.get_role(&name).await.map_err(AppError::from)?;
     Ok(Json(serde_json::to_value(role).unwrap_or_default()))
 }
@@ -135,9 +143,9 @@ async fn list_roles(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let engines = state.pki_engines.read().await;
-    let engine = engines.get("pki/").ok_or_else(|| {
-        AppError::NotFound("PKI engine not mounted".to_owned())
-    })?;
+    let engine = engines
+        .get("pki/")
+        .ok_or_else(|| AppError::NotFound("PKI engine not mounted".to_owned()))?;
     let names = engine.list_roles().await.map_err(AppError::from)?;
     Ok(Json(serde_json::json!({"keys": names})))
 }
@@ -154,9 +162,9 @@ async fn issue_cert(
     Json(body): Json<IssueCertRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let engines = state.pki_engines.read().await;
-    let engine = engines.get("pki/").ok_or_else(|| {
-        AppError::NotFound("PKI engine not mounted".to_owned())
-    })?;
+    let engine = engines
+        .get("pki/")
+        .ok_or_else(|| AppError::NotFound("PKI engine not mounted".to_owned()))?;
     let cert = engine
         .issue(&role, &body.common_name, body.ttl_hours)
         .await
@@ -174,9 +182,9 @@ async fn list_certs(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let engines = state.pki_engines.read().await;
-    let engine = engines.get("pki/").ok_or_else(|| {
-        AppError::NotFound("PKI engine not mounted".to_owned())
-    })?;
+    let engine = engines
+        .get("pki/")
+        .ok_or_else(|| AppError::NotFound("PKI engine not mounted".to_owned()))?;
     let serials = engine.list_certs().await.map_err(AppError::from)?;
     Ok(Json(serde_json::json!({"keys": serials})))
 }

@@ -112,11 +112,7 @@ async fn mount_engine(
         Arc::clone(&state.barrier),
         format!("kv/{mount_path}"),
     ));
-    state
-        .kv_engines
-        .write()
-        .await
-        .insert(mount_path, engine);
+    state.kv_engines.write().await.insert(mount_path, engine);
 
     Ok(StatusCode::NO_CONTENT)
 }

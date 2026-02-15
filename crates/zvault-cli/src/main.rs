@@ -56,7 +56,7 @@ fn print_banner() {
 
 // ── CLI structure ────────────────────────────────────────────────────
 
-/// ZVault — secrets management, done right.
+/// `ZVault` — secrets management, done right.
 #[derive(Parser)]
 #[command(
     name = "zvault",
@@ -75,7 +75,7 @@ fn print_banner() {
     ),
 )]
 struct Cli {
-    /// ZVault server address.
+    /// `ZVault` server address.
     #[arg(long, env = "VAULT_ADDR", default_value = "http://127.0.0.1:8200")]
     addr: String,
 
@@ -142,7 +142,7 @@ enum Commands {
         #[command(subcommand)]
         action: PkiCommands,
     },
-    /// AppRole authentication operations.
+    /// `AppRole` authentication operations.
     Approle {
         #[command(subcommand)]
         action: AppRoleCommands,
@@ -177,7 +177,7 @@ enum Commands {
     /// Start the MCP (Model Context Protocol) server for AI assistant integration.
     #[command(name = "mcp-server")]
     McpServer,
-    /// Configure an IDE to use ZVault as an MCP server.
+    /// Configure an IDE to use `ZVault` as an MCP server.
     Setup {
         /// IDE to configure: cursor, kiro, continue, or generic.
         ide: String,
@@ -191,7 +191,7 @@ enum Commands {
     License,
     /// Run diagnostics on vault health, license, and MCP connectivity.
     Doctor,
-    /// Initialize ZVault for the current project (generate .zvault.toml config).
+    /// Initialize `ZVault` for the current project (generate .zvault.toml config).
     #[command(name = "project-init")]
     ProjectInit {
         /// Project name (default: current directory name).
@@ -424,7 +424,7 @@ enum PkiCommands {
 
 #[derive(Subcommand)]
 enum AppRoleCommands {
-    /// Create an AppRole role.
+    /// Create an `AppRole` role.
     CreateRole {
         /// Role name.
         name: String,
@@ -442,7 +442,7 @@ enum AppRoleCommands {
         /// Role name.
         name: String,
     },
-    /// Login with role_id and secret_id.
+    /// Login with `role_id` and `secret_id`.
     Login {
         /// Role ID.
         #[arg(long)]
@@ -451,7 +451,7 @@ enum AppRoleCommands {
         #[arg(long)]
         secret_id: String,
     },
-    /// List all AppRole roles.
+    /// List all `AppRole` roles.
     ListRoles,
 }
 
@@ -478,7 +478,11 @@ enum NotifyCommands {
         /// Webhook URL (Slack, Discord, or generic).
         url: String,
         /// Events to subscribe to (comma-separated): secret.accessed, secret.rotated, policy.violated, lease.expired.
-        #[arg(long, value_delimiter = ',', default_value = "secret.accessed,secret.rotated,lease.expired")]
+        #[arg(
+            long,
+            value_delimiter = ',',
+            default_value = "secret.accessed,secret.rotated,lease.expired"
+        )]
         events: Vec<String>,
     },
     /// Show current webhook configuration.
@@ -493,7 +497,7 @@ enum NotifyCommands {
 enum RotateCommands {
     /// Set a rotation policy for a secret path.
     SetPolicy {
-        /// Secret path (e.g., env/myapp/DATABASE_URL).
+        /// Secret path (e.g., `env/myapp/DATABASE_URL`).
         path: String,
         /// Rotation interval in hours.
         #[arg(long)]
@@ -543,7 +547,10 @@ fn warning(msg: &str) {
 }
 
 fn print_seal_status(resp: &Value) {
-    let initialized = resp.get("initialized").and_then(Value::as_bool).unwrap_or(false);
+    let initialized = resp
+        .get("initialized")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
     let sealed = resp.get("sealed").and_then(Value::as_bool).unwrap_or(true);
     let threshold = resp.get("threshold").and_then(Value::as_u64).unwrap_or(0);
     let shares = resp.get("shares").and_then(Value::as_u64).unwrap_or(0);
@@ -579,13 +586,13 @@ fn print_seal_status(resp: &Value) {
 }
 
 fn progress_bar(current: u64, total: u64) -> String {
-    let width = 20;
+    let width: usize = 20;
     let filled = if total > 0 {
-        ((current * width) / total) as usize
+        usize::try_from((current * u64::try_from(width).unwrap_or(20)) / total).unwrap_or(0)
     } else {
         0
     };
-    let empty = width as usize - filled;
+    let empty = width.saturating_sub(filled);
     format!(
         "{CYAN}[{}{DIM}{}]{RESET}",
         "█".repeat(filled),
@@ -599,12 +606,8 @@ fn print_init_response(resp: &Value) {
     println!();
 
     if let Some(shares) = resp.get("unseal_shares").and_then(Value::as_array) {
-        println!(
-            "  {YELLOW}{BOLD}⚠  Store these unseal keys in separate secure locations!{RESET}"
-        );
-        println!(
-            "  {YELLOW}   They will NOT be shown again.{RESET}"
-        );
+        println!("  {YELLOW}{BOLD}⚠  Store these unseal keys in separate secure locations!{RESET}");
+        println!("  {YELLOW}   They will NOT be shown again.{RESET}");
         println!();
 
         for (i, share) in shares.iter().enumerate() {
@@ -618,18 +621,14 @@ fn print_init_response(resp: &Value) {
     println!();
 
     if let Some(token) = resp.get("root_token").and_then(Value::as_str) {
-        println!(
-            "  {DIM}Root Token:{RESET}    {GREEN}{BOLD}{token}{RESET}"
-        );
+        println!("  {DIM}Root Token:{RESET}    {GREEN}{BOLD}{token}{RESET}");
     }
 
     println!();
     println!(
         "  {DIM}Vault is initialized but {YELLOW}{BOLD}sealed{RESET}{DIM}. Use `zvault unseal`{RESET}"
     );
-    println!(
-        "  {DIM}with the required threshold of key shares to unseal.{RESET}"
-    );
+    println!("  {DIM}with the required threshold of key shares to unseal.{RESET}");
     println!();
 }
 
@@ -644,18 +643,12 @@ fn print_unseal_response(resp: &Value) {
         println!("  {bar} {BOLD}{progress}{RESET}/{threshold} shares submitted");
         println!();
         let remaining = threshold.saturating_sub(progress);
-        println!(
-            "  {DIM}{remaining} more share(s) needed to unseal.{RESET}"
-        );
+        println!("  {DIM}{remaining} more share(s) needed to unseal.{RESET}");
     } else {
         println!();
-        println!(
-            "  {BG_GREEN}{WHITE}{BOLD} ✓ VAULT UNSEALED {RESET}"
-        );
+        println!("  {BG_GREEN}{WHITE}{BOLD} ✓ VAULT UNSEALED {RESET}");
         println!();
-        println!(
-            "  {DIM}The vault is now ready to accept requests.{RESET}"
-        );
+        println!("  {DIM}The vault is now ready to accept requests.{RESET}");
     }
     println!();
 }
@@ -1053,8 +1046,20 @@ async fn run(client: Client, cmd: Commands) -> Result<()> {
             no_backup,
             no_ref,
             no_gitignore,
-        } => cmd_import(&client, &file, project.as_deref(), no_backup, no_ref, no_gitignore).await,
-        Commands::Run { env_file, command } => cmd_run(&client, env_file.as_deref(), &command).await,
+        } => {
+            cmd_import(
+                &client,
+                &file,
+                project.as_deref(),
+                no_backup,
+                no_ref,
+                no_gitignore,
+            )
+            .await
+        }
+        Commands::Run { env_file, command } => {
+            cmd_run(&client, env_file.as_deref(), &command).await
+        }
         Commands::McpServer => {
             license::require_pro("MCP server (AI Mode)")?;
             mcp::run_mcp_server(client.addr, client.token).await
@@ -1067,13 +1072,15 @@ async fn run(client: Client, cmd: Commands) -> Result<()> {
         Commands::License => {
             cmd_license();
             Ok(())
-        },
+        }
         Commands::Doctor => cmd_doctor(&client).await,
         Commands::ProjectInit { name, server } => cmd_project_init(name.as_deref(), &server),
         Commands::Lease { action } => cmd_lease(&client, action).await,
-        Commands::AuditExport { format, limit, output } => {
-            cmd_audit_export(&client, &format, limit, output.as_deref()).await
-        }
+        Commands::AuditExport {
+            format,
+            limit,
+            output,
+        } => cmd_audit_export(&client, &format, limit, output.as_deref()).await,
         Commands::Notify { action } => cmd_notify(&client, action).await,
         Commands::Rotate { action } => cmd_rotate(&client, action).await,
         Commands::Login { oidc } => cmd_login(&client, oidc).await,
@@ -1230,10 +1237,7 @@ async fn cmd_transit(client: &Client, action: TransitCommands) -> Result<()> {
             let resp = client
                 .post_no_body(&format!("/v1/transit/keys/{name}/rotate"))
                 .await?;
-            let ver = resp
-                .get("new_version")
-                .and_then(Value::as_u64)
-                .unwrap_or(0);
+            let ver = resp.get("new_version").and_then(Value::as_u64).unwrap_or(0);
             println!();
             success(&format!(
                 "Key {BOLD}{name}{RESET} rotated to {CYAN}v{ver}{RESET}."
@@ -1287,7 +1291,9 @@ async fn cmd_database(client: &Client, action: DatabaseCommands) -> Result<()> {
                 .post(&format!("/v1/database/config/{name}"), &body)
                 .await?;
             println!();
-            success(&format!("Database connection {BOLD}{name}{RESET} configured."));
+            success(&format!(
+                "Database connection {BOLD}{name}{RESET} configured."
+            ));
             println!();
         }
         DatabaseCommands::CreateRole {
@@ -1364,68 +1370,77 @@ async fn cmd_database(client: &Client, action: DatabaseCommands) -> Result<()> {
 
 // ── PKI commands ─────────────────────────────────────────────────────
 
+async fn cmd_pki_generate_root(client: &Client, common_name: &str, ttl_hours: u64) -> Result<()> {
+    let body = serde_json::json!({
+        "common_name": common_name,
+        "ttl_hours": ttl_hours,
+    });
+    let resp = client.post("/v1/pki/root/generate", &body).await?;
+    println!();
+    header("🏛️", "Root CA Generated");
+    if let Some(cn) = resp.get("common_name").and_then(Value::as_str) {
+        kv_line("Common Name", cn);
+    }
+    if let Some(ttl) = resp.get("ttl_hours").and_then(Value::as_u64) {
+        kv_line("Validity", &format!("{ttl} hours"));
+    }
+    if let Some(cert) = resp.get("certificate").and_then(Value::as_str) {
+        let short = if cert.len() > 80 {
+            format!("{}...", &cert[..80])
+        } else {
+            cert.to_owned()
+        };
+        kv_line("Certificate", &short);
+    }
+    println!();
+    Ok(())
+}
+
+async fn cmd_pki_issue(
+    client: &Client,
+    role: &str,
+    common_name: &str,
+    ttl_hours: Option<u64>,
+) -> Result<()> {
+    let mut body = serde_json::json!({ "common_name": common_name });
+    if let Some(ttl) = ttl_hours {
+        body["ttl_hours"] = serde_json::json!(ttl);
+    }
+    let resp = client.post(&format!("/v1/pki/issue/{role}"), &body).await?;
+    println!();
+    header("📜", "Certificate Issued");
+    if let Some(serial) = resp.get("serial_number").and_then(Value::as_str) {
+        kv_line("Serial", serial);
+    }
+    if let Some(exp) = resp.get("expiration").and_then(Value::as_str) {
+        kv_line("Expires", exp);
+    }
+    if let Some(cert) = resp.get("certificate").and_then(Value::as_str) {
+        let short = if cert.len() > 80 {
+            format!("{}...", &cert[..80])
+        } else {
+            cert.to_owned()
+        };
+        kv_line("Certificate", &short);
+    }
+    if resp.get("private_key").and_then(Value::as_str).is_some() {
+        kv_line("Private Key", "(included in response)");
+    }
+    println!();
+    Ok(())
+}
+
 async fn cmd_pki(client: &Client, action: PkiCommands) -> Result<()> {
     match action {
         PkiCommands::GenerateRoot {
             common_name,
             ttl_hours,
-        } => {
-            let body = serde_json::json!({
-                "common_name": common_name,
-                "ttl_hours": ttl_hours,
-            });
-            let resp = client.post("/v1/pki/root/generate", &body).await?;
-            println!();
-            header("🏛️", "Root CA Generated");
-            if let Some(cn) = resp.get("common_name").and_then(Value::as_str) {
-                kv_line("Common Name", cn);
-            }
-            if let Some(ttl) = resp.get("ttl_hours").and_then(Value::as_u64) {
-                kv_line("Validity", &format!("{ttl} hours"));
-            }
-            if let Some(cert) = resp.get("certificate").and_then(Value::as_str) {
-                let short = if cert.len() > 80 {
-                    format!("{}...", &cert[..80])
-                } else {
-                    cert.to_owned()
-                };
-                kv_line("Certificate", &short);
-            }
-            println!();
-        }
+        } => cmd_pki_generate_root(client, &common_name, ttl_hours).await?,
         PkiCommands::Issue {
             role,
             common_name,
             ttl_hours,
-        } => {
-            let mut body = serde_json::json!({ "common_name": common_name });
-            if let Some(ttl) = ttl_hours {
-                body["ttl_hours"] = serde_json::json!(ttl);
-            }
-            let resp = client
-                .post(&format!("/v1/pki/issue/{role}"), &body)
-                .await?;
-            println!();
-            header("📜", "Certificate Issued");
-            if let Some(serial) = resp.get("serial_number").and_then(Value::as_str) {
-                kv_line("Serial", serial);
-            }
-            if let Some(exp) = resp.get("expiration").and_then(Value::as_str) {
-                kv_line("Expires", exp);
-            }
-            if let Some(cert) = resp.get("certificate").and_then(Value::as_str) {
-                let short = if cert.len() > 80 {
-                    format!("{}...", &cert[..80])
-                } else {
-                    cert.to_owned()
-                };
-                kv_line("Certificate", &short);
-            }
-            if resp.get("private_key").and_then(Value::as_str).is_some() {
-                kv_line("Private Key", "(included in response)");
-            }
-            println!();
-        }
+        } => cmd_pki_issue(client, &role, &common_name, ttl_hours).await?,
         PkiCommands::CreateRole {
             name,
             allowed_domains,
@@ -1435,9 +1450,7 @@ async fn cmd_pki(client: &Client, action: PkiCommands) -> Result<()> {
                 "allowed_domains": allowed_domains,
                 "allow_subdomains": allow_subdomains,
             });
-            client
-                .post(&format!("/v1/pki/roles/{name}"), &body)
-                .await?;
+            client.post(&format!("/v1/pki/roles/{name}"), &body).await?;
             println!();
             success(&format!("PKI role {BOLD}{name}{RESET} created."));
             println!();
@@ -1525,17 +1538,12 @@ async fn cmd_approle(client: &Client, action: AppRoleCommands) -> Result<()> {
             }
             println!();
         }
-        AppRoleCommands::Login {
-            role_id,
-            secret_id,
-        } => {
+        AppRoleCommands::Login { role_id, secret_id } => {
             let body = serde_json::json!({
                 "role_id": role_id,
                 "secret_id": secret_id,
             });
-            let resp = client
-                .post_no_auth("/v1/auth/approle/login", &body)
-                .await?;
+            let resp = client.post_no_auth("/v1/auth/approle/login", &body).await?;
             println!();
             print_token_response(&resp);
         }
@@ -1634,8 +1642,8 @@ async fn cmd_import(
         bail!("file not found: {file}");
     }
 
-    let content = std::fs::read_to_string(path)
-        .with_context(|| format!("failed to read {file}"))?;
+    let content =
+        std::fs::read_to_string(path).with_context(|| format!("failed to read {file}"))?;
 
     let entries = parse_env_file(&content);
     if entries.is_empty() {
@@ -1662,7 +1670,10 @@ async fn cmd_import(
         let vault_path = format!("env/{project_name}/{key}");
         let body = serde_json::json!({ "data": { "value": value } });
 
-        match client.post(&format!("/v1/secret/data/{vault_path}"), &body).await {
+        match client
+            .post(&format!("/v1/secret/data/{vault_path}"), &body)
+            .await
+        {
             Ok(_) => {
                 println!("  {GREEN}✓{RESET} {key} → {DIM}zvault://env/{project_name}/{key}{RESET}");
                 imported = imported.saturating_add(1);
@@ -1692,7 +1703,11 @@ async fn cmd_import(
             "{}{}",
             path.parent()
                 .and_then(|p| p.to_str())
-                .map(|p| if p.is_empty() { String::new() } else { format!("{p}/") })
+                .map(|p| if p.is_empty() {
+                    String::new()
+                } else {
+                    format!("{p}/")
+                })
                 .unwrap_or_default(),
             ".env.zvault"
         );
@@ -1715,13 +1730,9 @@ async fn cmd_import(
 
     println!();
     if failed == 0 {
-        println!(
-            "  {GREEN}{BOLD}✓ Imported {imported} secrets into vault{RESET}"
-        );
+        println!("  {GREEN}{BOLD}✓ Imported {imported} secrets into vault{RESET}");
     } else {
-        println!(
-            "  {YELLOW}{BOLD}⚠ Imported {imported} secrets, {failed} failed{RESET}"
-        );
+        println!("  {YELLOW}{BOLD}⚠ Imported {imported} secrets, {failed} failed{RESET}");
     }
     println!();
 
@@ -1827,8 +1838,8 @@ async fn cmd_run(client: &Client, env_file: Option<&str>, command: &[String]) ->
     }
 
     let env_path = find_env_file(env_file)?;
-    let content = std::fs::read_to_string(&env_path)
-        .with_context(|| format!("failed to read {env_path}"))?;
+    let content =
+        std::fs::read_to_string(&env_path).with_context(|| format!("failed to read {env_path}"))?;
 
     let entries = parse_env_file(&content);
     if entries.is_empty() {
@@ -1865,19 +1876,14 @@ async fn cmd_run(client: &Client, env_file: Option<&str>, command: &[String]) ->
     }
 
     println!();
-    println!(
-        "  {DIM}Resolved {resolved} secrets, {plain} plain values{RESET}"
-    );
+    println!("  {DIM}Resolved {resolved} secrets, {plain} plain values{RESET}");
     println!();
 
     // Execute the child process with injected environment.
     let program = &command[0];
     let args = &command[1..];
 
-    println!(
-        "  {CYAN}{BOLD}▶{RESET} {BOLD}{}{RESET}",
-        command.join(" ")
-    );
+    println!("  {CYAN}{BOLD}▶{RESET} {BOLD}{}{RESET}", command.join(" "));
     println!();
 
     let status = std::process::Command::new(program)
@@ -1905,8 +1911,14 @@ async fn cmd_activate(key: &str) -> Result<()> {
     if license::is_polar_key(key) {
         let lic = license::validate_polar_key(key).await?;
 
-        println!("  {DIM}License ID:{RESET}   {BOLD}{}{RESET}", lic.payload.license_id);
-        println!("  {DIM}Tier:{RESET}         {GREEN}{BOLD}{}{RESET}", lic.payload.tier);
+        println!(
+            "  {DIM}License ID:{RESET}   {BOLD}{}{RESET}",
+            lic.payload.license_id
+        );
+        println!(
+            "  {DIM}Tier:{RESET}         {GREEN}{BOLD}{}{RESET}",
+            lic.payload.tier
+        );
         println!("  {DIM}Expires:{RESET}      {}", lic.payload.expires_at);
         println!("  {DIM}Source:{RESET}        Polar.sh");
         println!();
@@ -1918,8 +1930,14 @@ async fn cmd_activate(key: &str) -> Result<()> {
         // Save to ~/.zvault/license.key.
         let path = license::save_license(key)?;
 
-        println!("  {DIM}License ID:{RESET}   {BOLD}{}{RESET}", lic.payload.license_id);
-        println!("  {DIM}Tier:{RESET}         {GREEN}{BOLD}{}{RESET}", lic.payload.tier);
+        println!(
+            "  {DIM}License ID:{RESET}   {BOLD}{}{RESET}",
+            lic.payload.license_id
+        );
+        println!(
+            "  {DIM}Tier:{RESET}         {GREEN}{BOLD}{}{RESET}",
+            lic.payload.tier
+        );
         println!("  {DIM}Email:{RESET}        {}", lic.payload.email);
         println!("  {DIM}Expires:{RESET}      {}", lic.payload.expires_at);
         println!("  {DIM}Saved to:{RESET}     {}", path.display());
@@ -1938,8 +1956,14 @@ fn cmd_license() {
         Ok(Some(lic)) => {
             header("🪪", "License Status");
             println!();
-            println!("  {DIM}License ID:{RESET}   {BOLD}{}{RESET}", lic.payload.license_id);
-            println!("  {DIM}Tier:{RESET}         {GREEN}{BOLD}{}{RESET}", lic.payload.tier);
+            println!(
+                "  {DIM}License ID:{RESET}   {BOLD}{}{RESET}",
+                lic.payload.license_id
+            );
+            println!(
+                "  {DIM}Tier:{RESET}         {GREEN}{BOLD}{}{RESET}",
+                lic.payload.tier
+            );
             println!("  {DIM}Email:{RESET}        {}", lic.payload.email);
             println!("  {DIM}Issued:{RESET}       {}", lic.payload.issued_at);
             println!("  {DIM}Expires:{RESET}      {}", lic.payload.expires_at);
@@ -2011,9 +2035,7 @@ fn cmd_setup(ide: &str) -> Result<()> {
         "kiro" => setup::Ide::Kiro,
         "continue" => setup::Ide::Continue,
         "generic" => setup::Ide::Generic,
-        other => bail!(
-            "unknown IDE: '{other}'. Supported: cursor, kiro, continue, generic"
-        ),
+        other => bail!("unknown IDE: '{other}'. Supported: cursor, kiro, continue, generic"),
     };
 
     setup::run_setup(target)?;
@@ -2027,67 +2049,62 @@ fn cmd_setup(ide: &str) -> Result<()> {
 // ── Doctor command ────────────────────────────────────────────────────
 
 /// Run diagnostics on vault health, license status, and MCP connectivity.
-async fn cmd_doctor(client: &Client) -> Result<()> {
-    println!();
-    header("🩺", "ZVault Doctor");
-    println!();
-
-    let mut pass = 0u32;
-    let mut fail = 0u32;
-    let mut warn = 0u32;
-
-    // ── 1. Vault server reachability ─────────────────────────────
+async fn doctor_check_server(client: &Client) -> (u32, u32, u32) {
     print!("  Vault server ({})... ", client.addr);
-    match client.get_no_auth("/v1/sys/health").await {
-        Ok(resp) => {
-            let initialized = resp.get("initialized").and_then(Value::as_bool).unwrap_or(false);
-            let sealed = resp.get("sealed").and_then(Value::as_bool).unwrap_or(true);
+    if let Ok(resp) = client.get_no_auth("/v1/sys/health").await {
+        let initialized = resp
+            .get("initialized")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        let sealed = resp.get("sealed").and_then(Value::as_bool).unwrap_or(true);
 
-            if !initialized {
-                println!("{YELLOW}not initialized{RESET}");
-                warn = warn.saturating_add(1);
-            } else if sealed {
-                println!("{YELLOW}sealed{RESET}");
-                warn = warn.saturating_add(1);
-            } else {
-                println!("{GREEN}healthy (unsealed){RESET}");
-                pass = pass.saturating_add(1);
-            }
+        if !initialized {
+            println!("{YELLOW}not initialized{RESET}");
+            (0, 0, 1)
+        } else if sealed {
+            println!("{YELLOW}sealed{RESET}");
+            (0, 0, 1)
+        } else {
+            println!("{GREEN}healthy (unsealed){RESET}");
+            (1, 0, 0)
         }
-        Err(_) => {
-            println!("{RED}unreachable{RESET}");
-            fail = fail.saturating_add(1);
-        }
+    } else {
+        println!("{RED}unreachable{RESET}");
+        (0, 1, 0)
     }
+}
 
-    // ── 2. Authentication token ──────────────────────────────────
+async fn doctor_check_token(client: &Client) -> (u32, u32, u32) {
     print!("  Auth token... ");
     match &client.token {
         Some(token) if !token.is_empty() => {
-            // Try a token lookup to verify it's valid.
-            match client.post("/v1/auth/token/lookup-self", &serde_json::json!({})).await {
-                Ok(resp) => {
-                    let policies = resp
-                        .get("policies")
-                        .and_then(Value::as_array)
-                        .map(|a| a.len())
-                        .unwrap_or(0);
-                    println!("{GREEN}valid ({policies} policies){RESET}");
-                    pass = pass.saturating_add(1);
-                }
-                Err(_) => {
-                    println!("{YELLOW}set but invalid/expired{RESET}");
-                    warn = warn.saturating_add(1);
-                }
+            if let Ok(resp) = client
+                .post("/v1/auth/token/lookup-self", &serde_json::json!({}))
+                .await
+            {
+                let policies = resp
+                    .get("policies")
+                    .and_then(Value::as_array)
+                    .map_or(0, std::vec::Vec::len);
+                println!("{GREEN}valid ({policies} policies){RESET}");
+                (1, 0, 0)
+            } else {
+                println!("{YELLOW}set but invalid/expired{RESET}");
+                (0, 0, 1)
             }
         }
         _ => {
             println!("{YELLOW}not set (VAULT_TOKEN){RESET}");
-            warn = warn.saturating_add(1);
+            (0, 0, 1)
         }
     }
+}
 
-    // ── 3. License status ────────────────────────────────────────
+fn doctor_check_local() -> (u32, u32, u32) {
+    let mut pass = 0u32;
+    let mut warn = 0u32;
+
+    // License status.
     print!("  License... ");
     match license::load_license() {
         Ok(Some(lic)) => {
@@ -2103,22 +2120,22 @@ async fn cmd_doctor(client: &Client) -> Result<()> {
         }
         Err(e) => {
             println!("{RED}error: {e}{RESET}");
-            fail = fail.saturating_add(1);
+            return (pass, 1, warn);
         }
     }
 
-    // ── 4. MCP server availability ───────────────────────────────
+    // MCP server availability.
     print!("  MCP server (AI Mode)... ");
     let tier = license::current_tier();
     if tier >= license::Tier::Pro {
-        println!("{GREEN}available ({}){RESET}", tier);
+        println!("{GREEN}available ({tier}){RESET}");
         pass = pass.saturating_add(1);
     } else {
         println!("{DIM}locked (requires Pro){RESET}");
         warn = warn.saturating_add(1);
     }
 
-    // ── 5. .env.zvault file ──────────────────────────────────────
+    // .env.zvault file.
     print!("  .env.zvault... ");
     if std::path::Path::new(".env.zvault").exists() {
         let content = std::fs::read_to_string(".env.zvault").unwrap_or_default();
@@ -2133,7 +2150,7 @@ async fn cmd_doctor(client: &Client) -> Result<()> {
         warn = warn.saturating_add(1);
     }
 
-    // ── 6. .gitignore check ──────────────────────────────────────
+    // .gitignore check.
     print!("  .gitignore (.env excluded)... ");
     if std::path::Path::new(".gitignore").exists() {
         let content = std::fs::read_to_string(".gitignore").unwrap_or_default();
@@ -2149,7 +2166,7 @@ async fn cmd_doctor(client: &Client) -> Result<()> {
         warn = warn.saturating_add(1);
     }
 
-    // ── 7. IDE MCP config ────────────────────────────────────────
+    // IDE MCP config.
     print!("  IDE MCP config... ");
     let mcp_configs = [
         (".cursor/mcp.json", "Cursor"),
@@ -2163,16 +2180,29 @@ async fn cmd_doctor(client: &Client) -> Result<()> {
             break;
         }
     }
-    match found_ide {
-        Some(name) => {
-            println!("{GREEN}found ({name}){RESET}");
-            pass = pass.saturating_add(1);
-        }
-        None => {
-            println!("{DIM}not configured (run `zvault setup <ide>`){RESET}");
-            warn = warn.saturating_add(1);
-        }
+    if let Some(name) = found_ide {
+        println!("{GREEN}found ({name}){RESET}");
+        pass = pass.saturating_add(1);
+    } else {
+        println!("{DIM}not configured (run `zvault setup <ide>`){RESET}");
+        warn = warn.saturating_add(1);
     }
+
+    (pass, 0, warn)
+}
+
+async fn cmd_doctor(client: &Client) -> Result<()> {
+    println!();
+    header("🩺", "ZVault Doctor");
+    println!();
+
+    let (p1, f1, w1) = doctor_check_server(client).await;
+    let (p2, f2, w2) = doctor_check_token(client).await;
+    let (p3, f3, w3) = doctor_check_local();
+
+    let pass = p1.saturating_add(p2).saturating_add(p3);
+    let fail = f1.saturating_add(f2).saturating_add(f3);
+    let warn = w1.saturating_add(w2).saturating_add(w3);
 
     // ── Summary ──────────────────────────────────────────────────
     println!();
@@ -2273,7 +2303,9 @@ notify = false
     std::fs::write(config_path, &config_content)
         .map_err(|e| anyhow::anyhow!("failed to write .zvault.toml: {e}"))?;
 
-    success(&format!("Created .zvault.toml for project \"{project_name}\""));
+    success(&format!(
+        "Created .zvault.toml for project \"{project_name}\""
+    ));
 
     // Add .zvault.toml to .gitignore if it contains tokens/server info
     // Actually, .zvault.toml is safe to commit — it has no secrets.
@@ -2295,79 +2327,8 @@ notify = false
 
 async fn cmd_lease(client: &Client, action: LeaseCommands) -> Result<()> {
     match action {
-        LeaseCommands::List => {
-            println!();
-            header("📋", "Leases");
-            println!();
-
-            let resp = client.get("/v1/sys/leases").await?;
-            let leases = resp.get("leases").and_then(|v| v.as_array());
-
-            match leases {
-                Some(arr) if arr.is_empty() => {
-                    println!("  {DIM}No active leases.{RESET}");
-                }
-                Some(arr) => {
-                    println!(
-                        "  {DIM}{:<36}  {:<24}  {:<8}  {:<8}  {}{RESET}",
-                        "LEASE ID", "ENGINE", "TTL", "RENEW", "STATUS"
-                    );
-                    for lease in arr {
-                        let id = lease.get("lease_id").and_then(|v| v.as_str()).unwrap_or("-");
-                        let engine = lease.get("engine_path").and_then(|v| v.as_str()).unwrap_or("-");
-                        let ttl = lease.get("ttl_secs").and_then(|v| v.as_i64()).unwrap_or(0);
-                        let renewable = lease.get("renewable").and_then(|v| v.as_bool()).unwrap_or(false);
-                        let expired = lease.get("expired").and_then(|v| v.as_bool()).unwrap_or(false);
-
-                        let status = if expired {
-                            format!("{RED}expired{RESET}")
-                        } else {
-                            format!("{GREEN}active{RESET}")
-                        };
-                        let renew_str = if renewable { "yes" } else { "no" };
-
-                        println!(
-                            "  {:<36}  {:<24}  {:<8}  {:<8}  {}",
-                            id, engine, format_duration(ttl), renew_str, status
-                        );
-                    }
-                    let total = resp.get("total").and_then(|v| v.as_u64()).unwrap_or(0);
-                    println!();
-                    println!("  {DIM}Total: {total} lease(s){RESET}");
-                }
-                None => {
-                    println!("  {DIM}No lease data returned.{RESET}");
-                }
-            }
-            println!();
-            Ok(())
-        }
-        LeaseCommands::Lookup { lease_id } => {
-            let resp = client
-                .post(
-                    "/v1/sys/leases/lookup",
-                    &serde_json::json!({ "lease_id": lease_id }),
-                )
-                .await?;
-            println!();
-            header("🔍", "Lease Lookup");
-            println!();
-            kv_line("Lease ID", resp.get("lease_id").and_then(|v| v.as_str()).unwrap_or("-"));
-            kv_line("Engine", resp.get("engine_path").and_then(|v| v.as_str()).unwrap_or("-"));
-            kv_line("Issued At", resp.get("issued_at").and_then(|v| v.as_str()).unwrap_or("-"));
-            let ttl = resp.get("ttl_secs").and_then(|v| v.as_i64()).unwrap_or(0);
-            kv_line("TTL", &format_duration(ttl));
-            let renewable = resp.get("renewable").and_then(|v| v.as_bool()).unwrap_or(false);
-            kv_line("Renewable", if renewable { "yes" } else { "no" });
-            let expired = resp.get("expired").and_then(|v| v.as_bool()).unwrap_or(false);
-            if expired {
-                kv_line("Status", &format!("{RED}expired{RESET}"));
-            } else {
-                kv_line("Status", &format!("{GREEN}active{RESET}"));
-            }
-            println!();
-            Ok(())
-        }
+        LeaseCommands::List => cmd_lease_list(client).await,
+        LeaseCommands::Lookup { lease_id } => cmd_lease_lookup(client, &lease_id).await,
         LeaseCommands::Revoke { lease_id } => {
             client
                 .post(
@@ -2381,6 +2342,127 @@ async fn cmd_lease(client: &Client, action: LeaseCommands) -> Result<()> {
             Ok(())
         }
     }
+}
+
+/// List all active leases.
+async fn cmd_lease_list(client: &Client) -> Result<()> {
+    println!();
+    header("📋", "Leases");
+    println!();
+
+    let resp = client.get("/v1/sys/leases").await?;
+    let leases = resp.get("leases").and_then(|v| v.as_array());
+
+    match leases {
+        Some(arr) if arr.is_empty() => {
+            println!("  {DIM}No active leases.{RESET}");
+        }
+        Some(arr) => {
+            println!(
+                "  {DIM}{:<36}  {:<24}  {:<8}  {:<8}  STATUS{RESET}",
+                "LEASE ID", "ENGINE", "TTL", "RENEW"
+            );
+            for lease in arr {
+                let id = lease
+                    .get("lease_id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("-");
+                let engine = lease
+                    .get("engine_path")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("-");
+                let ttl = lease
+                    .get("ttl_secs")
+                    .and_then(serde_json::Value::as_i64)
+                    .unwrap_or(0);
+                let renewable = lease
+                    .get("renewable")
+                    .and_then(serde_json::Value::as_bool)
+                    .unwrap_or(false);
+                let expired = lease
+                    .get("expired")
+                    .and_then(serde_json::Value::as_bool)
+                    .unwrap_or(false);
+
+                let status = if expired {
+                    format!("{RED}expired{RESET}")
+                } else {
+                    format!("{GREEN}active{RESET}")
+                };
+                let renew_str = if renewable { "yes" } else { "no" };
+
+                println!(
+                    "  {:<36}  {:<24}  {:<8}  {:<8}  {}",
+                    id,
+                    engine,
+                    format_duration(ttl),
+                    renew_str,
+                    status
+                );
+            }
+            let total = resp
+                .get("total")
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(0);
+            println!();
+            println!("  {DIM}Total: {total} lease(s){RESET}");
+        }
+        None => {
+            println!("  {DIM}No lease data returned.{RESET}");
+        }
+    }
+    println!();
+    Ok(())
+}
+
+/// Look up details of a specific lease.
+async fn cmd_lease_lookup(client: &Client, lease_id: &str) -> Result<()> {
+    let resp = client
+        .post(
+            "/v1/sys/leases/lookup",
+            &serde_json::json!({ "lease_id": lease_id }),
+        )
+        .await?;
+    println!();
+    header("🔍", "Lease Lookup");
+    println!();
+    kv_line(
+        "Lease ID",
+        resp.get("lease_id").and_then(|v| v.as_str()).unwrap_or("-"),
+    );
+    kv_line(
+        "Engine",
+        resp.get("engine_path")
+            .and_then(|v| v.as_str())
+            .unwrap_or("-"),
+    );
+    kv_line(
+        "Issued At",
+        resp.get("issued_at")
+            .and_then(|v| v.as_str())
+            .unwrap_or("-"),
+    );
+    let ttl = resp
+        .get("ttl_secs")
+        .and_then(serde_json::Value::as_i64)
+        .unwrap_or(0);
+    kv_line("TTL", &format_duration(ttl));
+    let renewable = resp
+        .get("renewable")
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false);
+    kv_line("Renewable", if renewable { "yes" } else { "no" });
+    let expired = resp
+        .get("expired")
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false);
+    if expired {
+        kv_line("Status", &format!("{RED}expired{RESET}"));
+    } else {
+        kv_line("Status", &format!("{GREEN}active{RESET}"));
+    }
+    println!();
+    Ok(())
 }
 
 // ── Phase 3.3: Audit Export ──────────────────────────────────────────
@@ -2415,22 +2497,27 @@ async fn cmd_audit_export(
         "csv" => {
             let mut csv = String::from("timestamp,operation,path,actor,status\n");
             for entry in &entries {
-                let ts = entry.get("timestamp").and_then(|v| v.as_str()).unwrap_or("");
-                let op = entry.get("operation").and_then(|v| v.as_str()).unwrap_or("");
+                let ts = entry
+                    .get("timestamp")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                let op = entry
+                    .get("operation")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
                 let path = entry.get("path").and_then(|v| v.as_str()).unwrap_or("");
                 let actor = entry.get("actor").and_then(|v| v.as_str()).unwrap_or("");
                 let status = entry
                     .get("response")
                     .and_then(|v| v.get("status_code"))
-                    .and_then(|v| v.as_u64())
+                    .and_then(serde_json::Value::as_u64)
                     .map(|v| v.to_string())
                     .unwrap_or_default();
-                csv.push_str(&format!("{ts},{op},{path},{actor},{status}\n"));
+                let _ = writeln!(csv, "{ts},{op},{path},{actor},{status}");
             }
             csv
         }
-        _ => serde_json::to_string_pretty(&entries)
-            .unwrap_or_else(|_| "[]".to_owned()),
+        _ => serde_json::to_string_pretty(&entries).unwrap_or_else(|_| "[]".to_owned()),
     };
 
     match output {
@@ -2471,8 +2558,7 @@ fn load_webhook_config() -> Result<serde_json::Value> {
     }
     let content = std::fs::read_to_string(path)
         .map_err(|e| anyhow::anyhow!("failed to read webhook config: {e}"))?;
-    serde_json::from_str(&content)
-        .map_err(|e| anyhow::anyhow!("invalid webhook config: {e}"))
+    serde_json::from_str(&content).map_err(|e| anyhow::anyhow!("invalid webhook config: {e}"))
 }
 
 fn save_webhook_config(config: &serde_json::Value) -> Result<()> {
@@ -2497,10 +2583,7 @@ async fn send_webhook(url: &str, payload: &serde_json::Value) -> Result<()> {
     if resp.status().is_success() {
         Ok(())
     } else {
-        Err(anyhow::anyhow!(
-            "webhook returned status {}",
-            resp.status()
-        ))
+        Err(anyhow::anyhow!("webhook returned status {}", resp.status()))
     }
 }
 
@@ -2621,8 +2704,7 @@ fn load_rotation_config() -> Result<serde_json::Value> {
     }
     let content = std::fs::read_to_string(path)
         .map_err(|e| anyhow::anyhow!("failed to read rotation config: {e}"))?;
-    serde_json::from_str(&content)
-        .map_err(|e| anyhow::anyhow!("invalid rotation config: {e}"))
+    serde_json::from_str(&content).map_err(|e| anyhow::anyhow!("invalid rotation config: {e}"))
 }
 
 fn save_rotation_config(config: &serde_json::Value) -> Result<()> {
@@ -2632,6 +2714,142 @@ fn save_rotation_config(config: &serde_json::Value) -> Result<()> {
     std::fs::write(ROTATION_CONFIG_PATH, content)
         .map_err(|e| anyhow::anyhow!("failed to write rotation config: {e}"))?;
     Ok(())
+}
+
+async fn cmd_rotate_trigger(client: &Client, path: &str) -> Result<()> {
+    println!();
+    header("🔄", "Manual Rotation");
+    println!();
+
+    let parts: Vec<&str> = path.splitn(3, '/').collect();
+    if parts.len() < 3 {
+        return Err(anyhow::anyhow!(
+            "invalid path format — expected env/<project>/<key>"
+        ));
+    }
+
+    let api_path = format!("/v1/secret/data/{path}");
+    let resp = client.get(&api_path).await;
+    match resp {
+        Ok(_) => {
+            let mut config = load_rotation_config()?;
+            if let Some(policies) = config.get_mut("policies").and_then(|v| v.as_object_mut()) {
+                if let Some(policy) = policies.get_mut(path) {
+                    if let Some(obj) = policy.as_object_mut() {
+                        obj.insert(
+                            "last_rotated".to_owned(),
+                            serde_json::Value::String(chrono_now_iso()),
+                        );
+                    }
+                }
+            }
+            save_rotation_config(&config)?;
+
+            success(&format!("Rotation triggered for {path}"));
+            println!("  {DIM}The secret value should be updated by your rotation handler.{RESET}");
+            println!("  {DIM}Use `zvault kv put {path} value=<new_value>` to update.{RESET}");
+
+            let wh_config = load_webhook_config()?;
+            let webhooks = wh_config
+                .get("webhooks")
+                .and_then(|v| v.as_array())
+                .cloned()
+                .unwrap_or_default();
+            for wh in &webhooks {
+                let events = wh
+                    .get("events")
+                    .and_then(|v| v.as_array())
+                    .cloned()
+                    .unwrap_or_default();
+                let has_rotation = events.iter().any(|e| e.as_str() == Some("secret.rotated"));
+                if has_rotation {
+                    if let Some(url) = wh.get("url").and_then(|v| v.as_str()) {
+                        let payload = serde_json::json!({
+                            "event": "secret.rotated",
+                            "path": path,
+                            "timestamp": chrono_now_iso(),
+                            "vault": "zvault"
+                        });
+                        let _ = send_webhook(url, &payload).await;
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            return Err(anyhow::anyhow!("secret not found at {path}: {e}"));
+        }
+    }
+    println!();
+    Ok(())
+}
+
+fn cmd_rotate_list_policies(config: &serde_json::Value) {
+    let policies = config
+        .get("policies")
+        .and_then(|v| v.as_object())
+        .cloned()
+        .unwrap_or_default();
+
+    if policies.is_empty() {
+        println!("  {DIM}No rotation policies configured.{RESET}");
+    } else {
+        println!(
+            "  {DIM}{:<40}  {:<12}  {:<12}  LAST ROTATED{RESET}",
+            "PATH", "INTERVAL", "MAX AGE"
+        );
+        for (path, policy) in &policies {
+            let interval = policy
+                .get("interval_hours")
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(0);
+            let max_age = policy
+                .get("max_age_hours")
+                .and_then(serde_json::Value::as_u64)
+                .map_or("-".to_owned(), |v| format!("{v}h"));
+            let last = policy
+                .get("last_rotated")
+                .and_then(|v| v.as_str())
+                .unwrap_or("never");
+            println!(
+                "  {:<40}  {:<12}  {:<12}  {}",
+                path,
+                format!("{interval}h"),
+                max_age,
+                last
+            );
+        }
+    }
+}
+
+fn cmd_rotate_status(config: &serde_json::Value) {
+    let policies = config
+        .get("policies")
+        .and_then(|v| v.as_object())
+        .cloned()
+        .unwrap_or_default();
+
+    if policies.is_empty() {
+        println!("  {DIM}No rotation policies configured.{RESET}");
+        return;
+    }
+
+    println!("  {DIM}{:<40}  {:<12}  STATUS{RESET}", "PATH", "INTERVAL");
+    for (path, policy) in &policies {
+        let interval = policy
+            .get("interval_hours")
+            .and_then(serde_json::Value::as_u64)
+            .unwrap_or(0);
+        let last = policy.get("last_rotated").and_then(|v| v.as_str());
+
+        let status = match last {
+            None | Some("never") => format!("{YELLOW}never rotated{RESET}"),
+            Some(_ts) => {
+                format!("{GREEN}ok{RESET}")
+            }
+        };
+
+        println!("  {:<40}  {:<12}  {}", path, format!("{interval}h"), status);
+    }
 }
 
 async fn cmd_rotate(client: &Client, action: RotateCommands) -> Result<()> {
@@ -2674,18 +2892,25 @@ async fn cmd_rotate(client: &Client, action: RotateCommands) -> Result<()> {
             println!();
 
             let config = load_rotation_config()?;
-            let policy = config
-                .get("policies")
-                .and_then(|v| v.get(&path));
+            let policy = config.get("policies").and_then(|v| v.get(&path));
 
             match policy {
                 Some(p) => {
                     kv_line("Path", &path);
-                    let interval = p.get("interval_hours").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let interval = p
+                        .get("interval_hours")
+                        .and_then(serde_json::Value::as_u64)
+                        .unwrap_or(0);
                     kv_line("Interval", &format!("{interval}h"));
-                    let max_age = p.get("max_age_hours").and_then(|v| v.as_u64());
-                    kv_line("Max Age", &max_age.map_or("none".to_owned(), |v| format!("{v}h")));
-                    let last = p.get("last_rotated").and_then(|v| v.as_str()).unwrap_or("never");
+                    let max_age = p.get("max_age_hours").and_then(serde_json::Value::as_u64);
+                    kv_line(
+                        "Max Age",
+                        &max_age.map_or("none".to_owned(), |v| format!("{v}h")),
+                    );
+                    let last = p
+                        .get("last_rotated")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("never");
                     kv_line("Last Rotated", last);
                 }
                 None => {
@@ -2701,38 +2926,7 @@ async fn cmd_rotate(client: &Client, action: RotateCommands) -> Result<()> {
             println!();
 
             let config = load_rotation_config()?;
-            let policies = config
-                .get("policies")
-                .and_then(|v| v.as_object())
-                .cloned()
-                .unwrap_or_default();
-
-            if policies.is_empty() {
-                println!("  {DIM}No rotation policies configured.{RESET}");
-            } else {
-                println!(
-                    "  {DIM}{:<40}  {:<12}  {:<12}  {}{RESET}",
-                    "PATH", "INTERVAL", "MAX AGE", "LAST ROTATED"
-                );
-                for (path, policy) in &policies {
-                    let interval = policy.get("interval_hours").and_then(|v| v.as_u64()).unwrap_or(0);
-                    let max_age = policy
-                        .get("max_age_hours")
-                        .and_then(|v| v.as_u64())
-                        .map_or("-".to_owned(), |v| format!("{v}h"));
-                    let last = policy
-                        .get("last_rotated")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("never");
-                    println!(
-                        "  {:<40}  {:<12}  {:<12}  {}",
-                        path,
-                        format!("{interval}h"),
-                        max_age,
-                        last
-                    );
-                }
-            }
+            cmd_rotate_list_policies(&config);
             println!();
             Ok(())
         }
@@ -2747,121 +2941,14 @@ async fn cmd_rotate(client: &Client, action: RotateCommands) -> Result<()> {
             println!();
             Ok(())
         }
-        RotateCommands::Trigger { path } => {
-            println!();
-            header("🔄", "Manual Rotation");
-            println!();
-
-            // Read the current secret to verify it exists.
-            let parts: Vec<&str> = path.splitn(3, '/').collect();
-            if parts.len() < 3 {
-                return Err(anyhow::anyhow!(
-                    "invalid path format — expected env/<project>/<key>"
-                ));
-            }
-
-            let api_path = format!("/v1/secret/data/{path}");
-            let resp = client.get(&api_path).await;
-            match resp {
-                Ok(_) => {
-                    // Update last_rotated timestamp in rotation config.
-                    let mut config = load_rotation_config()?;
-                    if let Some(policies) =
-                        config.get_mut("policies").and_then(|v| v.as_object_mut())
-                    {
-                        if let Some(policy) = policies.get_mut(&path) {
-                            if let Some(obj) = policy.as_object_mut() {
-                                obj.insert(
-                                    "last_rotated".to_owned(),
-                                    serde_json::Value::String(chrono_now_iso()),
-                                );
-                            }
-                        }
-                    }
-                    save_rotation_config(&config)?;
-
-                    success(&format!("Rotation triggered for {path}"));
-                    println!("  {DIM}The secret value should be updated by your rotation handler.{RESET}");
-                    println!("  {DIM}Use `zvault kv put {path} value=<new_value>` to update.{RESET}");
-
-                    // Send webhook notification if configured.
-                    let wh_config = load_webhook_config()?;
-                    let webhooks = wh_config
-                        .get("webhooks")
-                        .and_then(|v| v.as_array())
-                        .cloned()
-                        .unwrap_or_default();
-                    for wh in &webhooks {
-                        let events = wh
-                            .get("events")
-                            .and_then(|v| v.as_array())
-                            .cloned()
-                            .unwrap_or_default();
-                        let has_rotation = events
-                            .iter()
-                            .any(|e| e.as_str() == Some("secret.rotated"));
-                        if has_rotation {
-                            if let Some(url) = wh.get("url").and_then(|v| v.as_str()) {
-                                let payload = serde_json::json!({
-                                    "event": "secret.rotated",
-                                    "path": path,
-                                    "timestamp": chrono_now_iso(),
-                                    "vault": "zvault"
-                                });
-                                let _ = send_webhook(url, &payload).await;
-                            }
-                        }
-                    }
-                }
-                Err(e) => {
-                    return Err(anyhow::anyhow!("secret not found at {path}: {e}"));
-                }
-            }
-            println!();
-            Ok(())
-        }
+        RotateCommands::Trigger { path } => cmd_rotate_trigger(client, &path).await,
         RotateCommands::Status => {
             println!();
             header("🔄", "Rotation Status");
             println!();
 
             let config = load_rotation_config()?;
-            let policies = config
-                .get("policies")
-                .and_then(|v| v.as_object())
-                .cloned()
-                .unwrap_or_default();
-
-            if policies.is_empty() {
-                println!("  {DIM}No rotation policies configured.{RESET}");
-                println!();
-                return Ok(());
-            }
-
-            println!(
-                "  {DIM}{:<40}  {:<12}  {}{RESET}",
-                "PATH", "INTERVAL", "STATUS"
-            );
-            for (path, policy) in &policies {
-                let interval = policy.get("interval_hours").and_then(|v| v.as_u64()).unwrap_or(0);
-                let last = policy.get("last_rotated").and_then(|v| v.as_str());
-
-                let status = match last {
-                    None | Some("never") => format!("{YELLOW}never rotated{RESET}"),
-                    Some(_ts) => {
-                        // Simple status — in production you'd parse the timestamp
-                        // and compare against interval_hours.
-                        format!("{GREEN}ok{RESET}")
-                    }
-                };
-
-                println!(
-                    "  {:<40}  {:<12}  {}",
-                    path,
-                    format!("{interval}h"),
-                    status
-                );
-            }
+            cmd_rotate_status(&config);
             println!();
             Ok(())
         }
@@ -2932,10 +3019,7 @@ async fn cmd_backup(client: &Client, output: Option<&str>) -> Result<()> {
 
     let resp = client.get_no_auth("/v1/sys/backup").await?;
 
-    let entry_count = resp
-        .get("entry_count")
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
+    let entry_count = resp.get("entry_count").and_then(Value::as_u64).unwrap_or(0);
     let created_at = resp
         .get("created_at")
         .and_then(Value::as_str)
@@ -2945,8 +3029,7 @@ async fn cmd_backup(client: &Client, output: Option<&str>) -> Result<()> {
         .and_then(Value::as_str)
         .unwrap_or("unknown");
 
-    let content = serde_json::to_string_pretty(&resp)
-        .unwrap_or_else(|_| resp.to_string());
+    let content = serde_json::to_string_pretty(&resp).unwrap_or_else(|_| resp.to_string());
 
     match output {
         Some(path) => {
@@ -2984,8 +3067,7 @@ async fn cmd_restore(client: &Client, file: &str) -> Result<()> {
     let content = std::fs::read_to_string(file)
         .with_context(|| format!("failed to read backup file: {file}"))?;
 
-    let backup: Value = serde_json::from_str(&content)
-        .context("invalid backup file format")?;
+    let backup: Value = serde_json::from_str(&content).context("invalid backup file format")?;
 
     let snapshot = backup
         .get("snapshot")
@@ -3004,10 +3086,7 @@ async fn cmd_restore(client: &Client, file: &str) -> Result<()> {
     let body = serde_json::json!({ "snapshot": snapshot });
     let resp = client.post_no_auth("/v1/sys/restore", &body).await?;
 
-    let restored = resp
-        .get("entry_count")
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
+    let restored = resp.get("entry_count").and_then(Value::as_u64).unwrap_or(0);
     let ok = resp
         .get("success")
         .and_then(Value::as_bool)
@@ -3046,9 +3125,7 @@ fn chrono_now_iso() -> String {
     // Calculate year/month/day from days since epoch (1970-01-01).
     let (year, month, day) = days_to_ymd(days);
 
-    format!(
-        "{year:04}-{month:02}-{day:02}T{hours:02}:{minutes:02}:{seconds:02}Z"
-    )
+    format!("{year:04}-{month:02}-{day:02}T{hours:02}:{minutes:02}:{seconds:02}Z")
 }
 
 /// Convert days since Unix epoch to (year, month, day).
@@ -3061,7 +3138,8 @@ fn days_to_ymd(days: u64) -> (u64, u64, u64) {
     let z = days.saturating_add(719_468);
     let era = z / 146_097;
     let doe = z.saturating_sub(era.saturating_mul(146_097));
-    let yoe = (doe.saturating_sub(doe / 1460)
+    let yoe = (doe
+        .saturating_sub(doe / 1460)
         .saturating_add(doe / 36524)
         .saturating_sub(doe / 146_096))
         / 365;

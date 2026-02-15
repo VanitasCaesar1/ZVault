@@ -33,7 +33,7 @@ pub struct PkiRole {
     pub name: String,
     /// Allowed domains for issued certificates.
     pub allowed_domains: Vec<String>,
-    /// Whether subdomains of allowed_domains are permitted.
+    /// Whether subdomains of `allowed_domains` are permitted.
     pub allow_subdomains: bool,
     /// Maximum TTL in hours for issued certificates.
     pub max_ttl_hours: u64,
@@ -97,7 +97,7 @@ impl PkiEngine {
     ///
     /// # Errors
     ///
-    /// Returns `PkiError::InvalidRequest` if common_name is empty.
+    /// Returns `PkiError::InvalidRequest` if `common_name` is empty.
     /// Returns `PkiError::CertGeneration` if certificate generation fails.
     pub async fn generate_root(
         &self,
@@ -110,17 +110,18 @@ impl PkiEngine {
             });
         }
 
-        let params = rcgen::CertificateParams::new(Vec::<String>::new())
-            .map_err(|e| PkiError::CertGeneration {
+        let params = rcgen::CertificateParams::new(Vec::<String>::new()).map_err(|e| {
+            PkiError::CertGeneration {
                 reason: format!("failed to create cert params: {e}"),
-            })?;
+            }
+        })?;
 
-        let key_pair = rcgen::KeyPair::generate()
-            .map_err(|e| PkiError::CertGeneration {
-                reason: format!("key generation failed: {e}"),
-            })?;
+        let key_pair = rcgen::KeyPair::generate().map_err(|e| PkiError::CertGeneration {
+            reason: format!("key generation failed: {e}"),
+        })?;
 
-        let cert = params.self_signed(&key_pair)
+        let cert = params
+            .self_signed(&key_pair)
             .map_err(|e| PkiError::CertGeneration {
                 reason: format!("self-signing failed: {e}"),
             })?;
@@ -202,11 +203,13 @@ impl PkiEngine {
             .ok_or_else(|| PkiError::RoleNotFound {
                 name: name.to_owned(),
             })?;
-        let role: PkiRole =
-            serde_json::from_slice(&data).map_err(|e| PkiError::Internal {
-                reason: format!("deserialization failed: {e}"),
-            })?;
-        self.roles.write().await.insert(name.to_owned(), role.clone());
+        let role: PkiRole = serde_json::from_slice(&data).map_err(|e| PkiError::Internal {
+            reason: format!("deserialization failed: {e}"),
+        })?;
+        self.roles
+            .write()
+            .await
+            .insert(name.to_owned(), role.clone());
         Ok(role)
     }
 
@@ -247,48 +250,55 @@ impl PkiEngine {
         });
         if !domain_allowed {
             return Err(PkiError::InvalidRequest {
-                reason: format!(
-                    "domain '{common_name}' not allowed by role '{role_name}'"
-                ),
+                reason: format!("domain '{common_name}' not allowed by role '{role_name}'"),
             });
         }
 
-        let effective_ttl = ttl_hours.unwrap_or(role.max_ttl_hours).min(role.max_ttl_hours);
+        let effective_ttl = ttl_hours
+            .unwrap_or(role.max_ttl_hours)
+            .min(role.max_ttl_hours);
 
         // Parse CA key pair.
-        let ca_key_pair = rcgen::KeyPair::from_pem(&ca.private_key_pem)
-            .map_err(|e| PkiError::CertGeneration {
+        let ca_key_pair = rcgen::KeyPair::from_pem(&ca.private_key_pem).map_err(|e| {
+            PkiError::CertGeneration {
                 reason: format!("failed to parse CA key: {e}"),
-            })?;
+            }
+        })?;
 
-        let ca_params = rcgen::CertificateParams::new(Vec::<String>::new())
-            .map_err(|e| PkiError::CertGeneration {
+        let ca_params = rcgen::CertificateParams::new(Vec::<String>::new()).map_err(|e| {
+            PkiError::CertGeneration {
                 reason: format!("failed to create CA params: {e}"),
-            })?;
-        let ca_cert = ca_params.self_signed(&ca_key_pair)
-            .map_err(|e| PkiError::CertGeneration {
-                reason: format!("failed to reconstruct CA cert: {e}"),
-            })?;
+            }
+        })?;
+        let ca_cert =
+            ca_params
+                .self_signed(&ca_key_pair)
+                .map_err(|e| PkiError::CertGeneration {
+                    reason: format!("failed to reconstruct CA cert: {e}"),
+                })?;
 
         // Generate leaf certificate.
-        let leaf_params = rcgen::CertificateParams::new(vec![common_name.to_owned()])
-            .map_err(|e| PkiError::CertGeneration {
-                reason: format!("failed to create leaf params: {e}"),
+        let leaf_params =
+            rcgen::CertificateParams::new(vec![common_name.to_owned()]).map_err(|e| {
+                PkiError::CertGeneration {
+                    reason: format!("failed to create leaf params: {e}"),
+                }
             })?;
 
-        let leaf_key = rcgen::KeyPair::generate()
-            .map_err(|e| PkiError::CertGeneration {
-                reason: format!("leaf key generation failed: {e}"),
-            })?;
+        let leaf_key = rcgen::KeyPair::generate().map_err(|e| PkiError::CertGeneration {
+            reason: format!("leaf key generation failed: {e}"),
+        })?;
 
-        let leaf_cert = leaf_params.signed_by(&leaf_key, &ca_cert, &ca_key_pair)
+        let leaf_cert = leaf_params
+            .signed_by(&leaf_key, &ca_cert, &ca_key_pair)
             .map_err(|e| PkiError::CertGeneration {
                 reason: format!("certificate signing failed: {e}"),
             })?;
 
         let serial = uuid::Uuid::new_v4().to_string().replace('-', "");
+        let effective_ttl_i64 = i64::try_from(effective_ttl).unwrap_or(i64::MAX);
         let expiration = chrono::Utc::now()
-            .checked_add_signed(chrono::Duration::hours(effective_ttl as i64))
+            .checked_add_signed(chrono::Duration::hours(effective_ttl_i64))
             .map(|t| t.to_rfc3339())
             .unwrap_or_default();
 
@@ -308,7 +318,9 @@ impl PkiEngine {
         let cert_data = serde_json::to_vec(&issued).map_err(|e| PkiError::Internal {
             reason: format!("serialization failed: {e}"),
         })?;
-        self.barrier.put(&self.cert_key(&serial), &cert_data).await?;
+        self.barrier
+            .put(&self.cert_key(&serial), &cert_data)
+            .await?;
 
         Ok(issued)
     }

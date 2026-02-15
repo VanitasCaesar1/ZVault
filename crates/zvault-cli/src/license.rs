@@ -29,7 +29,7 @@ use std::path::PathBuf;
 use anyhow::{Context, Result, bail};
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64;
-use ed25519_dalek::{Signature, VerifyingKey, Verifier};
+use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
 
 // ── Polar.sh configuration ───────────────────────────────────────────
@@ -196,11 +196,13 @@ pub fn verify_license_key(key: &str) -> Result<License> {
     // This matches how the license server signs: sign(base64(payload)).
     verifying_key
         .verify(payload_b64.as_bytes(), &signature)
-        .map_err(|_| anyhow::anyhow!("license signature verification failed — key is invalid or tampered"))?;
+        .map_err(|_| {
+            anyhow::anyhow!("license signature verification failed — key is invalid or tampered")
+        })?;
 
     // Parse payload JSON.
-    let payload: LicensePayload = serde_json::from_slice(&payload_bytes)
-        .context("license payload is malformed JSON")?;
+    let payload: LicensePayload =
+        serde_json::from_slice(&payload_bytes).context("license payload is malformed JSON")?;
 
     // ── Payload sanity checks ────────────────────────────────────
     // These prevent crafted-but-signed payloads from causing issues
@@ -336,8 +338,11 @@ fn civil_from_days(days: u64) -> (u64, u64, u64) {
         .saturating_sub(doe / 146_096))
         / 365;
     let y = yoe.saturating_add(era.saturating_mul(400));
-    let doy = doe
-        .saturating_sub(yoe.saturating_mul(365).saturating_add(yoe / 4).saturating_sub(yoe / 100));
+    let doy = doe.saturating_sub(
+        yoe.saturating_mul(365)
+            .saturating_add(yoe / 4)
+            .saturating_sub(yoe / 100),
+    );
     let mp = (doy.saturating_mul(5).saturating_add(2)) / 153;
     let d = doy
         .saturating_sub(mp.saturating_mul(153).saturating_add(2) / 5)
@@ -423,7 +428,7 @@ pub async fn validate_polar_key(key: &str) -> Result<License> {
 
     // Step 1: Validate the key.
     let validate_resp = client
-        .post(&format!("{POLAR_API_BASE}/validate"))
+        .post(format!("{POLAR_API_BASE}/validate"))
         .json(&serde_json::json!({
             "key": key,
             "organization_id": POLAR_ORG_ID,
@@ -456,7 +461,7 @@ pub async fn validate_polar_key(key: &str) -> Result<License> {
         .unwrap_or_else(|_| "zvault-cli".to_owned());
 
     let activate_resp = client
-        .post(&format!("{POLAR_API_BASE}/activate"))
+        .post(format!("{POLAR_API_BASE}/activate"))
         .json(&serde_json::json!({
             "key": key,
             "organization_id": POLAR_ORG_ID,
@@ -476,7 +481,6 @@ pub async fn validate_polar_key(key: &str) -> Result<License> {
 
     // Map Polar benefit/product to tier based on known product IDs.
     let tier = match validate_data.benefit_id.as_deref() {
-        Some("49f34606-431c-4215-a0c9-19ea745e5a93") => Tier::Pro,
         Some("c42a3bec-5db8-4cf2-b9c6-48416604353e") => Tier::Team,
         Some("a2aaaded-328e-4320-a493-76bf7b898e45") => Tier::Enterprise,
         _ => Tier::Pro, // Default to Pro for unrecognized benefits
@@ -487,7 +491,9 @@ pub async fn validate_polar_key(key: &str) -> Result<License> {
     // Build a License object compatible with the rest of the system.
     let payload = LicensePayload {
         tier,
-        email: validate_data.customer_id.unwrap_or_else(|| "polar-customer".to_owned()),
+        email: validate_data
+            .customer_id
+            .unwrap_or_else(|| "polar-customer".to_owned()),
         issued_at: now.clone(),
         expires_at: validate_data
             .expires_at
@@ -516,14 +522,12 @@ pub async fn validate_polar_key(key: &str) -> Result<License> {
 fn save_polar_cache(cache: &PolarLicenseCache) -> Result<()> {
     let home = home_dir()?;
     let dir = home.join(".zvault");
-    std::fs::create_dir_all(&dir)
-        .with_context(|| format!("failed to create {}", dir.display()))?;
+    std::fs::create_dir_all(&dir).with_context(|| format!("failed to create {}", dir.display()))?;
 
     let path = dir.join("polar-license.json");
-    let json = serde_json::to_string_pretty(cache)
-        .context("failed to serialize Polar license cache")?;
-    std::fs::write(&path, &json)
-        .with_context(|| format!("failed to write {}", path.display()))?;
+    let json =
+        serde_json::to_string_pretty(cache).context("failed to serialize Polar license cache")?;
+    std::fs::write(&path, &json).with_context(|| format!("failed to write {}", path.display()))?;
 
     #[cfg(unix)]
     {
@@ -569,8 +573,7 @@ fn load_polar_cache() -> Result<Option<PolarLicenseCache>> {
 pub fn save_license(key: &str) -> Result<PathBuf> {
     let home = home_dir()?;
     let dir = home.join(".zvault");
-    std::fs::create_dir_all(&dir)
-        .with_context(|| format!("failed to create {}", dir.display()))?;
+    std::fs::create_dir_all(&dir).with_context(|| format!("failed to create {}", dir.display()))?;
 
     let path = dir.join("license.key");
     std::fs::write(&path, key.trim())

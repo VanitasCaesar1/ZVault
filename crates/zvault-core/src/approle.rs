@@ -1,4 +1,4 @@
-//! AppRole authentication method for `ZVault`.
+//! `AppRole` authentication method for `ZVault`.
 //!
 //! Provides machine-to-machine authentication using role IDs and secret IDs.
 //! An operator creates a role with policies, retrieves the role ID, generates
@@ -16,7 +16,7 @@ use crate::barrier::Barrier;
 use crate::error::AppRoleError;
 use crate::token::{TokenEntry, TokenStore};
 
-/// An AppRole role definition.
+/// An `AppRole` role definition.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppRole {
     /// Role name.
@@ -50,7 +50,7 @@ pub struct SecretIdEntry {
     pub created_at: String,
 }
 
-/// The AppRole auth store.
+/// The `AppRole` auth store.
 pub struct AppRoleStore {
     barrier: Arc<Barrier>,
     prefix: String,
@@ -59,7 +59,7 @@ pub struct AppRoleStore {
 }
 
 impl AppRoleStore {
-    /// Create a new AppRole store.
+    /// Create a new `AppRole` store.
     pub fn new(barrier: Arc<Barrier>, prefix: String) -> Self {
         Self {
             barrier,
@@ -81,7 +81,7 @@ impl AppRoleStore {
         hex::encode(Sha256::digest(secret_id.as_bytes()))
     }
 
-    /// Create a new AppRole role.
+    /// Create a new `AppRole` role.
     ///
     /// # Errors
     ///
@@ -106,7 +106,10 @@ impl AppRoleStore {
             reason: format!("serialization failed: {e}"),
         })?;
         self.barrier.put(&self.role_key(&role.name), &data).await?;
-        self.roles.write().await.insert(role.name.clone(), role.clone());
+        self.roles
+            .write()
+            .await
+            .insert(role.name.clone(), role.clone());
         Ok(role)
     }
 
@@ -126,11 +129,13 @@ impl AppRoleStore {
             .ok_or_else(|| AppRoleError::RoleNotFound {
                 name: name.to_owned(),
             })?;
-        let role: AppRole =
-            serde_json::from_slice(&data).map_err(|e| AppRoleError::Internal {
-                reason: format!("deserialization failed: {e}"),
-            })?;
-        self.roles.write().await.insert(name.to_owned(), role.clone());
+        let role: AppRole = serde_json::from_slice(&data).map_err(|e| AppRoleError::Internal {
+            reason: format!("deserialization failed: {e}"),
+        })?;
+        self.roles
+            .write()
+            .await
+            .insert(name.to_owned(), role.clone());
         Ok(role)
     }
 
@@ -202,31 +207,33 @@ impl AppRoleStore {
         Ok(secret_id)
     }
 
-    /// Login with a role_id and secret_id, returning the plaintext token and its entry.
+    /// Login with a `role_id` and `secret_id`, returning the plaintext token and its entry.
     ///
     /// # Errors
     ///
-    /// Returns `AppRoleError::RoleNotFound` if no role matches the role_id.
-    /// Returns `AppRoleError::InvalidSecretId` if the secret_id is invalid.
+    /// Returns `AppRoleError::RoleNotFound` if no role matches the `role_id`.
+    /// Returns `AppRoleError::InvalidSecretId` if the `secret_id` is invalid.
     pub async fn login(
         &self,
         role_id: &str,
         secret_id: &str,
         token_store: &TokenStore,
     ) -> Result<(String, TokenEntry), AppRoleError> {
+        use crate::token::CreateTokenParams;
+
         // Find role by role_id (scan cached roles, then barrier).
         let role = self.find_role_by_id(role_id).await?;
 
         if role.bind_secret_id {
             let hash = Self::hash_secret_id(secret_id);
             let key = self.secret_id_key(&role.name, &hash);
-            let data = self
-                .barrier
-                .get(&key)
-                .await?
-                .ok_or_else(|| AppRoleError::InvalidSecretId {
-                    role_name: role.name.clone(),
-                })?;
+            let data =
+                self.barrier
+                    .get(&key)
+                    .await?
+                    .ok_or_else(|| AppRoleError::InvalidSecretId {
+                        role_name: role.name.clone(),
+                    })?;
 
             let mut entry: SecretIdEntry =
                 serde_json::from_slice(&data).map_err(|e| AppRoleError::Internal {
@@ -240,18 +247,17 @@ impl AppRoleStore {
                     // Last use — delete the secret ID.
                     let _ = self.barrier.delete(&key).await;
                 } else {
-                    let updated = serde_json::to_vec(&entry).map_err(|e| {
-                        AppRoleError::Internal {
+                    let updated =
+                        serde_json::to_vec(&entry).map_err(|e| AppRoleError::Internal {
                             reason: format!("serialization failed: {e}"),
-                        }
-                    })?;
+                        })?;
                     let _ = self.barrier.put(&key, &updated).await;
                 }
             }
         }
 
         // Create a token with the role's policies.
-        use crate::token::CreateTokenParams;
+
         let ttl = chrono::Duration::seconds(role.token_ttl_secs);
         let max_ttl = chrono::Duration::seconds(role.token_max_ttl_secs);
 
@@ -271,17 +277,18 @@ impl AppRoleStore {
             })?;
 
         // Look up the created token to get the full entry.
-        let token_entry = token_store
-            .lookup(&plaintext_token)
-            .await
-            .map_err(|e| AppRoleError::Internal {
-                reason: format!("token lookup failed: {e}"),
-            })?;
+        let token_entry =
+            token_store
+                .lookup(&plaintext_token)
+                .await
+                .map_err(|e| AppRoleError::Internal {
+                    reason: format!("token lookup failed: {e}"),
+                })?;
 
         Ok((plaintext_token, token_entry))
     }
 
-    /// Find a role by its role_id (not name).
+    /// Find a role by its `role_id` (not name).
     async fn find_role_by_id(&self, role_id: &str) -> Result<AppRole, AppRoleError> {
         // Check cache first.
         for role in self.roles.read().await.values() {
@@ -295,7 +302,10 @@ impl AppRoleStore {
         for key in &keys {
             if let Ok(Some(data)) = self.barrier.get(key).await {
                 if let Ok(role) = serde_json::from_slice::<AppRole>(&data) {
-                    self.roles.write().await.insert(role.name.clone(), role.clone());
+                    self.roles
+                        .write()
+                        .await
+                        .insert(role.name.clone(), role.clone());
                     if role.role_id == role_id {
                         return Ok(role);
                     }

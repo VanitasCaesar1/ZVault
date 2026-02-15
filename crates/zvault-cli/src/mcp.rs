@@ -755,8 +755,8 @@ async fn tool_check_env(client: &VaultClient, args: &Value) -> Result<String> {
         .and_then(Value::as_str)
         .unwrap_or(".env.zvault");
 
-    let content = std::fs::read_to_string(file_path)
-        .with_context(|| format!("cannot read {file_path}"))?;
+    let content =
+        std::fs::read_to_string(file_path).with_context(|| format!("cannot read {file_path}"))?;
 
     let entries = parse_env_content(&content);
     if entries.is_empty() {
@@ -861,7 +861,9 @@ async fn tool_set_secret(client: &VaultClient, args: &Value) -> Result<String> {
         .await?;
 
     // SECURITY: Confirm storage without echoing the value.
-    Ok(format!("Secret stored at '{path}' (key: {key_name}). Value: [REDACTED]"))
+    Ok(format!(
+        "Secret stored at '{path}' (key: {key_name}). Value: [REDACTED]"
+    ))
 }
 
 async fn tool_delete_secret(client: &VaultClient, args: &Value) -> Result<String> {
@@ -970,16 +972,20 @@ async fn resolve_secret_value(client: &VaultClient, path: &str) -> Result<String
 /// Execute a SQL query against a Postgres database using credentials from the vault.
 /// The AI never sees the connection string.
 async fn tool_query_database(client: &VaultClient, args: &Value) -> Result<String> {
-    let secret_path = args.get("secret_path")
+    let secret_path = args
+        .get("secret_path")
         .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: secret_path"))?;
-    let query = args.get("query")
+    let query = args
+        .get("query")
         .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: query"))?;
-    let allow_write = args.get("allow_write")
+    let allow_write = args
+        .get("allow_write")
         .and_then(Value::as_bool)
         .unwrap_or(false);
-    let max_rows: usize = args.get("max_rows")
+    let max_rows: usize = args
+        .get("max_rows")
         .and_then(Value::as_u64)
         .map_or(50, |n| n.min(500) as usize);
 
@@ -994,7 +1000,8 @@ async fn tool_query_database(client: &VaultClient, args: &Value) -> Result<Strin
     }
 
     // Resolve the connection string from the vault (never exposed to AI).
-    let conn_str = resolve_secret_value(client, secret_path).await
+    let conn_str = resolve_secret_value(client, secret_path)
+        .await
         .context("failed to resolve database connection string from vault")?;
 
     // Connect to Postgres.
@@ -1042,19 +1049,32 @@ async fn tool_query_database(client: &VaultClient, args: &Value) -> Result<Strin
 
     // Header.
     let _ = writeln!(output, "{}", col_names.join(" | "));
-    let _ = writeln!(output, "{}", col_names.iter().map(|c| "-".repeat(c.len().max(4))).collect::<Vec<_>>().join("-+-"));
+    let _ = writeln!(
+        output,
+        "{}",
+        col_names
+            .iter()
+            .map(|c| "-".repeat(c.len().max(4)))
+            .collect::<Vec<_>>()
+            .join("-+-")
+    );
 
     // Rows (capped at max_rows).
     let total = rows.len();
     for row in rows.iter().take(max_rows) {
-        let vals: Vec<String> = columns.iter().enumerate().map(|(i, col)| {
-            format_pg_value(row, i, col.type_())
-        }).collect();
+        let vals: Vec<String> = columns
+            .iter()
+            .enumerate()
+            .map(|(i, col)| format_pg_value(row, i, col.type_()))
+            .collect();
         let _ = writeln!(output, "{}", vals.join(" | "));
     }
 
     if total > max_rows {
-        let _ = writeln!(output, "\n... ({total} total rows, showing first {max_rows})");
+        let _ = writeln!(
+            output,
+            "\n... ({total} total rows, showing first {max_rows})"
+        );
     } else {
         let _ = writeln!(output, "\n({total} rows)");
     }
@@ -1063,23 +1083,38 @@ async fn tool_query_database(client: &VaultClient, args: &Value) -> Result<Strin
 }
 
 /// Format a single Postgres column value to a display string.
-fn format_pg_value(row: &tokio_postgres::Row, idx: usize, pg_type: &tokio_postgres::types::Type) -> String {
+fn format_pg_value(
+    row: &tokio_postgres::Row,
+    idx: usize,
+    pg_type: &tokio_postgres::types::Type,
+) -> String {
     use tokio_postgres::types::Type;
 
     match *pg_type {
-        Type::BOOL => row.try_get::<_, bool>(idx).map_or_else(|_| "NULL".into(), |v| v.to_string()),
-        Type::INT2 => row.try_get::<_, i16>(idx).map_or_else(|_| "NULL".into(), |v| v.to_string()),
-        Type::INT4 => row.try_get::<_, i32>(idx).map_or_else(|_| "NULL".into(), |v| v.to_string()),
-        Type::INT8 => row.try_get::<_, i64>(idx).map_or_else(|_| "NULL".into(), |v| v.to_string()),
-        Type::FLOAT4 => row.try_get::<_, f32>(idx).map_or_else(|_| "NULL".into(), |v| v.to_string()),
-        Type::FLOAT8 => row.try_get::<_, f64>(idx).map_or_else(|_| "NULL".into(), |v| v.to_string()),
-        Type::TEXT | Type::VARCHAR | Type::NAME | Type::BPCHAR => {
-            row.try_get::<_, String>(idx).unwrap_or_else(|_| "NULL".into())
-        }
-        Type::JSON | Type::JSONB => {
-            row.try_get::<_, serde_json::Value>(idx)
-                .map_or_else(|_| "NULL".into(), |v| v.to_string())
-        }
+        Type::BOOL => row
+            .try_get::<_, bool>(idx)
+            .map_or_else(|_| "NULL".into(), |v| v.to_string()),
+        Type::INT2 => row
+            .try_get::<_, i16>(idx)
+            .map_or_else(|_| "NULL".into(), |v| v.to_string()),
+        Type::INT4 => row
+            .try_get::<_, i32>(idx)
+            .map_or_else(|_| "NULL".into(), |v| v.to_string()),
+        Type::INT8 => row
+            .try_get::<_, i64>(idx)
+            .map_or_else(|_| "NULL".into(), |v| v.to_string()),
+        Type::FLOAT4 => row
+            .try_get::<_, f32>(idx)
+            .map_or_else(|_| "NULL".into(), |v| v.to_string()),
+        Type::FLOAT8 => row
+            .try_get::<_, f64>(idx)
+            .map_or_else(|_| "NULL".into(), |v| v.to_string()),
+        Type::TEXT | Type::VARCHAR | Type::NAME | Type::BPCHAR => row
+            .try_get::<_, String>(idx)
+            .unwrap_or_else(|_| "NULL".into()),
+        Type::JSON | Type::JSONB => row
+            .try_get::<_, serde_json::Value>(idx)
+            .map_or_else(|_| "NULL".into(), |v| v.to_string()),
         _ => {
             // Fallback: try as string, then show type name.
             row.try_get::<_, String>(idx)
@@ -1091,10 +1126,9 @@ fn format_pg_value(row: &tokio_postgres::Row, idx: usize, pg_type: &tokio_postgr
 /// Make an HTTP request with credentials resolved from the vault.
 /// The AI provides the URL/headers with `zvault://` references; `ZVault` resolves them.
 async fn tool_http_request(client: &VaultClient, args: &Value) -> Result<String> {
-    let method = args.get("method")
-        .and_then(Value::as_str)
-        .unwrap_or("GET");
-    let url = args.get("url")
+    let method = args.get("method").and_then(Value::as_str).unwrap_or("GET");
+    let url = args
+        .get("url")
         .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: url"))?;
     let body = args.get("body").and_then(Value::as_str);
@@ -1124,7 +1158,8 @@ async fn tool_http_request(client: &VaultClient, args: &Value) -> Result<String>
             if let Some(val_str) = val.as_str() {
                 let resolved = if val_str.starts_with("zvault://") {
                     let path = val_str.strip_prefix("zvault://").unwrap_or(val_str);
-                    resolve_secret_value(client, path).await
+                    resolve_secret_value(client, path)
+                        .await
                         .with_context(|| format!("failed to resolve header {key}"))?
                 } else {
                     val_str.to_owned()
@@ -1136,24 +1171,24 @@ async fn tool_http_request(client: &VaultClient, args: &Value) -> Result<String>
 
     // If a secret_path is provided, use it as Bearer token.
     if let Some(sp) = secret_path {
-        let token = resolve_secret_value(client, sp).await
+        let token = resolve_secret_value(client, sp)
+            .await
             .context("failed to resolve auth token from vault")?;
         req = req.header("Authorization", format!("Bearer {token}"));
     }
 
     // Set body if provided.
     if let Some(b) = body {
-        req = req.header("Content-Type", "application/json").body(b.to_owned());
+        req = req
+            .header("Content-Type", "application/json")
+            .body(b.to_owned());
     }
 
     // Execute with timeout.
-    let resp = tokio::time::timeout(
-        std::time::Duration::from_secs(30),
-        req.send(),
-    )
-    .await
-    .context("HTTP request timed out after 30 seconds")?
-    .context("HTTP request failed")?;
+    let resp = tokio::time::timeout(std::time::Duration::from_secs(30), req.send())
+        .await
+        .context("HTTP request timed out after 30 seconds")?
+        .context("HTTP request failed")?;
 
     let status = resp.status();
     let resp_headers = format!("{:?}", resp.headers());
@@ -1161,7 +1196,11 @@ async fn tool_http_request(client: &VaultClient, args: &Value) -> Result<String>
 
     // Truncate large responses.
     let body_display = if resp_body.len() > 10_000 {
-        format!("{}... (truncated, {} bytes total)", &resp_body[..10_000], resp_body.len())
+        format!(
+            "{}... (truncated, {} bytes total)",
+            &resp_body[..10_000],
+            resp_body.len()
+        )
     } else {
         resp_body
     };
@@ -1184,11 +1223,13 @@ async fn resolve_zvault_refs_in_string(client: &VaultClient, input: &str) -> Res
     while let Some(start) = result.find("zvault://") {
         // Find the end of the reference (next whitespace, quote, or end of string).
         let rest = &result[start..];
-        let end = rest.find(|c: char| c.is_whitespace() || c == '"' || c == '\'' || c == ',' || c == '}')
+        let end = rest
+            .find(|c: char| c.is_whitespace() || c == '"' || c == '\'' || c == ',' || c == '}')
             .unwrap_or(rest.len());
         let reference = &result[start..start + end];
         let path = reference.strip_prefix("zvault://").unwrap_or(reference);
-        let value = resolve_secret_value(client, path).await
+        let value = resolve_secret_value(client, path)
+            .await
             .with_context(|| format!("failed to resolve {reference}"))?;
         result = format!("{}{}{}", &result[..start], value, &result[start + end..]);
     }
@@ -1197,14 +1238,17 @@ async fn resolve_zvault_refs_in_string(client: &VaultClient, input: &str) -> Res
 
 /// Health-check a service using credentials from the vault.
 async fn tool_check_service(client: &VaultClient, args: &Value) -> Result<String> {
-    let secret_path = args.get("secret_path")
+    let secret_path = args
+        .get("secret_path")
         .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: secret_path"))?;
-    let service_type = args.get("service_type")
+    let service_type = args
+        .get("service_type")
         .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: service_type"))?;
 
-    let conn_str = resolve_secret_value(client, secret_path).await
+    let conn_str = resolve_secret_value(client, secret_path)
+        .await
         .context("failed to resolve service credentials from vault")?;
 
     let start = std::time::Instant::now();
@@ -1220,19 +1264,26 @@ async fn tool_check_service(client: &VaultClient, args: &Value) -> Result<String
             let result = tokio::time::timeout(
                 std::time::Duration::from_secs(10),
                 tokio_postgres::connect(&conn_str, pg_tls),
-            ).await;
+            )
+            .await;
 
             match result {
                 Ok(Ok((pg_client, connection))) => {
-                    tokio::spawn(async move { let _ = connection.await; });
-                    let version = pg_client.query_one("SELECT version()", &[]).await
+                    tokio::spawn(async move {
+                        let _ = connection.await;
+                    });
+                    let version = pg_client
+                        .query_one("SELECT version()", &[])
+                        .await
                         .map_or_else(|_| "unknown".into(), |row| row.get::<_, String>(0));
                     let elapsed = start.elapsed();
                     Ok(format!(
                         "✓ PostgreSQL is reachable\n  Version: {version}\n  Latency: {elapsed:.0?}\n  Secret: {secret_path} (credentials not shown)"
                     ))
                 }
-                Ok(Err(e)) => Ok(format!("✗ PostgreSQL connection failed\n  Error: {e}\n  Secret: {secret_path}")),
+                Ok(Err(e)) => Ok(format!(
+                    "✗ PostgreSQL connection failed\n  Error: {e}\n  Secret: {secret_path}"
+                )),
                 Err(_) => Ok("✗ PostgreSQL connection timed out (10s)".into()),
             }
         }
@@ -1242,14 +1293,17 @@ async fn tool_check_service(client: &VaultClient, args: &Value) -> Result<String
             let result = tokio::time::timeout(
                 std::time::Duration::from_secs(5),
                 tokio::net::TcpStream::connect(&host_port),
-            ).await;
+            )
+            .await;
 
             let elapsed = start.elapsed();
             match result {
                 Ok(Ok(_)) => Ok(format!(
                     "✓ Redis is reachable\n  Latency: {elapsed:.0?}\n  Secret: {secret_path} (credentials not shown)"
                 )),
-                Ok(Err(e)) => Ok(format!("✗ Redis connection failed\n  Error: {e}\n  Secret: {secret_path}")),
+                Ok(Err(e)) => Ok(format!(
+                    "✗ Redis connection failed\n  Error: {e}\n  Secret: {secret_path}"
+                )),
                 Err(_) => Ok("✗ Redis connection timed out (5s)".into()),
             }
         }
@@ -1258,7 +1312,8 @@ async fn tool_check_service(client: &VaultClient, args: &Value) -> Result<String
             let result = tokio::time::timeout(
                 std::time::Duration::from_secs(10),
                 http.get(&conn_str).send(),
-            ).await;
+            )
+            .await;
 
             let elapsed = start.elapsed();
             match result {
@@ -1266,7 +1321,9 @@ async fn tool_check_service(client: &VaultClient, args: &Value) -> Result<String
                     "✓ HTTP endpoint is reachable\n  Status: {}\n  Latency: {elapsed:.0?}\n  Secret: {secret_path} (URL not shown)",
                     resp.status()
                 )),
-                Ok(Err(e)) => Ok(format!("✗ HTTP request failed\n  Error: {e}\n  Secret: {secret_path}")),
+                Ok(Err(e)) => Ok(format!(
+                    "✗ HTTP request failed\n  Error: {e}\n  Secret: {secret_path}"
+                )),
                 Err(_) => Ok("✗ HTTP request timed out (10s)".into()),
             }
         }
@@ -1277,7 +1334,10 @@ async fn tool_check_service(client: &VaultClient, args: &Value) -> Result<String
 /// Extract host:port from a Redis URL for TCP health check.
 fn extract_redis_host_port(url: &str) -> String {
     // redis://[:password@]host:port[/db]
-    let stripped = url.strip_prefix("redis://").or_else(|| url.strip_prefix("rediss://")).unwrap_or(url);
+    let stripped = url
+        .strip_prefix("redis://")
+        .or_else(|| url.strip_prefix("rediss://"))
+        .unwrap_or(url);
     let after_auth = if let Some(at_pos) = stripped.rfind('@') {
         &stripped[at_pos + 1..]
     } else {
@@ -1295,23 +1355,28 @@ fn extract_redis_host_port(url: &str) -> String {
 
 /// Execute Redis commands using credentials from the vault.
 async fn tool_query_redis(client: &VaultClient, args: &Value) -> Result<String> {
-    let secret_path = args.get("secret_path").and_then(Value::as_str)
+    let secret_path = args
+        .get("secret_path")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: secret_path"))?;
-    let command_str = args.get("command").and_then(Value::as_str)
+    let command_str = args
+        .get("command")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: command"))?;
 
-    let redis_url = resolve_secret_value(client, secret_path).await
+    let redis_url = resolve_secret_value(client, secret_path)
+        .await
         .context("failed to resolve Redis URL from vault")?;
 
-    let redis_client = redis::Client::open(redis_url.as_str())
-        .context("invalid Redis URL")?;
+    let redis_client = redis::Client::open(redis_url.as_str()).context("invalid Redis URL")?;
 
     let mut conn = tokio::time::timeout(
         std::time::Duration::from_secs(10),
         redis_client.get_multiplexed_async_connection(),
-    ).await
-        .context("Redis connection timed out (10s)")?
-        .context("failed to connect to Redis")?;
+    )
+    .await
+    .context("Redis connection timed out (10s)")?
+    .context("failed to connect to Redis")?;
 
     let parts: Vec<&str> = command_str.split_whitespace().collect();
     if parts.is_empty() {
@@ -1320,13 +1385,36 @@ async fn tool_query_redis(client: &VaultClient, args: &Value) -> Result<String> 
 
     let cmd_name = parts[0].to_uppercase();
     let allowed = [
-        "GET", "SET", "DEL", "KEYS", "HGETALL", "HGET", "HKEYS", "HLEN",
-        "INFO", "DBSIZE", "TTL", "PTTL", "TYPE", "EXISTS", "MGET",
-        "LRANGE", "LLEN", "SMEMBERS", "SCARD", "SISMEMBER", "PING",
-        "STRLEN", "SCAN", "HSCAN",
+        "GET",
+        "SET",
+        "DEL",
+        "KEYS",
+        "HGETALL",
+        "HGET",
+        "HKEYS",
+        "HLEN",
+        "INFO",
+        "DBSIZE",
+        "TTL",
+        "PTTL",
+        "TYPE",
+        "EXISTS",
+        "MGET",
+        "LRANGE",
+        "LLEN",
+        "SMEMBERS",
+        "SCARD",
+        "SISMEMBER",
+        "PING",
+        "STRLEN",
+        "SCAN",
+        "HSCAN",
     ];
     if !allowed.contains(&cmd_name.as_str()) {
-        anyhow::bail!("command '{cmd_name}' is not allowed. Allowed: {}", allowed.join(", "));
+        anyhow::bail!(
+            "command '{cmd_name}' is not allowed. Allowed: {}",
+            allowed.join(", ")
+        );
     }
 
     let mut cmd = redis::cmd(&cmd_name);
@@ -1337,9 +1425,10 @@ async fn tool_query_redis(client: &VaultClient, args: &Value) -> Result<String> 
     let result: redis::Value = tokio::time::timeout(
         std::time::Duration::from_secs(30),
         cmd.query_async(&mut conn),
-    ).await
-        .context("Redis command timed out (30s)")?
-        .context("Redis command failed")?;
+    )
+    .await
+    .context("Redis command timed out (30s)")?
+    .context("Redis command failed")?;
 
     Ok(format_redis_value(&result, 0))
 }
@@ -1350,25 +1439,32 @@ fn format_redis_value(val: &redis::Value, depth: usize) -> String {
     match val {
         redis::Value::Nil => format!("{indent}(nil)"),
         redis::Value::Int(i) => format!("{indent}(integer) {i}"),
-        redis::Value::BulkString(bytes) => {
-            match String::from_utf8(bytes.clone()) {
-                Ok(s) => {
-                    if s.len() > 2000 {
-                        format!("{indent}\"{}...\" (truncated, {} bytes)", &s[..2000], s.len())
-                    } else {
-                        format!("{indent}\"{s}\"")
-                    }
+        redis::Value::BulkString(bytes) => match String::from_utf8(bytes.clone()) {
+            Ok(s) => {
+                if s.len() > 2000 {
+                    format!(
+                        "{indent}\"{}...\" (truncated, {} bytes)",
+                        &s[..2000],
+                        s.len()
+                    )
+                } else {
+                    format!("{indent}\"{s}\"")
                 }
-                Err(_) => format!("{indent}(binary, {} bytes)", bytes.len()),
             }
-        }
+            Err(_) => format!("{indent}(binary, {} bytes)", bytes.len()),
+        },
         redis::Value::Array(arr) => {
             if arr.is_empty() {
                 return format!("{indent}(empty array)");
             }
             let mut out = String::new();
             for (i, item) in arr.iter().enumerate() {
-                let _ = writeln!(out, "{indent}{}) {}", i.saturating_add(1), format_redis_value(item, 0));
+                let _ = writeln!(
+                    out,
+                    "{indent}{}) {}",
+                    i.saturating_add(1),
+                    format_redis_value(item, 0)
+                );
             }
             out
         }
@@ -1383,35 +1479,42 @@ fn format_redis_value(val: &redis::Value, depth: usize) -> String {
 async fn tool_query_mysql(client: &VaultClient, args: &Value) -> Result<String> {
     use mysql_async::prelude::*;
 
-    let secret_path = args.get("secret_path").and_then(Value::as_str)
+    let secret_path = args
+        .get("secret_path")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: secret_path"))?;
-    let query = args.get("query").and_then(Value::as_str)
+    let query = args
+        .get("query")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: query"))?;
-    let allow_write = args.get("allow_write").and_then(Value::as_bool).unwrap_or(false);
-    let max_rows: usize = args.get("max_rows").and_then(Value::as_u64)
+    let allow_write = args
+        .get("allow_write")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let max_rows: usize = args
+        .get("max_rows")
+        .and_then(Value::as_u64)
         .map_or(50, |n| n.min(500) as usize);
 
     if !allow_write && is_write_query(query) {
         anyhow::bail!("Write operation blocked. Set allow_write=true to permit.");
     }
 
-    let conn_str = resolve_secret_value(client, secret_path).await
+    let conn_str = resolve_secret_value(client, secret_path)
+        .await
         .context("failed to resolve MySQL connection string from vault")?;
 
     let pool = mysql_async::Pool::new(conn_str.as_str());
-    let mut conn = tokio::time::timeout(
-        std::time::Duration::from_secs(10),
-        pool.get_conn(),
-    ).await
+    let mut conn = tokio::time::timeout(std::time::Duration::from_secs(10), pool.get_conn())
+        .await
         .context("MySQL connection timed out (10s)")?
         .context("failed to connect to MySQL")?;
 
-    let rows: Vec<mysql_async::Row> = tokio::time::timeout(
-        std::time::Duration::from_secs(30),
-        conn.query(query),
-    ).await
-        .context("query timed out after 30 seconds")?
-        .context("query execution failed")?;
+    let rows: Vec<mysql_async::Row> =
+        tokio::time::timeout(std::time::Duration::from_secs(30), conn.query(query))
+            .await
+            .context("query timed out after 30 seconds")?
+            .context("query execution failed")?;
 
     if rows.is_empty() {
         pool.disconnect().await.ok();
@@ -1423,28 +1526,39 @@ async fn tool_query_mysql(client: &VaultClient, args: &Value) -> Result<String> 
     }
 
     let mut output = String::new();
-    let columns: Vec<String> = rows[0].columns_ref().iter()
+    let columns: Vec<String> = rows[0]
+        .columns_ref()
+        .iter()
         .map(|c| c.name_str().to_string())
         .collect();
 
     let _ = writeln!(output, "{}", columns.join(" | "));
-    let _ = writeln!(output, "{}", columns.iter()
-        .map(|c| "-".repeat(c.len().max(4)))
-        .collect::<Vec<_>>().join("-+-"));
+    let _ = writeln!(
+        output,
+        "{}",
+        columns
+            .iter()
+            .map(|c| "-".repeat(c.len().max(4)))
+            .collect::<Vec<_>>()
+            .join("-+-")
+    );
 
     let total = rows.len();
     for row in rows.iter().take(max_rows) {
-        let vals: Vec<String> = (0..columns.len()).map(|i| {
-            row.as_ref(i).map_or_else(
-                || "NULL".into(),
-                |v| format!("{v:?}"),
-            )
-        }).collect();
+        let vals: Vec<String> = (0..columns.len())
+            .map(|i| {
+                row.as_ref(i)
+                    .map_or_else(|| "NULL".into(), |v| format!("{v:?}"))
+            })
+            .collect();
         let _ = writeln!(output, "{}", vals.join(" | "));
     }
 
     if total > max_rows {
-        let _ = writeln!(output, "\n... ({total} total rows, showing first {max_rows})");
+        let _ = writeln!(
+            output,
+            "\n... ({total} total rows, showing first {max_rows})"
+        );
     } else {
         let _ = writeln!(output, "\n({total} rows)");
     }
@@ -1455,14 +1569,22 @@ async fn tool_query_mysql(client: &VaultClient, args: &Value) -> Result<String> 
 
 /// Execute `MongoDB` operations using credentials from the vault.
 async fn tool_query_mongodb(client: &VaultClient, args: &Value) -> Result<String> {
-    let secret_path = args.get("secret_path").and_then(Value::as_str)
+    let secret_path = args
+        .get("secret_path")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: secret_path"))?;
-    let database = args.get("database").and_then(Value::as_str)
+    let database = args
+        .get("database")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: database"))?;
-    let operation = args.get("operation").and_then(Value::as_str)
+    let operation = args
+        .get("operation")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: operation"))?;
     let collection_name = args.get("collection").and_then(Value::as_str);
-    let limit: u64 = args.get("limit").and_then(Value::as_u64)
+    let limit: u64 = args
+        .get("limit")
+        .and_then(Value::as_u64)
         .map_or(50, |n| n.min(500));
 
     let (data_api_url, api_key) = resolve_mongodb_credentials(client, secret_path).await?;
@@ -1472,7 +1594,9 @@ async fn tool_query_mongodb(client: &VaultClient, args: &Value) -> Result<String
     let action = match operation {
         "find" => "find",
         "count" | "aggregate" | "listCollections" => "aggregate",
-        other => anyhow::bail!("unsupported operation: {other}. Use: find, count, aggregate, listCollections"),
+        other => anyhow::bail!(
+            "unsupported operation: {other}. Use: find, count, aggregate, listCollections"
+        ),
     };
 
     let url = format!("{base_url}/action/{action}");
@@ -1486,16 +1610,22 @@ async fn tool_query_mongodb(client: &VaultClient, args: &Value) -> Result<String
             .header("Content-Type", "application/json")
             .json(&body)
             .send(),
-    ).await
-        .context("MongoDB request timed out (30s)")?
-        .context("MongoDB request failed")?;
+    )
+    .await
+    .context("MongoDB request timed out (30s)")?
+    .context("MongoDB request failed")?;
 
     let status = resp.status();
-    let resp_body: Value = resp.json().await
+    let resp_body: Value = resp
+        .json()
+        .await
         .context("failed to parse MongoDB response")?;
 
     if !status.is_success() {
-        let msg = resp_body.get("error").and_then(Value::as_str).unwrap_or("unknown error");
+        let msg = resp_body
+            .get("error")
+            .and_then(Value::as_str)
+            .unwrap_or("unknown error");
         anyhow::bail!("MongoDB Data API error ({status}): {msg}");
     }
 
@@ -1510,7 +1640,8 @@ async fn resolve_mongodb_credentials(
     client: &VaultClient,
     secret_path: &str,
 ) -> Result<(String, String)> {
-    let secret_val = resolve_secret_value(client, secret_path).await
+    let secret_val = resolve_secret_value(client, secret_path)
+        .await
         .context("failed to resolve MongoDB credentials from vault")?;
 
     if let Some((url, key)) = secret_val.split_once('|') {
@@ -1518,9 +1649,13 @@ async fn resolve_mongodb_credentials(
     }
 
     if let Ok(obj) = serde_json::from_str::<serde_json::Map<String, Value>>(&secret_val) {
-        let url = obj.get("url").and_then(Value::as_str)
+        let url = obj
+            .get("url")
+            .and_then(Value::as_str)
             .ok_or_else(|| anyhow::anyhow!("MongoDB secret must have 'url' field"))?;
-        let key = obj.get("api_key").and_then(Value::as_str)
+        let key = obj
+            .get("api_key")
+            .and_then(Value::as_str)
             .ok_or_else(|| anyhow::anyhow!("MongoDB secret must have 'api_key' field"))?;
         return Ok((url.to_owned(), key.to_owned()));
     }
@@ -1565,7 +1700,9 @@ fn build_mongodb_request_body(
         "aggregate" => {
             let coll = collection_name
                 .ok_or_else(|| anyhow::anyhow!("'collection' is required for aggregate"))?;
-            let pipeline = args.get("pipeline").cloned()
+            let pipeline = args
+                .get("pipeline")
+                .cloned()
                 .ok_or_else(|| anyhow::anyhow!("'pipeline' is required for aggregate"))?;
             json!({
                 "dataSource": "Cluster0",
@@ -1598,8 +1735,11 @@ fn format_mongodb_response(resp_body: &Value, database: &str) -> String {
 
     let mut out = format!("{} document(s):\n\n", docs.len());
     for doc in docs {
-        let _ = writeln!(out, "{}", serde_json::to_string_pretty(doc)
-            .unwrap_or_else(|_| format!("{doc}")));
+        let _ = writeln!(
+            out,
+            "{}",
+            serde_json::to_string_pretty(doc).unwrap_or_else(|_| format!("{doc}"))
+        );
         out.push('\n');
     }
     out
@@ -1607,19 +1747,27 @@ fn format_mongodb_response(resp_body: &Value, database: &str) -> String {
 
 /// Execute a shell command with vault secrets injected as environment variables.
 async fn tool_run_command(client: &VaultClient, args: &Value) -> Result<String> {
-    let command = args.get("command").and_then(Value::as_str)
+    let command = args
+        .get("command")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: command"))?;
-    let secrets = args.get("secrets").and_then(Value::as_object)
+    let secrets = args
+        .get("secrets")
+        .and_then(Value::as_object)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: secrets"))?;
-    let timeout_secs: u64 = args.get("timeout_secs").and_then(Value::as_u64)
+    let timeout_secs: u64 = args
+        .get("timeout_secs")
+        .and_then(Value::as_u64)
         .map_or(30, |n| n.min(120));
 
     // Resolve all secrets from the vault.
     let mut env_vars: Vec<(String, String)> = Vec::with_capacity(secrets.len());
     for (env_name, vault_path_val) in secrets {
-        let vault_path = vault_path_val.as_str()
+        let vault_path = vault_path_val
+            .as_str()
             .ok_or_else(|| anyhow::anyhow!("secret value for '{env_name}' must be a string"))?;
-        let value = resolve_secret_value(client, vault_path).await
+        let value = resolve_secret_value(client, vault_path)
+            .await
             .with_context(|| format!("failed to resolve secret for {env_name}"))?;
         env_vars.push((env_name.clone(), value));
     }
@@ -1637,9 +1785,10 @@ async fn tool_run_command(client: &VaultClient, args: &Value) -> Result<String> 
     let output = tokio::time::timeout(
         std::time::Duration::from_secs(timeout_secs),
         child.wait_with_output(),
-    ).await
-        .context(format!("command timed out after {timeout_secs}s"))?
-        .context("failed to wait for command")?;
+    )
+    .await
+    .context(format!("command timed out after {timeout_secs}s"))?
+    .context("failed to wait for command")?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -1678,25 +1827,30 @@ async fn tool_run_command(client: &VaultClient, args: &Value) -> Result<String> 
 }
 
 /// Build an S3 client from vault-stored credentials.
-async fn build_s3_client(
-    client: &VaultClient,
-    args: &Value,
-) -> Result<aws_sdk_s3::Client> {
-    let access_key_path = args.get("access_key_path").and_then(Value::as_str)
+async fn build_s3_client(client: &VaultClient, args: &Value) -> Result<aws_sdk_s3::Client> {
+    let access_key_path = args
+        .get("access_key_path")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: access_key_path"))?;
-    let secret_key_path = args.get("secret_key_path").and_then(Value::as_str)
+    let secret_key_path = args
+        .get("secret_key_path")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: secret_key_path"))?;
     let endpoint = args.get("endpoint").and_then(Value::as_str);
-    let region = args.get("region").and_then(Value::as_str).unwrap_or("us-east-1");
+    let region = args
+        .get("region")
+        .and_then(Value::as_str)
+        .unwrap_or("us-east-1");
 
-    let access_key = resolve_secret_value(client, access_key_path).await
+    let access_key = resolve_secret_value(client, access_key_path)
+        .await
         .context("failed to resolve S3 access key")?;
-    let secret_key = resolve_secret_value(client, secret_key_path).await
+    let secret_key = resolve_secret_value(client, secret_key_path)
+        .await
         .context("failed to resolve S3 secret key")?;
 
-    let creds = aws_credential_types::Credentials::new(
-        &access_key, &secret_key, None, None, "zvault",
-    );
+    let creds =
+        aws_credential_types::Credentials::new(&access_key, &secret_key, None, None, "zvault");
     let creds_provider = aws_credential_types::provider::SharedCredentialsProvider::new(creds);
 
     let mut config_builder = aws_sdk_s3::Config::builder()
@@ -1705,9 +1859,7 @@ async fn build_s3_client(
         .behavior_version_latest();
 
     if let Some(ep) = endpoint {
-        config_builder = config_builder
-            .endpoint_url(ep)
-            .force_path_style(true);
+        config_builder = config_builder.endpoint_url(ep).force_path_style(true);
     }
 
     Ok(aws_sdk_s3::Client::from_conf(config_builder.build()))
@@ -1715,10 +1867,13 @@ async fn build_s3_client(
 
 /// List objects in an S3/R2 bucket.
 async fn tool_s3_list(client: &VaultClient, args: &Value) -> Result<String> {
-    let bucket = args.get("bucket").and_then(Value::as_str)
+    let bucket = args
+        .get("bucket")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: bucket"))?;
     let prefix = args.get("prefix").and_then(Value::as_str);
-    let max_keys: i32 = args.get("max_keys")
+    let max_keys: i32 = args
+        .get("max_keys")
         .and_then(Value::as_i64)
         .and_then(|n| i32::try_from(n.clamp(1, 1000)).ok())
         .unwrap_or(100);
@@ -1730,16 +1885,17 @@ async fn tool_s3_list(client: &VaultClient, args: &Value) -> Result<String> {
         req = req.prefix(p);
     }
 
-    let resp = tokio::time::timeout(
-        std::time::Duration::from_secs(30),
-        req.send(),
-    ).await
+    let resp = tokio::time::timeout(std::time::Duration::from_secs(30), req.send())
+        .await
         .context("S3 list timed out (30s)")?
         .context("S3 list failed")?;
 
     let objects = resp.contents();
     if objects.is_empty() {
-        return Ok(format!("No objects found in '{bucket}' (prefix: {}).", prefix.unwrap_or("none")));
+        return Ok(format!(
+            "No objects found in '{bucket}' (prefix: {}).",
+            prefix.unwrap_or("none")
+        ));
     }
 
     let mut out = format!("Objects in '{bucket}' ({} returned):\n\n", objects.len());
@@ -1749,7 +1905,8 @@ async fn tool_s3_list(client: &VaultClient, args: &Value) -> Result<String> {
     for obj in objects {
         let key = obj.key().unwrap_or("?");
         let size = obj.size().unwrap_or(0);
-        let modified = obj.last_modified()
+        let modified = obj
+            .last_modified()
             .map_or_else(|| "?".into(), std::string::ToString::to_string);
         let _ = writeln!(out, "{:<60} {:>10} {}", key, format_bytes(size), modified);
     }
@@ -1759,9 +1916,13 @@ async fn tool_s3_list(client: &VaultClient, args: &Value) -> Result<String> {
 
 /// Read an object from S3/R2.
 async fn tool_s3_read(client: &VaultClient, args: &Value) -> Result<String> {
-    let bucket = args.get("bucket").and_then(Value::as_str)
+    let bucket = args
+        .get("bucket")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: bucket"))?;
-    let key = args.get("key").and_then(Value::as_str)
+    let key = args
+        .get("key")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: key"))?;
 
     let s3 = build_s3_client(client, args).await?;
@@ -1769,16 +1930,20 @@ async fn tool_s3_read(client: &VaultClient, args: &Value) -> Result<String> {
     let resp = tokio::time::timeout(
         std::time::Duration::from_secs(30),
         s3.get_object().bucket(bucket).key(key).send(),
-    ).await
-        .context("S3 read timed out (30s)")?
-        .context("S3 get_object failed")?;
+    )
+    .await
+    .context("S3 read timed out (30s)")?
+    .context("S3 get_object failed")?;
 
     let content_length = resp.content_length().unwrap_or(0);
     if content_length > 1_048_576 {
         anyhow::bail!("Object is too large ({content_length} bytes). Max 1MB for read.");
     }
 
-    let bytes = resp.body.collect().await
+    let bytes = resp
+        .body
+        .collect()
+        .await
         .context("failed to read S3 object body")?
         .into_bytes();
 
@@ -1793,13 +1958,21 @@ async fn tool_s3_read(client: &VaultClient, args: &Value) -> Result<String> {
 
 /// Write an object to S3/R2.
 async fn tool_s3_write(client: &VaultClient, args: &Value) -> Result<String> {
-    let bucket = args.get("bucket").and_then(Value::as_str)
+    let bucket = args
+        .get("bucket")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: bucket"))?;
-    let key = args.get("key").and_then(Value::as_str)
+    let key = args
+        .get("key")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: key"))?;
-    let content = args.get("content").and_then(Value::as_str)
+    let content = args
+        .get("content")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: content"))?;
-    let content_type = args.get("content_type").and_then(Value::as_str)
+    let content_type = args
+        .get("content_type")
+        .and_then(Value::as_str)
         .unwrap_or("application/octet-stream");
 
     let s3 = build_s3_client(client, args).await?;
@@ -1809,14 +1982,20 @@ async fn tool_s3_write(client: &VaultClient, args: &Value) -> Result<String> {
         s3.put_object()
             .bucket(bucket)
             .key(key)
-            .body(aws_sdk_s3::primitives::ByteStream::from(content.as_bytes().to_vec()))
+            .body(aws_sdk_s3::primitives::ByteStream::from(
+                content.as_bytes().to_vec(),
+            ))
             .content_type(content_type)
             .send(),
-    ).await
-        .context("S3 write timed out (30s)")?
-        .context("S3 put_object failed")?;
+    )
+    .await
+    .context("S3 write timed out (30s)")?
+    .context("S3 put_object failed")?;
 
-    Ok(format!("✓ Uploaded to s3://{bucket}/{key} ({} bytes, {content_type})", content.len()))
+    Ok(format!(
+        "✓ Uploaded to s3://{bucket}/{key} ({} bytes, {content_type})",
+        content.len()
+    ))
 }
 
 /// Format bytes into human-readable size using integer arithmetic.
@@ -1840,19 +2019,29 @@ fn format_bytes(bytes: i64) -> String {
 
 /// Execute a SQL query against `ClickHouse` using credentials from the vault.
 async fn tool_query_clickhouse(client: &VaultClient, args: &Value) -> Result<String> {
-    let secret_path = args.get("secret_path").and_then(Value::as_str)
+    let secret_path = args
+        .get("secret_path")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: secret_path"))?;
-    let query = args.get("query").and_then(Value::as_str)
+    let query = args
+        .get("query")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: query"))?;
-    let allow_write = args.get("allow_write").and_then(Value::as_bool).unwrap_or(false);
-    let max_rows: usize = args.get("max_rows").and_then(Value::as_u64)
+    let allow_write = args
+        .get("allow_write")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let max_rows: usize = args
+        .get("max_rows")
+        .and_then(Value::as_u64)
         .map_or(50, |n| n.min(500) as usize);
 
     if !allow_write && is_write_query(query) {
         anyhow::bail!("Write operation blocked. Set allow_write=true to permit.");
     }
 
-    let conn_str = resolve_secret_value(client, secret_path).await
+    let conn_str = resolve_secret_value(client, secret_path)
+        .await
         .context("failed to resolve ClickHouse URL from vault")?;
 
     // ClickHouse URL format: http://user:pass@host:8123/database
@@ -1877,9 +2066,10 @@ async fn tool_query_clickhouse(client: &VaultClient, args: &Value) -> Result<Str
     let resp = tokio::time::timeout(
         std::time::Duration::from_secs(30),
         http.post(&conn_str).body(final_query).send(),
-    ).await
-        .context("ClickHouse query timed out (30s)")?
-        .context("ClickHouse request failed")?;
+    )
+    .await
+    .context("ClickHouse query timed out (30s)")?
+    .context("ClickHouse request failed")?;
 
     let status = resp.status();
     let body = resp.text().await.unwrap_or_default();
@@ -1896,10 +2086,15 @@ async fn tool_query_clickhouse(client: &VaultClient, args: &Value) -> Result<Str
         });
     }
 
+    Ok(format_clickhouse_rows(&body, max_rows))
+}
+
+/// Format `ClickHouse` `JSONEachRow` output into a readable table.
+fn format_clickhouse_rows(body: &str, max_rows: usize) -> String {
     // Parse JSONEachRow: one JSON object per line.
     let lines: Vec<&str> = body.lines().filter(|l| !l.trim().is_empty()).collect();
     if lines.is_empty() {
-        return Ok("No rows returned.".into());
+        return "No rows returned.".into();
     }
 
     // Try to parse as JSON for nice formatting.
@@ -1908,60 +2103,83 @@ async fn tool_query_clickhouse(client: &VaultClient, args: &Value) -> Result<Str
         let columns: Vec<&str> = first_row.keys().map(String::as_str).collect();
         let mut output = String::new();
         let _ = writeln!(output, "{}", columns.join(" | "));
-        let _ = writeln!(output, "{}", columns.iter()
-            .map(|c| "-".repeat(c.len().max(4)))
-            .collect::<Vec<_>>().join("-+-"));
+        let _ = writeln!(
+            output,
+            "{}",
+            columns
+                .iter()
+                .map(|c| "-".repeat(c.len().max(4)))
+                .collect::<Vec<_>>()
+                .join("-+-")
+        );
 
         let total = lines.len();
         for line in lines.iter().take(max_rows) {
             if let Ok(row) = serde_json::from_str::<serde_json::Map<String, Value>>(line) {
-                let vals: Vec<String> = columns.iter().map(|&col| {
-                    row.get(col).map_or_else(
-                        || "NULL".into(),
-                        |v| match v {
-                            Value::String(s) => s.clone(),
-                            other => other.to_string(),
-                        },
-                    )
-                }).collect();
+                let vals: Vec<String> = columns
+                    .iter()
+                    .map(|&col| {
+                        row.get(col).map_or_else(
+                            || "NULL".into(),
+                            |v| match v {
+                                Value::String(s) => s.clone(),
+                                other => other.to_string(),
+                            },
+                        )
+                    })
+                    .collect();
                 let _ = writeln!(output, "{}", vals.join(" | "));
             }
         }
 
         if total > max_rows {
-            let _ = writeln!(output, "\n... ({total} total rows, showing first {max_rows})");
+            let _ = writeln!(
+                output,
+                "\n... ({total} total rows, showing first {max_rows})"
+            );
         } else {
             let _ = writeln!(output, "\n({total} rows)");
         }
-        Ok(output)
+        output
     } else {
         // Fallback: return raw output.
-        let display = if body.len() > 10_000 {
+        if body.len() > 10_000 {
             format!("{}... (truncated)", &body[..10_000])
         } else {
-            body
-        };
-        Ok(display)
+            body.to_owned()
+        }
     }
 }
 
 /// Search a `MeiliSearch` index using credentials from the vault.
 async fn tool_search_meilisearch(client: &VaultClient, args: &Value) -> Result<String> {
-    let host_path = args.get("host_path").and_then(Value::as_str)
+    let host_path = args
+        .get("host_path")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: host_path"))?;
-    let api_key_path = args.get("api_key_path").and_then(Value::as_str)
+    let api_key_path = args
+        .get("api_key_path")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: api_key_path"))?;
-    let index = args.get("index").and_then(Value::as_str)
+    let index = args
+        .get("index")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: index"))?;
-    let query = args.get("query").and_then(Value::as_str)
+    let query = args
+        .get("query")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: query"))?;
-    let limit: u64 = args.get("limit").and_then(Value::as_u64)
+    let limit: u64 = args
+        .get("limit")
+        .and_then(Value::as_u64)
         .map_or(20, |n| n.min(100));
     let filter = args.get("filter").and_then(Value::as_str);
 
-    let host = resolve_secret_value(client, host_path).await
+    let host = resolve_secret_value(client, host_path)
+        .await
         .context("failed to resolve MeiliSearch host")?;
-    let api_key = resolve_secret_value(client, api_key_path).await
+    let api_key = resolve_secret_value(client, api_key_path)
+        .await
         .context("failed to resolve MeiliSearch API key")?;
 
     // Use the HTTP API directly (avoids meilisearch-sdk dependency).
@@ -1973,7 +2191,8 @@ async fn tool_search_meilisearch(client: &VaultClient, args: &Value) -> Result<S
         "limit": limit,
     });
     if let Some(f) = filter {
-        body.as_object_mut().map(|m| m.insert("filter".into(), json!(f)));
+        body.as_object_mut()
+            .map(|m| m.insert("filter".into(), json!(f)));
     }
 
     let resp = tokio::time::timeout(
@@ -1982,22 +2201,34 @@ async fn tool_search_meilisearch(client: &VaultClient, args: &Value) -> Result<S
             .header("Authorization", format!("Bearer {api_key}"))
             .json(&body)
             .send(),
-    ).await
-        .context("MeiliSearch request timed out (15s)")?
-        .context("MeiliSearch request failed")?;
+    )
+    .await
+    .context("MeiliSearch request timed out (15s)")?
+    .context("MeiliSearch request failed")?;
 
     let status = resp.status();
-    let resp_body: Value = resp.json().await
+    let resp_body: Value = resp
+        .json()
+        .await
         .context("failed to parse MeiliSearch response")?;
 
     if !status.is_success() {
-        let msg = resp_body.get("message").and_then(Value::as_str).unwrap_or("unknown error");
+        let msg = resp_body
+            .get("message")
+            .and_then(Value::as_str)
+            .unwrap_or("unknown error");
         anyhow::bail!("MeiliSearch error ({status}): {msg}");
     }
 
     let hits = resp_body.get("hits").and_then(Value::as_array);
-    let total = resp_body.get("estimatedTotalHits").and_then(Value::as_u64).unwrap_or(0);
-    let processing_time = resp_body.get("processingTimeMs").and_then(Value::as_u64).unwrap_or(0);
+    let total = resp_body
+        .get("estimatedTotalHits")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let processing_time = resp_body
+        .get("processingTimeMs")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
 
     let Some(hits) = hits else {
         return Ok("No results found.".into());
@@ -2013,7 +2244,11 @@ async fn tool_search_meilisearch(client: &VaultClient, args: &Value) -> Result<S
 
     for (i, hit) in hits.iter().enumerate() {
         let _ = writeln!(out, "--- Result {} ---", i.saturating_add(1));
-        let _ = writeln!(out, "{}", serde_json::to_string_pretty(hit).unwrap_or_else(|_| format!("{hit}")));
+        let _ = writeln!(
+            out,
+            "{}",
+            serde_json::to_string_pretty(hit).unwrap_or_else(|_| format!("{hit}"))
+        );
         out.push('\n');
     }
 
@@ -2022,11 +2257,17 @@ async fn tool_search_meilisearch(client: &VaultClient, args: &Value) -> Result<S
 
 /// Check `RabbitMQ` status via the management HTTP API.
 async fn tool_rabbitmq_status(client: &VaultClient, args: &Value) -> Result<String> {
-    let secret_path = args.get("secret_path").and_then(Value::as_str)
+    let secret_path = args
+        .get("secret_path")
+        .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("missing required parameter: secret_path"))?;
-    let resource = args.get("resource").and_then(Value::as_str).unwrap_or("overview");
+    let resource = args
+        .get("resource")
+        .and_then(Value::as_str)
+        .unwrap_or("overview");
 
-    let mgmt_url = resolve_secret_value(client, secret_path).await
+    let mgmt_url = resolve_secret_value(client, secret_path)
+        .await
         .context("failed to resolve RabbitMQ management URL from vault")?;
 
     let api_path = match resource {
@@ -2035,7 +2276,9 @@ async fn tool_rabbitmq_status(client: &VaultClient, args: &Value) -> Result<Stri
         "connections" => "/api/connections",
         "channels" => "/api/channels",
         "nodes" => "/api/nodes",
-        other => anyhow::bail!("unsupported resource: {other}. Use: overview, queues, connections, channels, nodes"),
+        other => anyhow::bail!(
+            "unsupported resource: {other}. Use: overview, queues, connections, channels, nodes"
+        ),
     };
 
     // Parse auth from URL: http://user:pass@host:15672
@@ -2045,9 +2288,10 @@ async fn tool_rabbitmq_status(client: &VaultClient, args: &Value) -> Result<Stri
     let resp = tokio::time::timeout(
         std::time::Duration::from_secs(10),
         http.get(&full_url).send(),
-    ).await
-        .context("RabbitMQ request timed out (10s)")?
-        .context("RabbitMQ request failed")?;
+    )
+    .await
+    .context("RabbitMQ request timed out (10s)")?
+    .context("RabbitMQ request failed")?;
 
     let status = resp.status();
     if !status.is_success() {
@@ -2055,55 +2299,17 @@ async fn tool_rabbitmq_status(client: &VaultClient, args: &Value) -> Result<Stri
         anyhow::bail!("RabbitMQ management API error ({status}): {body}");
     }
 
-    let body: Value = resp.json().await
+    let body: Value = resp
+        .json()
+        .await
         .context("failed to parse RabbitMQ response")?;
 
     match resource {
-        "overview" => {
-            let mut out = String::from("RabbitMQ Overview:\n");
-            if let Some(v) = body.get("rabbitmq_version").and_then(Value::as_str) {
-                let _ = writeln!(out, "  Version: {v}");
-            }
-            if let Some(v) = body.get("erlang_version").and_then(Value::as_str) {
-                let _ = writeln!(out, "  Erlang: {v}");
-            }
-            if let Some(q) = body.get("queue_totals").and_then(Value::as_object) {
-                let messages = q.get("messages").and_then(Value::as_u64).unwrap_or(0);
-                let ready = q.get("messages_ready").and_then(Value::as_u64).unwrap_or(0);
-                let unacked = q.get("messages_unacknowledged").and_then(Value::as_u64).unwrap_or(0);
-                let _ = writeln!(out, "  Messages: {messages} total, {ready} ready, {unacked} unacked");
-            }
-            if let Some(o) = body.get("object_totals").and_then(Value::as_object) {
-                let queues = o.get("queues").and_then(Value::as_u64).unwrap_or(0);
-                let connections = o.get("connections").and_then(Value::as_u64).unwrap_or(0);
-                let channels = o.get("channels").and_then(Value::as_u64).unwrap_or(0);
-                let consumers = o.get("consumers").and_then(Value::as_u64).unwrap_or(0);
-                let _ = writeln!(out, "  Queues: {queues}, Connections: {connections}, Channels: {channels}, Consumers: {consumers}");
-            }
-            Ok(out)
-        }
-        "queues" => {
-            let queues = body.as_array().map_or(Vec::new(), std::clone::Clone::clone);
-            if queues.is_empty() {
-                return Ok("No queues found.".into());
-            }
-            let mut out = format!("Queues ({} total):\n\n", queues.len());
-            let _ = writeln!(out, "{:<40} {:>8} {:>8} {:>8} {:>10}", "Name", "Ready", "Unacked", "Total", "Consumers");
-            let _ = writeln!(out, "{}", "-".repeat(80));
-            for q in &queues {
-                let name = q.get("name").and_then(Value::as_str).unwrap_or("?");
-                let ready = q.get("messages_ready").and_then(Value::as_u64).unwrap_or(0);
-                let unacked = q.get("messages_unacknowledged").and_then(Value::as_u64).unwrap_or(0);
-                let total = q.get("messages").and_then(Value::as_u64).unwrap_or(0);
-                let consumers = q.get("consumers").and_then(Value::as_u64).unwrap_or(0);
-                let _ = writeln!(out, "{name:<40} {ready:>8} {unacked:>8} {total:>8} {consumers:>10}");
-            }
-            Ok(out)
-        }
+        "overview" => Ok(format_rabbitmq_overview(&body)),
+        "queues" => Ok(format_rabbitmq_queues(&body)),
         _ => {
             // For connections, channels, nodes — just pretty-print the JSON.
-            let display = serde_json::to_string_pretty(&body)
-                .unwrap_or_else(|_| format!("{body}"));
+            let display = serde_json::to_string_pretty(&body).unwrap_or_else(|_| format!("{body}"));
             let display = if display.len() > 10_000 {
                 format!("{}... (truncated)", &display[..10_000])
             } else {
@@ -2112,6 +2318,70 @@ async fn tool_rabbitmq_status(client: &VaultClient, args: &Value) -> Result<Stri
             Ok(format!("RabbitMQ {resource}:\n\n{display}"))
         }
     }
+}
+
+/// Format `RabbitMQ` overview response into a readable summary.
+fn format_rabbitmq_overview(body: &Value) -> String {
+    let mut out = String::from("RabbitMQ Overview:\n");
+    if let Some(v) = body.get("rabbitmq_version").and_then(Value::as_str) {
+        let _ = writeln!(out, "  Version: {v}");
+    }
+    if let Some(v) = body.get("erlang_version").and_then(Value::as_str) {
+        let _ = writeln!(out, "  Erlang: {v}");
+    }
+    if let Some(q) = body.get("queue_totals").and_then(Value::as_object) {
+        let messages = q.get("messages").and_then(Value::as_u64).unwrap_or(0);
+        let ready = q.get("messages_ready").and_then(Value::as_u64).unwrap_or(0);
+        let unacked = q
+            .get("messages_unacknowledged")
+            .and_then(Value::as_u64)
+            .unwrap_or(0);
+        let _ = writeln!(
+            out,
+            "  Messages: {messages} total, {ready} ready, {unacked} unacked"
+        );
+    }
+    if let Some(o) = body.get("object_totals").and_then(Value::as_object) {
+        let queues = o.get("queues").and_then(Value::as_u64).unwrap_or(0);
+        let connections = o.get("connections").and_then(Value::as_u64).unwrap_or(0);
+        let channels = o.get("channels").and_then(Value::as_u64).unwrap_or(0);
+        let consumers = o.get("consumers").and_then(Value::as_u64).unwrap_or(0);
+        let _ = writeln!(
+            out,
+            "  Queues: {queues}, Connections: {connections}, Channels: {channels}, Consumers: {consumers}"
+        );
+    }
+    out
+}
+
+/// Format `RabbitMQ` queues response into a readable table.
+fn format_rabbitmq_queues(body: &Value) -> String {
+    let queues = body.as_array().map_or(Vec::new(), std::clone::Clone::clone);
+    if queues.is_empty() {
+        return "No queues found.".into();
+    }
+    let mut out = format!("Queues ({} total):\n\n", queues.len());
+    let _ = writeln!(
+        out,
+        "{:<40} {:>8} {:>8} {:>8} {:>10}",
+        "Name", "Ready", "Unacked", "Total", "Consumers"
+    );
+    let _ = writeln!(out, "{}", "-".repeat(80));
+    for q in &queues {
+        let name = q.get("name").and_then(Value::as_str).unwrap_or("?");
+        let ready = q.get("messages_ready").and_then(Value::as_u64).unwrap_or(0);
+        let unacked = q
+            .get("messages_unacknowledged")
+            .and_then(Value::as_u64)
+            .unwrap_or(0);
+        let total = q.get("messages").and_then(Value::as_u64).unwrap_or(0);
+        let consumers = q.get("consumers").and_then(Value::as_u64).unwrap_or(0);
+        let _ = writeln!(
+            out,
+            "{name:<40} {ready:>8} {unacked:>8} {total:>8} {consumers:>10}"
+        );
+    }
+    out
 }
 
 /// Check if a SQL query is a write operation.
@@ -2178,14 +2448,8 @@ async fn handle_request(client: &VaultClient, req: JsonRpcRequest) -> Option<Jso
         // ── Tool execution ───────────────────────────────────────
         "tools/call" => {
             let params = req.params.unwrap_or(Value::Null);
-            let tool_name = params
-                .get("name")
-                .and_then(Value::as_str)
-                .unwrap_or("");
-            let arguments = params
-                .get("arguments")
-                .cloned()
-                .unwrap_or(json!({}));
+            let tool_name = params.get("name").and_then(Value::as_str).unwrap_or("");
+            let arguments = params.get("arguments").cloned().unwrap_or(json!({}));
 
             let result = dispatch_tool(client, tool_name, &arguments).await;
             Some(rpc_ok(id, result))
@@ -2195,7 +2459,11 @@ async fn handle_request(client: &VaultClient, req: JsonRpcRequest) -> Option<Jso
         _ => {
             // Notifications (no id) should be silently ignored per spec.
             req.id.as_ref()?;
-            Some(rpc_err(id, -32601, format!("method not found: {}", req.method)))
+            Some(rpc_err(
+                id,
+                -32601,
+                format!("method not found: {}", req.method),
+            ))
         }
     }
 }
@@ -2252,8 +2520,7 @@ pub async fn run_mcp_server(addr: String, token: Option<String>) -> Result<()> {
         };
 
         if let Some(resp) = handle_request(&client, req).await {
-            let out =
-                serde_json::to_string(&resp).context("failed to serialize response")?;
+            let out = serde_json::to_string(&resp).context("failed to serialize response")?;
             writeln!(stdout, "{out}").context("failed to write to stdout")?;
             stdout.flush().context("failed to flush stdout")?;
         }

@@ -48,7 +48,7 @@ pub struct AppState {
     pub database_engines: RwLock<HashMap<String, Arc<DatabaseEngine>>>,
     /// Registered PKI engines keyed by mount path.
     pub pki_engines: RwLock<HashMap<String, Arc<PkiEngine>>>,
-    /// AppRole auth store (None if not enabled).
+    /// `AppRole` auth store (None if not enabled).
     pub approle_store: Option<Arc<AppRoleStore>>,
     /// Spring OAuth configuration (None if not configured).
     pub spring_oauth: Option<SpringOAuthConfig>,

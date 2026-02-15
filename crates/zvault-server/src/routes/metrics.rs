@@ -5,11 +5,11 @@
 
 use std::sync::Arc;
 
+use axum::Router;
 use axum::extract::State;
 use axum::http::header;
 use axum::response::IntoResponse;
 use axum::routing::get;
-use axum::Router;
 
 use crate::state::AppState;
 
@@ -27,9 +27,7 @@ pub fn router() -> Router<Arc<AppState>> {
 /// - `zvault_lease_expired_count` (gauge): expired leases pending cleanup
 /// - `zvault_mount_count` (gauge): number of mounted engines
 /// - `zvault_info` (gauge): build info label
-async fn prometheus_metrics(
-    State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
+async fn prometheus_metrics(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let mut lines = Vec::with_capacity(32);
 
     // Seal status.
@@ -60,7 +58,10 @@ async fn prometheus_metrics(
         lines.push("# TYPE zvault_lease_count gauge".to_owned());
         lines.push(format!("zvault_lease_count {total}"));
 
-        lines.push("# HELP zvault_lease_expired_count Number of expired leases pending cleanup.".to_owned());
+        lines.push(
+            "# HELP zvault_lease_expired_count Number of expired leases pending cleanup."
+                .to_owned(),
+        );
         lines.push("# TYPE zvault_lease_expired_count gauge".to_owned());
         lines.push(format!("zvault_lease_expired_count {expired}"));
 
@@ -83,7 +84,10 @@ async fn prometheus_metrics(
     let body = lines.join("\n") + "\n";
 
     (
-        [(header::CONTENT_TYPE, "text/plain; version=0.0.4; charset=utf-8")],
+        [(
+            header::CONTENT_TYPE,
+            "text/plain; version=0.0.4; charset=utf-8",
+        )],
         body,
     )
 }

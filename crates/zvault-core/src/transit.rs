@@ -209,19 +209,18 @@ impl TransitEngine {
         }
 
         let version = key.latest_version;
-        let key_version =
-            key.versions
-                .get(&version)
-                .ok_or_else(|| EngineError::Internal {
-                    reason: format!("key version {version} missing"),
-                })?;
+        let key_version = key
+            .versions
+            .get(&version)
+            .ok_or_else(|| EngineError::Internal {
+                reason: format!("key version {version} missing"),
+            })?;
 
         let enc_key = Self::material_to_key(key_version.key_material.as_bytes())?;
-        let ciphertext = crypto::encrypt(&enc_key, plaintext).map_err(|e| {
-            EngineError::Internal {
+        let ciphertext =
+            crypto::encrypt(&enc_key, plaintext).map_err(|e| EngineError::Internal {
                 reason: format!("encryption failed: {e}"),
-            }
-        })?;
+            })?;
 
         Ok(format!("vault:v{version}:{}", BASE64.encode(&ciphertext)))
     }
@@ -232,11 +231,7 @@ impl TransitEngine {
     ///
     /// Returns [`EngineError`] if the key doesn't exist, the ciphertext format
     /// is invalid, the version is below `min_decryption_version`, or decryption fails.
-    pub async fn decrypt(
-        &self,
-        key_name: &str,
-        ciphertext: &str,
-    ) -> Result<Vec<u8>, EngineError> {
+    pub async fn decrypt(&self, key_name: &str, ciphertext: &str) -> Result<Vec<u8>, EngineError> {
         let key = self.load_key(key_name).await?;
 
         if !key.supports_decryption {
@@ -256,12 +251,12 @@ impl TransitEngine {
             });
         }
 
-        let key_version =
-            key.versions
-                .get(&version)
-                .ok_or_else(|| EngineError::NotFound {
-                    path: format!("{key_name}/v{version}"),
-                })?;
+        let key_version = key
+            .versions
+            .get(&version)
+            .ok_or_else(|| EngineError::NotFound {
+                path: format!("{key_name}/v{version}"),
+            })?;
 
         let enc_key = Self::material_to_key(key_version.key_material.as_bytes())?;
         crypto::decrypt(&enc_key, &raw_ct).map_err(|e| EngineError::Internal {
@@ -274,11 +269,7 @@ impl TransitEngine {
     /// # Errors
     ///
     /// Returns [`EngineError`] on any failure.
-    pub async fn rewrap(
-        &self,
-        key_name: &str,
-        ciphertext: &str,
-    ) -> Result<String, EngineError> {
+    pub async fn rewrap(&self, key_name: &str, ciphertext: &str) -> Result<String, EngineError> {
         let plaintext = self.decrypt(key_name, ciphertext).await?;
         self.encrypt(key_name, &plaintext).await
     }
@@ -289,10 +280,7 @@ impl TransitEngine {
     /// # Errors
     ///
     /// Returns [`EngineError`] if the named key doesn't exist or encryption fails.
-    pub async fn generate_data_key(
-        &self,
-        key_name: &str,
-    ) -> Result<DataKeyResponse, EngineError> {
+    pub async fn generate_data_key(&self, key_name: &str) -> Result<DataKeyResponse, EngineError> {
         let data_key = EncryptionKey::generate();
         let plaintext_b64 = BASE64.encode(data_key.as_bytes());
         let wrapped = self.encrypt(key_name, data_key.as_bytes()).await?;
@@ -409,15 +397,17 @@ fn parse_ciphertext(ct: &str) -> Result<(u32, Vec<u8>), EngineError> {
         });
     }
 
-    let version_str = parts[1].strip_prefix('v').ok_or_else(|| {
-        EngineError::InvalidRequest {
+    let version_str = parts[1]
+        .strip_prefix('v')
+        .ok_or_else(|| EngineError::InvalidRequest {
             reason: "invalid version prefix, expected 'v{N}'".to_owned(),
-        }
-    })?;
+        })?;
 
-    let version: u32 = version_str.parse().map_err(|_| EngineError::InvalidRequest {
-        reason: format!("invalid version number: {version_str}"),
-    })?;
+    let version: u32 = version_str
+        .parse()
+        .map_err(|_| EngineError::InvalidRequest {
+            reason: format!("invalid version number: {version_str}"),
+        })?;
 
     let raw = BASE64
         .decode(parts[2])

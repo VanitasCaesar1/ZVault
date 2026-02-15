@@ -1,4 +1,4 @@
-//! HTTP route handlers for the AppRole auth method.
+//! HTTP route handlers for the `AppRole` auth method.
 //!
 //! Endpoints:
 //! - `POST /v1/auth/approle/role/:name` — create a role
@@ -7,7 +7,7 @@
 //! - `GET  /v1/auth/approle/role` — list all roles
 //! - `GET  /v1/auth/approle/role/:name/role-id` — get role ID
 //! - `POST /v1/auth/approle/role/:name/secret-id` — generate secret ID
-//! - `POST /v1/auth/approle/login` — login with role_id + secret_id
+//! - `POST /v1/auth/approle/login` — login with `role_id` + `secret_id`
 
 use std::sync::Arc;
 
@@ -21,7 +21,7 @@ use zvault_core::approle::AppRole;
 use crate::error::AppError;
 use crate::state::AppState;
 
-/// Build the AppRole auth router (authenticated — role management).
+/// Build the `AppRole` auth router (authenticated — role management).
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/role", get(list_roles))
@@ -33,7 +33,7 @@ pub fn router() -> Router<Arc<AppState>> {
         .route("/role/{name}/secret-id", post(generate_secret_id))
 }
 
-/// Build the public AppRole login router (no auth required).
+/// Build the public `AppRole` login router (no auth required).
 pub fn login_router() -> Router<Arc<AppState>> {
     Router::new().route("/login", post(login))
 }
@@ -53,18 +53,25 @@ struct CreateRoleRequest {
     secret_id_ttl_secs: i64,
 }
 
-fn default_ttl() -> i64 { 3600 }
-fn default_max_ttl() -> i64 { 86400 }
-fn default_true() -> bool { true }
+fn default_ttl() -> i64 {
+    3600
+}
+fn default_max_ttl() -> i64 {
+    86400
+}
+fn default_true() -> bool {
+    true
+}
 
 async fn create_role(
     State(state): State<Arc<AppState>>,
     Path(name): Path<String>,
     Json(body): Json<CreateRoleRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let store = state.approle_store.as_ref().ok_or_else(|| {
-        AppError::NotFound("AppRole auth not enabled".to_owned())
-    })?;
+    let store = state
+        .approle_store
+        .as_ref()
+        .ok_or_else(|| AppError::NotFound("AppRole auth not enabled".to_owned()))?;
     let role = store
         .create_role(AppRole {
             name,
@@ -88,9 +95,10 @@ async fn get_role(
     State(state): State<Arc<AppState>>,
     Path(name): Path<String>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let store = state.approle_store.as_ref().ok_or_else(|| {
-        AppError::NotFound("AppRole auth not enabled".to_owned())
-    })?;
+    let store = state
+        .approle_store
+        .as_ref()
+        .ok_or_else(|| AppError::NotFound("AppRole auth not enabled".to_owned()))?;
     let role = store.get_role(&name).await.map_err(AppError::from)?;
     Ok(Json(serde_json::json!({
         "name": role.name,
@@ -107,9 +115,10 @@ async fn delete_role(
     State(state): State<Arc<AppState>>,
     Path(name): Path<String>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let store = state.approle_store.as_ref().ok_or_else(|| {
-        AppError::NotFound("AppRole auth not enabled".to_owned())
-    })?;
+    let store = state
+        .approle_store
+        .as_ref()
+        .ok_or_else(|| AppError::NotFound("AppRole auth not enabled".to_owned()))?;
     store.delete_role(&name).await.map_err(AppError::from)?;
     Ok(Json(serde_json::json!({"status": "deleted"})))
 }
@@ -117,9 +126,10 @@ async fn delete_role(
 async fn list_roles(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let store = state.approle_store.as_ref().ok_or_else(|| {
-        AppError::NotFound("AppRole auth not enabled".to_owned())
-    })?;
+    let store = state
+        .approle_store
+        .as_ref()
+        .ok_or_else(|| AppError::NotFound("AppRole auth not enabled".to_owned()))?;
     let names = store.list_roles().await.map_err(AppError::from)?;
     Ok(Json(serde_json::json!({"keys": names})))
 }
@@ -128,9 +138,10 @@ async fn get_role_id(
     State(state): State<Arc<AppState>>,
     Path(name): Path<String>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let store = state.approle_store.as_ref().ok_or_else(|| {
-        AppError::NotFound("AppRole auth not enabled".to_owned())
-    })?;
+    let store = state
+        .approle_store
+        .as_ref()
+        .ok_or_else(|| AppError::NotFound("AppRole auth not enabled".to_owned()))?;
     let role_id = store.get_role_id(&name).await.map_err(AppError::from)?;
     Ok(Json(serde_json::json!({"role_id": role_id})))
 }
@@ -139,9 +150,10 @@ async fn generate_secret_id(
     State(state): State<Arc<AppState>>,
     Path(name): Path<String>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let store = state.approle_store.as_ref().ok_or_else(|| {
-        AppError::NotFound("AppRole auth not enabled".to_owned())
-    })?;
+    let store = state
+        .approle_store
+        .as_ref()
+        .ok_or_else(|| AppError::NotFound("AppRole auth not enabled".to_owned()))?;
     let secret_id = store
         .generate_secret_id(&name)
         .await
@@ -159,9 +171,10 @@ async fn login(
     State(state): State<Arc<AppState>>,
     Json(body): Json<LoginRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let store = state.approle_store.as_ref().ok_or_else(|| {
-        AppError::NotFound("AppRole auth not enabled".to_owned())
-    })?;
+    let store = state
+        .approle_store
+        .as_ref()
+        .ok_or_else(|| AppError::NotFound("AppRole auth not enabled".to_owned()))?;
     let (plaintext_token, token_entry) = store
         .login(&body.role_id, &body.secret_id, &state.token_store)
         .await
@@ -169,8 +182,7 @@ async fn login(
 
     let ttl_secs = token_entry
         .expires_at
-        .map(|exp| (exp - chrono::Utc::now()).num_seconds().max(0))
-        .unwrap_or(0);
+        .map_or(0, |exp| (exp - chrono::Utc::now()).num_seconds().max(0));
 
     Ok(Json(serde_json::json!({
         "client_token": plaintext_token,

@@ -4,10 +4,10 @@
 //! callback at `/auth/callback`. The dashboard SPA is deployed as a
 //! separate service and talks to this server via `VITE_API_URL`.
 
+use axum::Router;
 use axum::extract::{Query, State};
 use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::get;
-use axum::Router;
 use std::sync::Arc;
 
 use crate::state::AppState;
@@ -55,22 +55,21 @@ async fn spring_oauth_callback(
     State(state): State<Arc<AppState>>,
     Query(params): Query<OAuthCallbackParams>,
 ) -> Response {
-    let dashboard_url = std::env::var("DASHBOARD_URL")
-        .unwrap_or_else(|_| "http://localhost:5173".to_owned());
+    let dashboard_url =
+        std::env::var("DASHBOARD_URL").unwrap_or_else(|_| "http://localhost:5173".to_owned());
 
     // If Spring returned an error, redirect to login with message.
     if let Some(err) = params.error {
-        return Redirect::to(&format!("{}/login?error={}", dashboard_url, err)).into_response();
+        return Redirect::to(&format!("{dashboard_url}/login?error={err}")).into_response();
     }
 
-    let code = match params.code {
-        Some(c) => c,
-        None => return Redirect::to(&format!("{}/login?error=missing_code", dashboard_url)).into_response(),
+    let Some(code) = params.code else {
+        return Redirect::to(&format!("{dashboard_url}/login?error=missing_code")).into_response();
     };
 
-    let oauth_config = match &state.spring_oauth {
-        Some(cfg) => cfg,
-        None => return Redirect::to(&format!("{}/login?error=oauth_not_configured", dashboard_url)).into_response(),
+    let Some(oauth_config) = &state.spring_oauth else {
+        return Redirect::to(&format!("{dashboard_url}/login?error=oauth_not_configured"))
+            .into_response();
     };
 
     // Build redirect URI — use configured value or derive from callback.
@@ -84,7 +83,10 @@ async fn spring_oauth_callback(
         Ok(resp) => resp,
         Err(e) => {
             tracing::warn!(error = %e, "Spring token exchange failed");
-            return Redirect::to(&format!("{}/login?error=token_exchange_failed", dashboard_url)).into_response();
+            return Redirect::to(&format!(
+                "{dashboard_url}/login?error=token_exchange_failed"
+            ))
+            .into_response();
         }
     };
 
@@ -93,7 +95,8 @@ async fn spring_oauth_callback(
         Ok(info) => info,
         Err(e) => {
             tracing::warn!(error = %e, "Spring userinfo fetch failed");
-            return Redirect::to(&format!("{}/login?error=userinfo_failed", dashboard_url)).into_response();
+            return Redirect::to(&format!("{dashboard_url}/login?error=userinfo_failed"))
+                .into_response();
         }
     };
 
@@ -101,9 +104,7 @@ async fn spring_oauth_callback(
     let policy = oauth_config.default_policy.clone();
 
     // Create a vault token for this user.
-    let display_name = user_info
-        .name
-        .unwrap_or_else(|| user_info.sub.clone());
+    let display_name = user_info.name.unwrap_or_else(|| user_info.sub.clone());
 
     let mut metadata = std::collections::HashMap::new();
     metadata.insert("spring_sub".to_owned(), user_info.sub);
@@ -127,12 +128,13 @@ async fn spring_oauth_callback(
         Ok(token) => token,
         Err(e) => {
             tracing::warn!(error = %e, "failed to create vault token for Spring user");
-            return Redirect::to(&format!("{}/login?error=vault_token_failed", dashboard_url)).into_response();
+            return Redirect::to(&format!("{dashboard_url}/login?error=vault_token_failed"))
+                .into_response();
         }
     };
 
     // Redirect to dashboard with token as query param (dashboard stores it).
-    Redirect::to(&format!("{}/?token={}", dashboard_url, vault_token)).into_response()
+    Redirect::to(&format!("{dashboard_url}/?token={vault_token}")).into_response()
 }
 
 /// Exchange an authorization code for tokens at Spring's `/token` endpoint.
@@ -186,7 +188,9 @@ async fn fetch_userinfo(
     if !resp.status().is_success() {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
-        return Err(format!("Spring userinfo endpoint returned {status}: {body}"));
+        return Err(format!(
+            "Spring userinfo endpoint returned {status}: {body}"
+        ));
     }
 
     resp.json::<SpringUserInfo>()
@@ -197,10 +201,10 @@ async fn fetch_userinfo(
 // ── Landing page ─────────────────────────────────────────────────────
 
 async fn landing_page() -> Html<String> {
-    let dashboard_url = std::env::var("DASHBOARD_URL")
-        .unwrap_or_else(|_| "http://localhost:5173".to_owned());
-    let docs_url = std::env::var("DOCS_URL")
-        .unwrap_or_else(|_| "https://docs.zvault.cloud".to_owned());
+    let dashboard_url =
+        std::env::var("DASHBOARD_URL").unwrap_or_else(|_| "http://localhost:5173".to_owned());
+    let docs_url =
+        std::env::var("DOCS_URL").unwrap_or_else(|_| "https://docs.zvault.cloud".to_owned());
 
     let mut html = String::with_capacity(32768);
     html.push_str(LANDING_CSS);
@@ -213,7 +217,7 @@ async fn landing_page() -> Html<String> {
 }
 
 /// CSS and HTML head for the marketing landing page at `/`.
-const LANDING_CSS: &str = r##"<!DOCTYPE html>
+const LANDING_CSS: &str = r#"<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>ZVault &mdash; Secrets Management</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -255,7 +259,7 @@ a{color:inherit;text-decoration:none}
 .footer{border-top:1px solid rgba(245,230,184,.06);max-width:1100px;margin:0 auto;padding:24px;display:flex;justify-content:space-between;font-size:13px;color:#5A4A36}
 @media(max-width:768px){.hero h1{font-size:36px}.features{grid-template-columns:1fr}.nav-links{display:none}}
 </style></head>
-"##;
+"#;
 
 /// HTML body for the marketing landing page.
 const LANDING_BODY: &str = r##"<body>

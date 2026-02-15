@@ -33,7 +33,7 @@ pub fn disable_core_dumps() -> Result<(), String> {
             rlim_cur: 0,
             rlim_max: 0,
         };
-        libc::setrlimit(libc::RLIMIT_CORE, &rlim)
+        libc::setrlimit(libc::RLIMIT_CORE, &raw const rlim)
     };
 
     if result == 0 {

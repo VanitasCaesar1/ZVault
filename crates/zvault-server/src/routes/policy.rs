@@ -115,11 +115,8 @@ async fn put_policy(
         .rules
         .into_iter()
         .map(|r| {
-            let capabilities: Result<Vec<Capability>, AppError> = r
-                .capabilities
-                .iter()
-                .map(|c| parse_capability(c))
-                .collect();
+            let capabilities: Result<Vec<Capability>, AppError> =
+                r.capabilities.iter().map(|c| parse_capability(c)).collect();
             Ok(PolicyRule {
                 path: r.path,
                 capabilities: capabilities?,
@@ -165,8 +162,6 @@ fn parse_capability(s: &str) -> Result<Capability, AppError> {
         "delete" => Ok(Capability::Delete),
         "sudo" => Ok(Capability::Sudo),
         "deny" => Ok(Capability::Deny),
-        _ => Err(AppError::BadRequest(format!(
-            "unknown capability: {s}"
-        ))),
+        _ => Err(AppError::BadRequest(format!("unknown capability: {s}"))),
     }
 }

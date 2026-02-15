@@ -179,9 +179,7 @@ impl KvEngine {
         data: Option<serde_json::Value>,
     ) -> Result<EngineResponse, EngineError> {
         let kv_data: HashMap<String, serde_json::Value> = match data {
-            Some(serde_json::Value::Object(map)) => {
-                map.into_iter().collect()
-            }
+            Some(serde_json::Value::Object(map)) => map.into_iter().collect(),
             Some(other) => {
                 let mut m = HashMap::new();
                 m.insert("value".to_owned(), other);
@@ -194,7 +192,12 @@ impl KvEngine {
         let now = Utc::now();
 
         // Load existing secret or create new.
-        let mut secret = match self.barrier.get(&storage_key).await.map_err(EngineError::Barrier)? {
+        let mut secret = match self
+            .barrier
+            .get(&storage_key)
+            .await
+            .map_err(EngineError::Barrier)?
+        {
             Some(bytes) => {
                 serde_json::from_slice::<KvSecret>(&bytes).map_err(|e| EngineError::Internal {
                     reason: format!("deserialization failed: {e}"),
@@ -215,9 +218,7 @@ impl KvEngine {
             created_at: now,
             deleted_at: None,
         };
-        secret
-            .versions
-            .insert(secret.current_version, version);
+        secret.versions.insert(secret.current_version, version);
 
         // Prune old versions if max_versions is set.
         if secret.max_versions > 0 {

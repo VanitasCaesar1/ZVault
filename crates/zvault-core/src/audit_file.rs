@@ -40,7 +40,9 @@ impl FileAuditBackend {
     }
 
     /// Open or reuse the file handle.
-    async fn get_writer(&self) -> Result<tokio::sync::MutexGuard<'_, Option<tokio::fs::File>>, AuditError> {
+    async fn get_writer(
+        &self,
+    ) -> Result<tokio::sync::MutexGuard<'_, Option<tokio::fs::File>>, AuditError> {
         let mut guard = self.writer.lock().await;
         if guard.is_none() {
             let file = OpenOptions::new()
@@ -77,10 +79,12 @@ impl AuditBackend for FileAuditBackend {
             reason: "file handle unexpectedly None after open".to_owned(),
         })?;
 
-        file.write_all(&line).await.map_err(|e| AuditError::BackendFailure {
-            name: "file".to_owned(),
-            reason: format!("write failed: {e}"),
-        })?;
+        file.write_all(&line)
+            .await
+            .map_err(|e| AuditError::BackendFailure {
+                name: "file".to_owned(),
+                reason: format!("write failed: {e}"),
+            })?;
 
         file.flush().await.map_err(|e| AuditError::BackendFailure {
             name: "file".to_owned(),

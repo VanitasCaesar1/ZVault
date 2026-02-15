@@ -5,9 +5,9 @@
 //! getting started, architecture, API reference, CLI reference, security
 //! model, and configuration.
 
+use axum::Router;
 use axum::response::Html;
 use axum::routing::get;
-use axum::Router;
 use std::sync::Arc;
 
 use crate::state::AppState;
@@ -31,7 +31,11 @@ async fn docs_index() -> Html<String> {
 }
 
 async fn getting_started() -> Html<String> {
-    Html(docs_shell("Getting Started", "getting-started", GETTING_STARTED))
+    Html(docs_shell(
+        "Getting Started",
+        "getting-started",
+        GETTING_STARTED,
+    ))
 }
 
 async fn architecture() -> Html<String> {
@@ -89,18 +93,38 @@ fn docs_shell(title: &str, active: &str, content: &str) -> String {
     html.push_str(r##"<header class="docs-header"><div class="docs-header-inner"><a href="/" class="docs-logo"><svg viewBox="0 0 32 32" fill="none"><defs><linearGradient id="zg" x1="0" y1="0" x2="32" y2="32"><stop offset="0%" stop-color="#F5C842"/><stop offset="100%" stop-color="#E8A817"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#zg)"/><path d="M9 11h14l-14 10h14" stroke="#2D1F0E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>ZVault</a><nav class="docs-header-nav"><a href="/app">Dashboard</a><a href="/docs">Docs</a><a href="https://github.com/zvault/zvault">GitHub</a></nav></div></header>"##);
 
     // Sidebar
-    html.push_str(r##"<div class="docs-layout"><aside class="docs-sidebar"><nav class="docs-sidebar-nav">"##);
-    html.push_str(r##"<div class="docs-sidebar-section"><div class="docs-sidebar-label">Overview</div>"##);
+    html.push_str(
+        r#"<div class="docs-layout"><aside class="docs-sidebar"><nav class="docs-sidebar-nav">"#,
+    );
+    html.push_str(
+        r#"<div class="docs-sidebar-section"><div class="docs-sidebar-label">Overview</div>"#,
+    );
     html.push_str(&nav_item("/docs", "index", "Introduction"));
-    html.push_str(&nav_item("/docs/getting-started", "getting-started", "Getting Started"));
-    html.push_str(&nav_item("/docs/architecture", "architecture", "Architecture"));
+    html.push_str(&nav_item(
+        "/docs/getting-started",
+        "getting-started",
+        "Getting Started",
+    ));
+    html.push_str(&nav_item(
+        "/docs/architecture",
+        "architecture",
+        "Architecture",
+    ));
     html.push_str("</div>");
-    html.push_str(r##"<div class="docs-sidebar-section"><div class="docs-sidebar-label">Reference</div>"##);
+    html.push_str(
+        r#"<div class="docs-sidebar-section"><div class="docs-sidebar-label">Reference</div>"#,
+    );
     html.push_str(&nav_item("/docs/api", "api", "API Reference"));
     html.push_str(&nav_item("/docs/cli", "cli", "CLI Reference"));
-    html.push_str(&nav_item("/docs/configuration", "configuration", "Configuration"));
+    html.push_str(&nav_item(
+        "/docs/configuration",
+        "configuration",
+        "Configuration",
+    ));
     html.push_str("</div>");
-    html.push_str(r##"<div class="docs-sidebar-section"><div class="docs-sidebar-label">Concepts</div>"##);
+    html.push_str(
+        r#"<div class="docs-sidebar-section"><div class="docs-sidebar-label">Concepts</div>"#,
+    );
     html.push_str(&nav_item("/docs/engines", "engines", "Secrets Engines"));
     html.push_str(&nav_item("/docs/policies", "policies", "Policies & Auth"));
     html.push_str(&nav_item("/docs/security", "security", "Security Model"));
@@ -108,7 +132,7 @@ fn docs_shell(title: &str, active: &str, content: &str) -> String {
     html.push_str("</nav></aside>");
 
     // Main content
-    html.push_str(r##"<main class="docs-main"><div class="docs-content"><h1 class="docs-title">"##);
+    html.push_str(r#"<main class="docs-main"><div class="docs-content"><h1 class="docs-title">"#);
     html.push_str(title);
     html.push_str("</h1>");
     html.push_str(content);
@@ -117,7 +141,7 @@ fn docs_shell(title: &str, active: &str, content: &str) -> String {
 }
 
 /// CSS for the documentation site — Crextio-inspired warm amber glassmorphism.
-const DOCS_CSS: &str = r##"<!DOCTYPE html>
+const DOCS_CSS: &str = r#"<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>ZVault Docs</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -200,10 +224,10 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .docs-content .method-put{background:rgba(91,155,213,.1);color:#1565C0}
 @media(max-width:900px){.docs-sidebar{display:none}.docs-main{padding:24px 16px}}
 </style></head>
-"##;
+"#;
 
 /// Documentation index / introduction page.
-const DOCS_INDEX: &str = r##"
+const DOCS_INDEX: &str = r#"
 <p>Welcome to the ZVault documentation. ZVault is a secrets management platform
 written entirely in Rust, designed to keep your sensitive data encrypted at rest
 and tightly controlled at runtime.</p>
@@ -239,10 +263,10 @@ and tightly controlled at runtime.</p>
 3. Operate     →  Read/write secrets, manage leases, audit everything
 4. Seal        →  Zeroize all keys from memory, reject all operations
 </code></pre>
-"##;
+"#;
 
 /// Getting started guide.
-const GETTING_STARTED: &str = r##"
+const GETTING_STARTED: &str = r#"
 <p>This guide walks you through building, running, and initializing ZVault for the first time.</p>
 
 <h2>Prerequisites</h2>
@@ -313,10 +337,10 @@ zvault-cli kv get secret/myapp/db</code></pre>
   <strong>Revoke the root token</strong> after creating scoped tokens for your applications.
   Root tokens have unrestricted access.
 </div>
-"##;
+"#;
 
 /// Architecture documentation.
-const ARCHITECTURE: &str = r##"
+const ARCHITECTURE: &str = r"
 <p>ZVault follows a layered architecture where security boundaries are enforced at each level.</p>
 
 <h2>The Barrier Pattern</h2>
@@ -391,10 +415,10 @@ transit/&lt;mount&gt;/keys/   → transit key material</code></pre>
   <li>Close storage backend</li>
   <li>Exit</li>
 </ol>
-"##;
+";
 
 /// API reference documentation.
-const API_REFERENCE: &str = r##"
+const API_REFERENCE: &str = r#"
 <p>All API endpoints are prefixed with <code>/v1</code>. Authenticated endpoints require
 an <code>X-Vault-Token</code> header.</p>
 
@@ -529,10 +553,10 @@ Response: {"token": "hvs.xxx", "policies": ["app-readonly"], "ttl": 3600}</code>
 
 <div class="endpoint"><span class="method method-post">POST</span> <code>/v1/sys/leases/revoke</code></div>
 <p>Revoke a lease by ID.</p>
-"##;
+"#;
 
 /// CLI reference documentation.
-const CLI_REFERENCE: &str = r##"
+const CLI_REFERENCE: &str = r#"
 <p>The <code>zvault-cli</code> is a standalone binary that communicates with the ZVault server
 over HTTP. It has no internal dependencies on the server crates.</p>
 
@@ -623,10 +647,10 @@ over HTTP. It has no internal dependencies on the server crates.</p>
 
 <h3><code>zvault-cli policy delete &lt;name&gt;</code></h3>
 <p>Delete a policy.</p>
-"##;
+"#;
 
 /// Security model documentation.
-const SECURITY_MODEL: &str = r##"
+const SECURITY_MODEL: &str = r#"
 <p>ZVault is a secrets management platform. Security is the product, not a feature.
 This page documents the threat model, cryptographic choices, and hardening measures.</p>
 
@@ -705,10 +729,10 @@ Cache-Control: no-store</code></pre>
   <li>Run as a non-root user with <code>CAP_IPC_LOCK</code> capability</li>
   <li>Restrict network access — bind to <code>127.0.0.1</code> and use a reverse proxy</li>
 </ul>
-"##;
+"#;
 
 /// Configuration documentation.
-const CONFIGURATION: &str = r##"
+const CONFIGURATION: &str = r"
 <p>ZVault is configured entirely through environment variables. No config files required.</p>
 
 <h2>Environment Variables</h2>
@@ -829,10 +853,10 @@ ReadWritePaths=/var/lib/zvault /var/log/zvault
 
 [Install]
 WantedBy=multi-user.target</code></pre>
-"##;
+";
 
 /// Secrets engines documentation.
-const ENGINES: &str = r##"
+const ENGINES: &str = r#"
 <p>Secrets engines are pluggable components that handle different types of secret data.
 Each engine is mounted at a path and handles all requests under that path.</p>
 
@@ -907,10 +931,10 @@ creates temporary users with a TTL, and revokes them on lease expiry.</p>
 <div class="callout callout-warn">Planned — not yet implemented.</div>
 <p>Acts as an internal certificate authority. Generates X.509 certificates on demand
 with configurable SANs, TTL, and key usage.</p>
-"##;
+"#;
 
 /// Policies and auth documentation.
-const POLICIES: &str = r##"
+const POLICIES: &str = r#"
 <p>ZVault uses path-based policies to control access. Every token is bound to one or more
 policies that define what paths it can access and what operations it can perform.</p>
 
@@ -993,4 +1017,4 @@ Maps OIDC claims to ZVault policies.</p>
 <h3>Kubernetes (planned)</h3>
 <p>Validate Kubernetes service account JWTs. Maps service accounts and namespaces to policies.
 Essential for the K8s operator integration.</p>
-"##;
+"#;

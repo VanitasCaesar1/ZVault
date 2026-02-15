@@ -116,7 +116,11 @@ async fn create_key(
 ) -> Result<StatusCode, AppError> {
     state
         .policy_store
-        .check(&auth.policies, &format!("transit/keys/{name}"), &Capability::Create)
+        .check(
+            &auth.policies,
+            &format!("transit/keys/{name}"),
+            &Capability::Create,
+        )
         .await?;
 
     let engine = get_transit_engine(&state).await?;
@@ -133,7 +137,11 @@ async fn rotate_key(
 ) -> Result<Json<RotateResponse>, AppError> {
     state
         .policy_store
-        .check(&auth.policies, &format!("transit/keys/{name}"), &Capability::Update)
+        .check(
+            &auth.policies,
+            &format!("transit/keys/{name}"),
+            &Capability::Update,
+        )
         .await?;
 
     let engine = get_transit_engine(&state).await?;
@@ -151,7 +159,11 @@ async fn encrypt(
 ) -> Result<Json<EncryptResponse>, AppError> {
     state
         .policy_store
-        .check(&auth.policies, &format!("transit/encrypt/{name}"), &Capability::Update)
+        .check(
+            &auth.policies,
+            &format!("transit/encrypt/{name}"),
+            &Capability::Update,
+        )
         .await?;
 
     let plaintext_bytes = base64_decode(&body.plaintext)?;
@@ -170,7 +182,11 @@ async fn decrypt(
 ) -> Result<Json<DecryptResponse>, AppError> {
     state
         .policy_store
-        .check(&auth.policies, &format!("transit/decrypt/{name}"), &Capability::Update)
+        .check(
+            &auth.policies,
+            &format!("transit/decrypt/{name}"),
+            &Capability::Update,
+        )
         .await?;
 
     let engine = get_transit_engine(&state).await?;
@@ -178,7 +194,9 @@ async fn decrypt(
 
     let plaintext_b64 = BASE64.encode(&plaintext);
 
-    Ok(Json(DecryptResponse { plaintext: plaintext_b64 }))
+    Ok(Json(DecryptResponse {
+        plaintext: plaintext_b64,
+    }))
 }
 
 /// Re-wrap ciphertext under the latest key version.
@@ -190,7 +208,11 @@ async fn rewrap(
 ) -> Result<Json<RewrapResponse>, AppError> {
     state
         .policy_store
-        .check(&auth.policies, &format!("transit/rewrap/{name}"), &Capability::Update)
+        .check(
+            &auth.policies,
+            &format!("transit/rewrap/{name}"),
+            &Capability::Update,
+        )
         .await?;
 
     let engine = get_transit_engine(&state).await?;
@@ -207,7 +229,11 @@ async fn generate_data_key(
 ) -> Result<Json<DataKeyResponse>, AppError> {
     state
         .policy_store
-        .check(&auth.policies, &format!("transit/datakey/{name}"), &Capability::Update)
+        .check(
+            &auth.policies,
+            &format!("transit/datakey/{name}"),
+            &Capability::Update,
+        )
         .await?;
 
     let engine = get_transit_engine(&state).await?;
@@ -243,7 +269,11 @@ async fn key_info(
 ) -> Result<Json<KeyInfoResponse>, AppError> {
     state
         .policy_store
-        .check(&auth.policies, &format!("transit/keys/{name}"), &Capability::Read)
+        .check(
+            &auth.policies,
+            &format!("transit/keys/{name}"),
+            &Capability::Read,
+        )
         .await?;
 
     let engine = get_transit_engine(&state).await?;

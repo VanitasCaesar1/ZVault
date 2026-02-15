@@ -205,11 +205,7 @@ async fn renew_self(
 ) -> Result<Json<serde_json::Value>, AppError> {
     state
         .policy_store
-        .check(
-            &auth.policies,
-            "auth/token/renew-self",
-            &Capability::Update,
-        )
+        .check(&auth.policies, "auth/token/renew-self", &Capability::Update)
         .await?;
 
     // We don't have the plaintext token in AuthContext, so renew-self

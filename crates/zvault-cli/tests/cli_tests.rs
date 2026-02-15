@@ -5,6 +5,8 @@
 //! running vault server — tests that need one are gated behind the
 //! `integration` feature or skipped gracefully.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -20,7 +22,7 @@ fn zvault_bin() -> String {
     path.to_owned()
 }
 
-/// Helper: run zvault with args and return (exit_code, stdout, stderr).
+/// Helper: run zvault with args and return (`exit_code`, stdout, stderr).
 fn run(args: &[&str]) -> (i32, String, String) {
     let output = Command::new(zvault_bin())
         .args(args)
@@ -51,23 +53,34 @@ fn test_version_flag() {
 fn test_help_flag() {
     let (code, stdout, _) = run(&["--help"]);
     assert_eq!(code, 0, "zvault --help should exit 0");
-    assert!(stdout.contains("ZVault CLI"), "help should mention ZVault CLI");
-    assert!(stdout.contains("status"), "help should list 'status' command");
-    assert!(stdout.contains("import"), "help should list 'import' command");
+    assert!(
+        stdout.contains("ZVault CLI"),
+        "help should mention ZVault CLI"
+    );
+    assert!(
+        stdout.contains("status"),
+        "help should list 'status' command"
+    );
+    assert!(
+        stdout.contains("import"),
+        "help should list 'import' command"
+    );
     assert!(stdout.contains("run"), "help should list 'run' command");
-    assert!(stdout.contains("doctor"), "help should list 'doctor' command");
+    assert!(
+        stdout.contains("doctor"),
+        "help should list 'doctor' command"
+    );
 }
 
 #[test]
 fn test_subcommand_help() {
-    let subcommands = ["kv", "token", "policy", "transit", "pki", "approle", "database"];
+    let subcommands = [
+        "kv", "token", "policy", "transit", "pki", "approle", "database",
+    ];
     for sub in subcommands {
         let (code, stdout, _) = run(&[sub, "--help"]);
         assert_eq!(code, 0, "{sub} --help should exit 0");
-        assert!(
-            !stdout.is_empty(),
-            "{sub} --help should produce output"
-        );
+        assert!(!stdout.is_empty(), "{sub} --help should produce output");
     }
 }
 
@@ -109,17 +122,20 @@ fn test_import_empty_env_file() {
     fs::write(&env_path, "# just a comment\n\n").expect("write failed");
 
     let output = Command::new(zvault_bin())
-        .args(["import", env_path.to_str().unwrap(), "--no-backup", "--no-ref", "--no-gitignore"])
+        .args([
+            "import",
+            env_path.to_str().unwrap(),
+            "--no-backup",
+            "--no-ref",
+            "--no-gitignore",
+        ])
         .env("VAULT_ADDR", "http://127.0.0.1:19999")
         .env("VAULT_TOKEN", "test-token")
         .output()
         .expect("failed to execute zvault");
 
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        !output.status.success(),
-        "import of empty env should fail"
-    );
+    assert!(!output.status.success(), "import of empty env should fail");
     assert!(
         stderr.contains("no secrets found"),
         "should report no secrets: {stderr}"
@@ -151,10 +167,7 @@ fn test_run_missing_env_file() {
         .expect("failed to execute zvault");
 
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        !output.status.success(),
-        "run without env file should fail"
-    );
+    assert!(!output.status.success(), "run without env file should fail");
     assert!(
         stderr.contains(".env.zvault") || stderr.contains(".env"),
         "should mention missing env file: {stderr}"
@@ -182,9 +195,14 @@ fn test_doctor_runs_without_crash() {
         "doctor should exit 0 even with warnings: stderr={}",
         String::from_utf8_lossy(&output.stderr)
     );
-    assert!(stdout.contains("Doctor"), "should show Doctor header: {stdout}");
-    assert!(stdout.contains("passed") || stdout.contains("warnings") || stdout.contains("failed"),
-        "should show summary: {stdout}");
+    assert!(
+        stdout.contains("Doctor"),
+        "should show Doctor header: {stdout}"
+    );
+    assert!(
+        stdout.contains("passed") || stdout.contains("warnings") || stdout.contains("failed"),
+        "should show summary: {stdout}"
+    );
 }
 
 #[test]
@@ -329,7 +347,7 @@ SPACES_AROUND = spaced
     let stdout = String::from_utf8_lossy(&output.stdout);
     // Should have parsed 6 secrets (SIMPLE, QUOTED, SINGLE, EXPORTED, EMPTY, SPACES_AROUND).
     assert!(
-        stdout.contains("6") || stdout.contains("Secrets"),
+        stdout.contains('6') || stdout.contains("Secrets"),
         "should parse 6 env vars from mixed format: {stdout}"
     );
 }

@@ -26,19 +26,28 @@ use zvault_core::policy::Capability;
 /// - Path must not be empty.
 fn validate_secret_path(path: &str) -> Result<(), AppError> {
     if path.is_empty() {
-        return Err(AppError::BadRequest("secret path must not be empty".to_owned()));
+        return Err(AppError::BadRequest(
+            "secret path must not be empty".to_owned(),
+        ));
     }
 
     if path.contains("..") {
-        return Err(AppError::BadRequest("path traversal (..) is not allowed".to_owned()));
+        return Err(AppError::BadRequest(
+            "path traversal (..) is not allowed".to_owned(),
+        ));
     }
 
     if path.contains('\0') {
-        return Err(AppError::BadRequest("null bytes are not allowed in paths".to_owned()));
+        return Err(AppError::BadRequest(
+            "null bytes are not allowed in paths".to_owned(),
+        ));
     }
 
     // Only allow safe characters.
-    if !path.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-' || b == b'/') {
+    if !path
+        .bytes()
+        .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-' || b == b'/')
+    {
         return Err(AppError::BadRequest(
             "secret path may only contain alphanumeric characters, '_', '-', and '/'".to_owned(),
         ));
@@ -64,7 +73,10 @@ fn validate_secret_path(path: &str) -> Result<(), AppError> {
 /// - `GET    /v1/secret/list/{*path}` — list keys
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/data/{*path}", get(read_secret).post(write_secret).delete(delete_secret))
+        .route(
+            "/data/{*path}",
+            get(read_secret).post(write_secret).delete(delete_secret),
+        )
         .route("/metadata/{*path}", get(get_metadata))
         .route("/list/{*path}", get(list_secrets))
 }
@@ -290,7 +302,5 @@ async fn get_engine(
         .await
         .get(mount_path)
         .cloned()
-        .ok_or_else(|| {
-            AppError::NotFound(format!("no engine mounted at '{mount_path}'"))
-        })
+        .ok_or_else(|| AppError::NotFound(format!("no engine mounted at '{mount_path}'")))
 }

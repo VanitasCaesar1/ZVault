@@ -264,10 +264,9 @@ fn write_json_config(path: &Path, value: &serde_json::Value) -> Result<()> {
             .with_context(|| format!("invalid JSON in {}", path.display()))?;
 
         // Deep merge: add our mcpServers entries without clobbering others.
-        if let (Some(existing_servers), Some(new_servers)) = (
-            existing_json.get_mut("mcpServers"),
-            value.get("mcpServers"),
-        ) {
+        if let (Some(existing_servers), Some(new_servers)) =
+            (existing_json.get_mut("mcpServers"), value.get("mcpServers"))
+        {
             if let (Some(existing_obj), Some(new_obj)) =
                 (existing_servers.as_object_mut(), new_servers.as_object())
             {
@@ -288,8 +287,7 @@ fn write_json_config(path: &Path, value: &serde_json::Value) -> Result<()> {
 
         println!("  ✓ Merged zvault config into {}", path.display());
     } else {
-        let pretty =
-            serde_json::to_string_pretty(value).context("failed to serialize config")?;
+        let pretty = serde_json::to_string_pretty(value).context("failed to serialize config")?;
         std::fs::write(path, pretty)
             .with_context(|| format!("failed to write {}", path.display()))?;
     }

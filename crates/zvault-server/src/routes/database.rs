@@ -27,9 +27,15 @@ use crate::state::AppState;
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/config", get(list_configs))
-        .route("/config/{name}", post(configure).get(get_config).delete(delete_config))
+        .route(
+            "/config/{name}",
+            post(configure).get(get_config).delete(delete_config),
+        )
         .route("/roles", get(list_roles))
-        .route("/roles/{name}", post(create_role).get(get_role).delete(delete_role))
+        .route(
+            "/roles/{name}",
+            post(create_role).get(get_role).delete(delete_role),
+        )
         .route("/creds/{name}", get(generate_creds))
 }
 
@@ -43,7 +49,9 @@ struct ConfigureRequest {
     allowed_roles: Vec<String>,
 }
 
-fn default_max_conn() -> u32 { 4 }
+fn default_max_conn() -> u32 {
+    4
+}
 
 async fn configure(
     State(state): State<Arc<AppState>>,
@@ -51,9 +59,9 @@ async fn configure(
     Json(body): Json<ConfigureRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let engines = state.database_engines.read().await;
-    let engine = engines.get("database/").ok_or_else(|| {
-        AppError::NotFound("database engine not mounted".to_owned())
-    })?;
+    let engine = engines
+        .get("database/")
+        .ok_or_else(|| AppError::NotFound("database engine not mounted".to_owned()))?;
     engine
         .configure(DatabaseConfig {
             name,
@@ -72,9 +80,9 @@ async fn get_config(
     Path(name): Path<String>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let engines = state.database_engines.read().await;
-    let engine = engines.get("database/").ok_or_else(|| {
-        AppError::NotFound("database engine not mounted".to_owned())
-    })?;
+    let engine = engines
+        .get("database/")
+        .ok_or_else(|| AppError::NotFound("database engine not mounted".to_owned()))?;
     let config = engine.get_config(&name).await.map_err(AppError::from)?;
     // Redact connection_url in response.
     Ok(Json(serde_json::json!({
@@ -91,9 +99,9 @@ async fn delete_config(
     Path(name): Path<String>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let engines = state.database_engines.read().await;
-    let engine = engines.get("database/").ok_or_else(|| {
-        AppError::NotFound("database engine not mounted".to_owned())
-    })?;
+    let engine = engines
+        .get("database/")
+        .ok_or_else(|| AppError::NotFound("database engine not mounted".to_owned()))?;
     engine.delete_config(&name).await.map_err(AppError::from)?;
     Ok(Json(serde_json::json!({"status": "deleted"})))
 }
@@ -102,9 +110,9 @@ async fn list_configs(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let engines = state.database_engines.read().await;
-    let engine = engines.get("database/").ok_or_else(|| {
-        AppError::NotFound("database engine not mounted".to_owned())
-    })?;
+    let engine = engines
+        .get("database/")
+        .ok_or_else(|| AppError::NotFound("database engine not mounted".to_owned()))?;
     let names = engine.list_configs().await.map_err(AppError::from)?;
     Ok(Json(serde_json::json!({"keys": names})))
 }
@@ -121,8 +129,12 @@ struct CreateRoleRequest {
     max_ttl_secs: i64,
 }
 
-fn default_ttl() -> i64 { 3600 }
-fn default_max_ttl() -> i64 { 86400 }
+fn default_ttl() -> i64 {
+    3600
+}
+fn default_max_ttl() -> i64 {
+    86400
+}
 
 async fn create_role(
     State(state): State<Arc<AppState>>,
@@ -130,9 +142,9 @@ async fn create_role(
     Json(body): Json<CreateRoleRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let engines = state.database_engines.read().await;
-    let engine = engines.get("database/").ok_or_else(|| {
-        AppError::NotFound("database engine not mounted".to_owned())
-    })?;
+    let engine = engines
+        .get("database/")
+        .ok_or_else(|| AppError::NotFound("database engine not mounted".to_owned()))?;
     engine
         .create_role(DatabaseRole {
             name,
@@ -152,9 +164,9 @@ async fn get_role(
     Path(name): Path<String>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let engines = state.database_engines.read().await;
-    let engine = engines.get("database/").ok_or_else(|| {
-        AppError::NotFound("database engine not mounted".to_owned())
-    })?;
+    let engine = engines
+        .get("database/")
+        .ok_or_else(|| AppError::NotFound("database engine not mounted".to_owned()))?;
     let role = engine.get_role(&name).await.map_err(AppError::from)?;
     Ok(Json(serde_json::to_value(role).unwrap_or_default()))
 }
@@ -164,9 +176,9 @@ async fn delete_role(
     Path(name): Path<String>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let engines = state.database_engines.read().await;
-    let engine = engines.get("database/").ok_or_else(|| {
-        AppError::NotFound("database engine not mounted".to_owned())
-    })?;
+    let engine = engines
+        .get("database/")
+        .ok_or_else(|| AppError::NotFound("database engine not mounted".to_owned()))?;
     engine.delete_role(&name).await.map_err(AppError::from)?;
     Ok(Json(serde_json::json!({"status": "deleted"})))
 }
@@ -175,9 +187,9 @@ async fn list_roles(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let engines = state.database_engines.read().await;
-    let engine = engines.get("database/").ok_or_else(|| {
-        AppError::NotFound("database engine not mounted".to_owned())
-    })?;
+    let engine = engines
+        .get("database/")
+        .ok_or_else(|| AppError::NotFound("database engine not mounted".to_owned()))?;
     let names = engine.list_roles().await.map_err(AppError::from)?;
     Ok(Json(serde_json::json!({"keys": names})))
 }
@@ -187,9 +199,9 @@ async fn generate_creds(
     Path(name): Path<String>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let engines = state.database_engines.read().await;
-    let engine = engines.get("database/").ok_or_else(|| {
-        AppError::NotFound("database engine not mounted".to_owned())
-    })?;
+    let engine = engines
+        .get("database/")
+        .ok_or_else(|| AppError::NotFound("database engine not mounted".to_owned()))?;
     let (creds, role) = engine
         .generate_credentials(&name)
         .await
