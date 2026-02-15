@@ -23,18 +23,22 @@ jobs:
             os: ubuntu-latest
             archive: zvault-${{ github.ref_name }}-linux-x86_64.tar.gz
             use_cross: false
+            extra_features: ""
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
             archive: zvault-${{ github.ref_name }}-linux-aarch64.tar.gz
             use_cross: true
+            extra_features: --features zvault-cli/vendored-openssl
           - target: x86_64-apple-darwin
             os: macos-latest
             archive: zvault-${{ github.ref_name }}-darwin-x86_64.tar.gz
             use_cross: false
+            extra_features: ""
           - target: aarch64-apple-darwin
             os: macos-14
             archive: zvault-${{ github.ref_name }}-darwin-aarch64.tar.gz
             use_cross: false
+            extra_features: ""
 
     steps:
       - uses: actions/checkout@v4
@@ -56,7 +60,7 @@ jobs:
 
       - name: Build CLI
         run: |
-          ${{ matrix.use_cross && 'cross' || 'cargo' }} build --release --package zvault-cli --target ${{ matrix.target }}
+          ${{ matrix.use_cross && 'cross' || 'cargo' }} build --release --package zvault-cli --target ${{ matrix.target }} ${{ matrix.extra_features }}
 
       - name: Build server
         run: |
@@ -92,10 +96,15 @@ jobs:
         with:
           path: artifacts
 
+      - name: Collect artifacts
+        run: |
+          mkdir -p dist
+          find artifacts -name '*.tar.gz' -type f -exec cp {} dist/ \;
+          ls -la dist/
+
       - name: Generate checksums
         run: |
-          cd artifacts
-          find . -name '*.tar.gz' -exec mv {} . \;
+          cd dist
           sha256sum *.tar.gz > checksums-sha256.txt
           cat checksums-sha256.txt
 
@@ -106,8 +115,8 @@ jobs:
           body_path: .github/release-notes.md
           append_body: true
           files: |
-            artifacts/*.tar.gz
-            artifacts/checksums-sha256.txt
+            dist/*.tar.gz
+            dist/checksums-sha256.txt
 
   publish-crates:
     name: Publish to crates.io
