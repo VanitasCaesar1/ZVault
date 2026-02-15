@@ -28,13 +28,18 @@ ZVault fixes this. Your AI sees `zvault://payments/stripe-key` — a reference, 
 ## Install
 
 ```bash
+# One-liner (macOS/Linux)
 curl -fsSL https://zvault.cloud/install.sh | sh
-```
 
-Or build from source:
+# Homebrew
+brew tap VanitasCaesar1/tap
+brew install zvault
 
-```bash
-cargo install --git https://github.com/zvault/zvault vaultrs-cli
+# Cargo (crates.io)
+cargo install zvault-cli
+
+# Or build from source
+cargo install --git https://github.com/VanitasCaesar1/zvault zvault-cli
 ```
 
 ## How It Works
@@ -64,14 +69,20 @@ The killer feature. Connect your IDE's AI to ZVault via MCP — it can query wha
 # Setup for your IDE (one command)
 zvault setup cursor    # or: kiro, continue, generic
 
-# Starts an MCP server with 7 tools:
-# - zvault_list_secrets     (names only, never values)
-# - zvault_describe_secret  (metadata, type, last rotated)
-# - zvault_check_env        (verify all required secrets exist)
-# - zvault_generate_env     (generate .env.example from vault)
-# - zvault_secret_stats     (count, engines, health)
-# - zvault_search_secrets   (fuzzy search by name)
-# - zvault_run_command      (execute with secrets injected)
+# Starts an MCP server with 10 tools:
+# Vault operations (Free):
+# - zvault_list_secrets       (names only, never values)
+# - zvault_describe_secret    (metadata, type, last rotated)
+# - zvault_check_env          (verify all required secrets exist)
+# - zvault_generate_env       (generate .env.example from vault)
+# - zvault_set_secret         (store a secret)
+# - zvault_delete_secret      (delete a secret)
+# - zvault_vault_status       (seal status, health)
+#
+# Secure proxy tools (Pro — AI never sees credentials):
+# - zvault_query_database     (SQL via vault-stored Postgres creds)
+# - zvault_http_request       (HTTP with zvault:// refs in headers/URL)
+# - zvault_check_service      (health-check postgres/redis/http)
 ```
 
 ## Features
@@ -150,15 +161,15 @@ zvault license                         # Show license status
 ### Quick (in-memory, for dev)
 
 ```bash
-cargo run --package vaultrs-server
+cargo run --package zvault-server
 # → http://127.0.0.1:8200 (API + Web UI)
 ```
 
 ### Production (persistent storage)
 
 ```bash
-cargo build --release --package vaultrs-server
-VAULTRS_STORAGE=rocksdb VAULTRS_STORAGE_PATH=/var/lib/zvault ./target/release/vaultrs-server
+cargo build --release --package zvault-server
+ZVAULT_STORAGE=rocksdb ZVAULT_STORAGE_PATH=/var/lib/zvault ./target/release/zvault-server
 ```
 
 ### Docker
@@ -166,38 +177,38 @@ VAULTRS_STORAGE=rocksdb VAULTRS_STORAGE_PATH=/var/lib/zvault ./target/release/va
 ```bash
 docker build -t zvault .
 docker run -p 8200:8200 \
-  -e VAULTRS_STORAGE=rocksdb \
-  -e VAULTRS_STORAGE_PATH=/data \
-  -e VAULTRS_DISABLE_MLOCK=true \
+  -e ZVAULT_STORAGE=rocksdb \
+  -e ZVAULT_STORAGE_PATH=/data \
+  -e ZVAULT_DISABLE_MLOCK=true \
   -v zvault-data:/data \
   zvault
 ```
 
 ### Railway
 
-One-click deploy with `railway.toml` included. Set `VAULTRS_STORAGE=rocksdb` and `VAULTRS_STORAGE_PATH=/data`.
+One-click deploy with `railway.toml` included. Set `ZVAULT_STORAGE=rocksdb` and `ZVAULT_STORAGE_PATH=/data`.
 
 ## Configuration
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | — | Bind port (Railway convention) |
-| `VAULTRS_BIND_ADDR` | `127.0.0.1:8200` | Full bind address |
-| `VAULTRS_STORAGE` | `memory` | `memory`, `rocksdb`, or `redb` |
-| `VAULTRS_STORAGE_PATH` | `./data` | Path for persistent storage |
-| `VAULTRS_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
-| `VAULTRS_AUDIT_FILE` | — | Audit log file path |
-| `VAULTRS_DISABLE_MLOCK` | `false` | Skip `mlockall` (for containers) |
+| `ZVAULT_BIND_ADDR` | `127.0.0.1:8200` | Full bind address |
+| `ZVAULT_STORAGE` | `memory` | `memory`, `rocksdb`, or `redb` |
+| `ZVAULT_STORAGE_PATH` | `./data` | Path for persistent storage |
+| `ZVAULT_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
+| `ZVAULT_AUDIT_FILE` | — | Audit log file path |
+| `ZVAULT_DISABLE_MLOCK` | `false` | Skip `mlockall` (for containers) |
 
 ## Crate Structure
 
 ```
 Z-vault/
 ├── crates/
-│   ├── vaultrs-core/       # Barrier, seal, tokens, policies, audit, engines
-│   ├── vaultrs-storage/    # StorageBackend trait + RocksDB/redb/memory
-│   ├── vaultrs-server/     # HTTP server, routes, middleware, web UI
-│   └── vaultrs-cli/        # Standalone CLI (HTTP client, MCP server, license)
+│   ├── zvault-core/       # Barrier, seal, tokens, policies, audit, engines
+│   ├── zvault-storage/    # StorageBackend trait + RocksDB/redb/memory
+│   ├── zvault-server/     # HTTP server, routes, middleware, web UI
+│   └── zvault-cli/        # Standalone CLI (HTTP client, MCP server, license)
 ├── dashboard/              # React SPA (served by server at /ui)
 ├── website/                # Landing page (zvault.cloud)
 ├── docs-site/              # Documentation (docs.zvault.cloud)
@@ -207,7 +218,7 @@ Z-vault/
 ## Development
 
 ```bash
-cargo run --package vaultrs-server     # Run server (dev)
+cargo run --package zvault-server     # Run server (dev)
 cargo test --workspace                 # Run tests
 cargo clippy --workspace               # Lint (strict)
 cargo fmt --all                        # Format
@@ -220,5 +231,5 @@ Dual-licensed under MIT and Apache 2.0.
 ---
 
 <p align="center">
-  <a href="https://zvault.cloud">zvault.cloud</a> · <a href="https://docs.zvault.cloud">docs</a> · <a href="https://github.com/zvault/zvault">github</a>
+  <a href="https://zvault.cloud">zvault.cloud</a> · <a href="https://docs.zvault.cloud">docs</a> · <a href="https://github.com/VanitasCaesar1/zvault">github</a>
 </p>

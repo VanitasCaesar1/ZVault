@@ -11,7 +11,7 @@ const path = require("path");
 const { execSync } = require("child_process");
 const os = require("os");
 
-const REPO = "zvault/zvault";
+const REPO = "VanitasCaesar1/zvault";
 const BIN_DIR = path.join(__dirname, "bin");
 const VERSION = require("./package.json").version;
 
@@ -114,7 +114,7 @@ async function main() {
     console.error(`\nFailed to install zvault binary: ${err.message}`);
     console.error(`\nYou can install manually:`);
     console.error(`  curl -fsSL https://zvault.cloud/install.sh | sh`);
-    console.error(`  cargo install --git https://github.com/${REPO} vaultrs-cli\n`);
+    console.error(`  cargo install --git https://github.com/${REPO} zvault-cli\n`);
     // Don't fail the npm install — the binary just won't be available
     process.exit(0);
   }

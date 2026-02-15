@@ -5,11 +5,11 @@ Thanks for your interest in contributing. This guide covers everything you need.
 ## Quick Start
 
 ```bash
-git clone https://github.com/zvault/zvault.git
+git clone https://github.com/VanitasCaesar1/zvault.git
 cd zvault
 cargo build --workspace
 cargo test --workspace
-cargo run --package vaultrs-server
+cargo run --package zvault-server
 ```
 
 ## Prerequisites
@@ -21,10 +21,10 @@ cargo run --package vaultrs-server
 
 ```
 crates/
-├── vaultrs-core/       # Barrier, seal, tokens, policies, audit, engines
-├── vaultrs-storage/    # StorageBackend trait + implementations
-├── vaultrs-server/     # HTTP server, routes, middleware, web UI
-└── vaultrs-cli/        # CLI client, MCP server, license system
+├── zvault-core/       # Barrier, seal, tokens, policies, audit, engines
+├── zvault-storage/    # StorageBackend trait + implementations
+├── zvault-server/     # HTTP server, routes, middleware, web UI
+└── zvault-cli/        # CLI client, MCP server, license system
 ```
 
 ## Code Standards
@@ -56,7 +56,7 @@ Use conventional commits: `feat:`, `fix:`, `docs:`, `test:`, `chore:`, `security
 
 ```bash
 cargo test --workspace                    # All tests
-cargo test --package vaultrs-core         # Specific crate
+cargo test --package zvault-core         # Specific crate
 cargo test --workspace -- --nocapture     # With output
 ```
 

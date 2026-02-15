@@ -55,3 +55,4 @@ npm/bin/zvault
 
 # Kiro
 .kiro/
+../backendgo/.env

@@ -1010,14 +1010,14 @@ Per-token rate limiting via token bucket algorithm:
 ## 15. Project Structure
 
 ```
-vaultrs/
+zvault/
 ├── Cargo.toml                          # workspace root
 ├── zvault.toml.example                 # example server config
 ├── docs/
 │   └── DESIGN.md                       # ← you are here
 │
 ├── crates/
-│   ├── vaultrs-server/                 # main server binary
+│   ├── zvault-server/                 # main server binary
 │   │   ├── Cargo.toml
 │   │   └── src/
 │   │       ├── main.rs                 # bootstrap, config loading, server start
@@ -1032,7 +1032,7 @@ vaultrs/
 │   │           ├── policy.rs           # /v1/sys/policy/*
 │   │           └── audit.rs            # /v1/sys/audit/*
 │   │
-│   ├── vaultrs-core/                   # core library (shared logic)
+│   ├── zvault-core/                   # core library (shared logic)
 │   │   ├── Cargo.toml
 │   │   └── src/
 │   │       ├── lib.rs
@@ -1047,7 +1047,7 @@ vaultrs/
 │   │       ├── mount.rs                # engine mount table management
 │   │       └── types.rs                # shared types (RequestContext, etc.)
 │   │
-│   ├── vaultrs-engines/                # secrets engine implementations
+│   ├── zvault-engines/                # secrets engine implementations
 │   │   ├── Cargo.toml
 │   │   └── src/
 │   │       ├── lib.rs                  # SecretsEngine trait + EngineRouter
@@ -1059,7 +1059,7 @@ vaultrs/
 │   │       ├── transit.rs              # transit encryption engine
 │   │       └── pki.rs                  # PKI / CA engine
 │   │
-│   ├── vaultrs-storage/                # storage backend abstraction
+│   ├── zvault-storage/                # storage backend abstraction
 │   │   ├── Cargo.toml
 │   │   └── src/
 │   │       ├── lib.rs                  # StorageBackend trait
@@ -1067,7 +1067,7 @@ vaultrs/
 │   │       ├── redb.rs                 # redb implementation (feature-gated)
 │   │       └── memory.rs               # in-memory (for testing)
 │   │
-│   ├── vaultrs-raft/                   # Raft consensus layer
+│   ├── zvault-raft/                   # Raft consensus layer
 │   │   ├── Cargo.toml
 │   │   └── src/
 │   │       ├── lib.rs
@@ -1075,7 +1075,7 @@ vaultrs/
 │   │       ├── state_machine.rs        # Raft state machine (applies writes to storage)
 │   │       └── snapshot.rs             # Raft snapshot management
 │   │
-│   ├── vaultrs-auth/                   # auth method implementations
+│   ├── zvault-auth/                   # auth method implementations
 │   │   ├── Cargo.toml
 │   │   └── src/
 │   │       ├── lib.rs                  # AuthMethod trait
@@ -1084,7 +1084,7 @@ vaultrs/
 │   │       ├── kubernetes.rs           # K8s service account auth
 │   │       └── approle.rs              # AppRole auth
 │   │
-│   ├── vaultrs-cli/                    # CLI client binary
+│   ├── zvault-cli/                    # CLI client binary
 │   │   ├── Cargo.toml
 │   │   └── src/
 │   │       ├── main.rs
@@ -1100,7 +1100,7 @@ vaultrs/
 │   │           ├── policy.rs           # policy CRUD
 │   │           └── audit.rs            # audit enable/query
 │   │
-│   ├── vaultrs-operator/              # Kubernetes operator binary
+│   ├── zvault-operator/              # Kubernetes operator binary
 │   │   ├── Cargo.toml
 │   │   └── src/
 │   │       ├── main.rs
@@ -1108,7 +1108,7 @@ vaultrs/
 │   │       ├── crd.rs                  # ZVaultSecret CRD definition
 │   │       └── client.rs              # ZVault API client
 │   │
-│   ├── vaultrs-types/                 # shared request/response types
+│   ├── zvault-types/                 # shared request/response types
 │   │   ├── Cargo.toml
 │   │   └── src/
 │   │       ├── lib.rs                  # re-exports
@@ -1117,7 +1117,7 @@ vaultrs/
 │   │       ├── auth.rs                 # token, OIDC, AppRole types
 │   │       └── policy.rs              # Policy, Rule types
 │   │
-│   └── vaultrs-ui/                    # Leptos web UI (WASM + SSR)
+│   └── zvault-ui/                    # Leptos web UI (WASM + SSR)
 │       ├── Cargo.toml
 │       └── src/
 │           ├── lib.rs                  # app root, router
@@ -1140,7 +1140,7 @@ vaultrs/
 │   ├── docker/
 │   │   └── Dockerfile                 # multi-stage build
 │   └── helm/
-│       └── vaultrs/                   # Helm chart
+│       └── zvault/                   # Helm chart
 │           ├── Chart.yaml
 │           ├── values.yaml
 │           └── templates/
@@ -1274,7 +1274,7 @@ Full-stack Rust UI built with Leptos, served from the same binary as the API.
 
 ### 17.1 Why Leptos
 
-- **Shared types**: Request/response types defined once in `vaultrs-types`,
+- **Shared types**: Request/response types defined once in `zvault-types`,
   used by server, CLI, and UI. No OpenAPI codegen, no drift.
 - **Single binary**: The server serves both the API at `/v1/*` and the UI at
   `/`. No separate frontend deployment.
@@ -1298,17 +1298,17 @@ Full-stack Rust UI built with Leptos, served from the same binary as the API.
 ### 17.3 Architecture
 
 ```
-vaultrs-server binary
+zvault-server binary
   ├── /v1/*          → Axum API handlers
   └── /*             → Leptos SSR + static WASM/JS/CSS assets
 
-vaultrs-types crate (shared)
-  ├── Used by vaultrs-server (serialize responses)
-  ├── Used by vaultrs-ui (deserialize responses)
-  └── Used by vaultrs-cli (deserialize responses)
+zvault-types crate (shared)
+  ├── Used by zvault-server (serialize responses)
+  ├── Used by zvault-ui (deserialize responses)
+  └── Used by zvault-cli (deserialize responses)
 ```
 
-The `vaultrs-types` crate contains all API request/response structs with
+The `zvault-types` crate contains all API request/response structs with
 `serde::Serialize + Deserialize`. Both the server and UI depend on it,
 ensuring type-level API compatibility at compile time.
 
@@ -1319,7 +1319,7 @@ ensuring type-level API compatibility at compile time.
 | `leptos` 0.7 | Reactive UI framework (SSR + CSR) |
 | `leptos_router` 0.7 | Client-side routing |
 | `leptos_axum` 0.7 | Axum integration for SSR |
-| `vaultrs-types` | Shared API types |
+| `zvault-types` | Shared API types |
 
 ---
 

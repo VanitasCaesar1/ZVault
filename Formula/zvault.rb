@@ -2,36 +2,50 @@ class Zvault < Formula
   desc "AI-native secrets manager — stop leaking secrets to LLMs"
   homepage "https://zvault.cloud"
   license any_of: ["MIT", "Apache-2.0"]
-  version "0.1.0"
+  version "0.1.1"
+  head "https://github.com/VanitasCaesar1/zvault.git", branch: "main"
 
-  on_macos do
-    on_arm do
-      url "https://github.com/zvault/zvault/releases/download/v#{version}/zvault-v#{version}-darwin-aarch64.tar.gz"
-      sha256 "REPLACE_WITH_ACTUAL_SHA256"
-    end
-    on_intel do
-      url "https://github.com/zvault/zvault/releases/download/v#{version}/zvault-v#{version}-darwin-x86_64.tar.gz"
-      sha256 "REPLACE_WITH_ACTUAL_SHA256"
-    end
-  end
+  url "https://static.crates.io/crates/zvault-cli/zvault-cli-0.1.1.crate"
+  sha256 "09be3d37e3b3cf1fd2c483d9f3d46f778c1c5d0a85c2641caa6757c0af306d78"
 
-  on_linux do
-    on_arm do
-      url "https://github.com/zvault/zvault/releases/download/v#{version}/zvault-v#{version}-linux-aarch64.tar.gz"
-      sha256 "REPLACE_WITH_ACTUAL_SHA256"
-    end
-    on_intel do
-      url "https://github.com/zvault/zvault/releases/download/v#{version}/zvault-v#{version}-linux-x86_64.tar.gz"
-      sha256 "REPLACE_WITH_ACTUAL_SHA256"
-    end
-  end
+  depends_on "rust" => :build
 
   def install
-    bin.install "zvault"
-    bin.install "vaultrs-server"
+    if build.head?
+      system "cargo", "build", "--release", "--package", "zvault-cli"
+      system "cargo", "build", "--release", "--package", "zvault-server"
+      bin.install "target/release/zvault"
+      bin.install "target/release/zvault-server"
+    else
+      system "cargo", "install", "--root", prefix, "--path", "."
+    end
+  end
+
+  def post_install
+    (var/"zvault").mkpath
+  end
+
+  def caveats
+    <<~EOS
+      To get started:
+        zvault status                        # Check vault health
+        zvault init --shares 3 --threshold 2 # Initialize vault
+        zvault import .env                   # Import your .env file
+
+      AI Mode (Pro):
+        zvault mcp-server                    # Start MCP server for AI assistants
+        zvault setup cursor                  # Configure Cursor IDE
+        zvault setup kiro                    # Configure Kiro IDE
+
+      Data is stored in:
+        #{var}/zvault
+
+      Documentation:
+        https://docs.zvault.cloud
+    EOS
   end
 
   test do
-    assert_match "zvault", shell_output("#{bin}/zvault --version")
+    assert_match "zvault", shell_output("#{bin}/zvault --help")
   end
 end

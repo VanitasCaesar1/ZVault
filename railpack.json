@@ -4,11 +4,11 @@
     "build": {
       "commands": [
         "...",
-        "cargo build --release --bin vaultrs-server"
+        "cargo build --release --bin zvault-server"
       ]
     }
   },
   "deploy": {
-    "startCommand": "./bin/vaultrs-server"
+    "startCommand": "./bin/zvault-server"
   }
 }

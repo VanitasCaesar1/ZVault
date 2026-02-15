@@ -1,11 +1,11 @@
 {
   "name": "zvault",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "ZVault CLI — stop leaking secrets to LLMs. The AI-native secrets manager.",
   "homepage": "https://zvault.cloud",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zvault/zvault"
+    "url": "https://github.com/VanitasCaesar1/zvault"
   },
   "license": "MIT OR Apache-2.0",
   "keywords": [

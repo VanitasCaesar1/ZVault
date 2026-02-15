@@ -30,7 +30,7 @@ zvault setup cursor       # Connect AI via MCP (Pro)
 
 - [Website](https://zvault.cloud)
 - [Documentation](https://docs.zvault.cloud)
-- [GitHub](https://github.com/zvault/zvault)
+- [GitHub](https://github.com/VanitasCaesar1/zvault)
 
 ## License
 

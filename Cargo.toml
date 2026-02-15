@@ -1,17 +1,23 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/vaultrs-storage",
-    "crates/vaultrs-core",
-    "crates/vaultrs-server",
-    "crates/vaultrs-cli",
+    "crates/zvault-storage",
+    "crates/zvault-core",
+    "crates/zvault-server",
+    "crates/zvault-cli",
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
+rust-version = "1.85"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/zvault/zvault"
+repository = "https://github.com/VanitasCaesar1/zvault"
+homepage = "https://zvault.cloud"
+documentation = "https://docs.zvault.cloud"
+readme = "README.md"
+keywords = ["secrets", "vault", "encryption", "mcp", "ai"]
+categories = ["command-line-utilities", "cryptography", "development-tools"]
 
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }

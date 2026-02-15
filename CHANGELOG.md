@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- MCP proxy tools: `zvault_query_database` (Postgres SQL via vault creds), `zvault_http_request` (HTTP with `zvault://` refs), `zvault_check_service` (health-check postgres/redis/http)
+- MCP tools roadmap: 50 planned tools across 5 tiers (see `docs/MCP_TOOLS_ROADMAP.md`)
+- Prepared all 4 crates for crates.io publishing (keywords, categories, homepage, documentation, rust-version)
+- Automated crates.io publishing in release workflow (dependency-order: storage → core → server → cli)
+- Manual publish script: `scripts/publish.sh` (dry-run by default, `--exec` to publish)
+- Homebrew formula with `brew services` support, shell completions, and `--HEAD` builds
+- `ZVAULT_DEV` env var bypass for license checks during development
+
+### Fixed
+
+- MCP server stdin deadlock: replaced synchronous `stdin.lock()` with `spawn_blocking` + `tokio::sync::mpsc` channel
+- `resolve_secret_value()` now correctly extracts key names from vault path for KV v2 nested `data` envelopes
+- All clippy lints in `mcp.rs` resolved
+
 ## [0.1.0] - 2026-02-11
 
 ### Added
@@ -52,5 +68,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fail-closed audit logging
 - No unsafe code (`#![deny(unsafe_code)]`)
 
-[Unreleased]: https://github.com/zvault/zvault/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/zvault/zvault/releases/tag/v0.1.0
+[Unreleased]: https://github.com/VanitasCaesar1/zvault/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/VanitasCaesar1/zvault/releases/tag/v0.1.0

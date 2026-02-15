@@ -1,0 +1,32 @@
+[package]
+name = "zvault-storage"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme = "README.md"
+keywords = ["vault", "storage", "backend", "encryption"]
+categories = ["database", "cryptography"]
+description = "Storage backend abstraction for ZVault — pluggable key-value storage with RocksDB, redb, and in-memory backends"
+
+[lints]
+workspace = true
+
+[features]
+default = ["rocksdb-backend"]
+rocksdb-backend = ["dep:rocksdb"]
+redb-backend = ["dep:redb"]
+postgres-backend = ["dep:sqlx"]
+
+[dependencies]
+async-trait.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+rocksdb = { version = "0.22", optional = true }
+redb = { version = "2", optional = true }
+sqlx = { workspace = true, optional = true }

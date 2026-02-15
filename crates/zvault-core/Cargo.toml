@@ -1,0 +1,40 @@
+[package]
+name = "zvault-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme = "README.md"
+keywords = ["vault", "secrets", "encryption", "barrier", "crypto"]
+categories = ["cryptography", "authentication"]
+description = "Core library for ZVault — AES-256-GCM barrier, Shamir seal, token auth, policy engine, audit logging"
+
+[lints]
+workspace = true
+
+[dependencies]
+zvault-storage = { path = "../zvault-storage", version = "0.1.1", default-features = false }
+
+async-trait.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+aes-gcm = "0.10"
+hkdf = "0.12"
+sha2 = "0.10"
+hmac = "0.12"
+hex = "0.4"
+zeroize = { version = "1", features = ["derive"] }
+base64 = "0.22"
+sharks = "0.5"
+uuid = { version = "1", features = ["v4"] }
+subtle = "2"
+chrono = { version = "0.4", features = ["serde"] }
+glob-match = "0.2"
+rcgen = "0.13"

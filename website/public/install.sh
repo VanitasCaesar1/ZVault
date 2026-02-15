@@ -7,7 +7,7 @@
 
 set -e
 
-REPO="zvault/zvault"
+REPO="VanitasCaesar1/zvault"
 INSTALL_DIR="$HOME/.zvault/bin"
 BINARY_NAME="zvault"
 
@@ -73,7 +73,7 @@ download_and_install() {
     trap 'rm -rf "$TMPDIR"' EXIT
 
     if command -v curl >/dev/null 2>&1; then
-        curl -fsSL "$URL" -o "${TMPDIR}/${TARBALL}" || error "Download failed. Release may not exist for your platform yet.\n  URL: ${URL}\n\n  Build from source instead:\n    cargo install --git https://github.com/${REPO} vaultrs-cli"
+        curl -fsSL "$URL" -o "${TMPDIR}/${TARBALL}" || error "Download failed. Release may not exist for your platform yet.\n  URL: ${URL}\n\n  Build from source instead:\n    cargo install --git https://github.com/${REPO} zvault-cli"
     else
         wget -q "$URL" -O "${TMPDIR}/${TARBALL}" || error "Download failed."
     fi
