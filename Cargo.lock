@@ -5338,7 +5338,7 @@ dependencies = [
 
 [[package]]
 name = "zvault-cli"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "aws-config",
@@ -5363,7 +5363,7 @@ dependencies = [
 
 [[package]]
 name = "zvault-core"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "aes-gcm",
  "async-trait",
@@ -5389,7 +5389,7 @@ dependencies = [
 
 [[package]]
 name = "zvault-server"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -5413,7 +5413,7 @@ dependencies = [
 
 [[package]]
 name = "zvault-storage"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "async-trait",
  "redb",

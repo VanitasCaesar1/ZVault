@@ -16,8 +16,8 @@ description = "ZVault HTTP server — REST API, web dashboard, and system routes
 workspace = true
 
 [dependencies]
-zvault-core = { path = "../zvault-core", version = "0.1.1" }
-zvault-storage = { path = "../zvault-storage", version = "0.1.1", default-features = false }
+zvault-core = { path = "../zvault-core", version = "0.2.0" }
+zvault-storage = { path = "../zvault-storage", version = "0.2.0", default-features = false }
 
 axum.workspace = true
 tower.workspace = true

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-02-15
+
 ### Added
 
 - MCP Tier 2 tools (11–20): `zvault_query_redis`, `zvault_query_mysql`, `zvault_query_mongodb`, `zvault_run_command`, `zvault_s3_list`, `zvault_s3_read`, `zvault_s3_write`, `zvault_query_clickhouse`, `zvault_search_meilisearch`, `zvault_rabbitmq_status`
@@ -77,5 +79,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fail-closed audit logging
 - No unsafe code (`#![deny(unsafe_code)]`)
 
-[Unreleased]: https://github.com/VanitasCaesar1/zvault/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/VanitasCaesar1/zvault/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/VanitasCaesar1/zvault/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/VanitasCaesar1/zvault/releases/tag/v0.1.0
