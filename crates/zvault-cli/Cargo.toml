@@ -31,6 +31,12 @@ base64 = "0.22"
 tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1"] }
 postgres-native-tls = "0.5"
 native-tls = "0.2"
+redis = { version = "0.27", features = ["tokio-comp", "tokio-native-tls-comp"] }
+mysql_async = { version = "0.34", default-features = false, features = ["default-rustls"] }
+aws-sdk-s3 = "1"
+aws-config = { version = "1", features = ["behavior-version-latest"] }
+aws-credential-types = "1"
+clickhouse = { version = "0.13", features = ["rustls-tls"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

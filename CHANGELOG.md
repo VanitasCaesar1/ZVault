@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- MCP Tier 2 tools (11–20): `zvault_query_redis`, `zvault_query_mysql`, `zvault_query_mongodb`, `zvault_run_command`, `zvault_s3_list`, `zvault_s3_read`, `zvault_s3_write`, `zvault_query_clickhouse`, `zvault_search_meilisearch`, `zvault_rabbitmq_status`
+- MongoDB support via Atlas Data API (HTTP-based, no native driver — `mongodb` crate incompatible with Rust 2024 edition)
+- S3/R2 support via `aws-sdk-s3` with configurable endpoint for Cloudflare R2 compatibility
+- ClickHouse support via official `clickhouse` crate with row-level result formatting
+- Shell command execution with vault-injected env vars and automatic secret scrubbing from output
+- Redis command execution with structured value formatting
+- MySQL query support with read-only safety checks
+- MeiliSearch search with configurable filters, sort, and field selection
+- RabbitMQ management API integration (overview, queues, connections, channels, nodes)
 - MCP proxy tools: `zvault_query_database` (Postgres SQL via vault creds), `zvault_http_request` (HTTP with `zvault://` refs), `zvault_check_service` (health-check postgres/redis/http)
 - MCP tools roadmap: 50 planned tools across 5 tiers (see `docs/MCP_TOOLS_ROADMAP.md`)
 - Prepared all 4 crates for crates.io publishing (keywords, categories, homepage, documentation, rust-version)
@@ -21,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - MCP server stdin deadlock: replaced synchronous `stdin.lock()` with `spawn_blocking` + `tokio::sync::mpsc` channel
 - `resolve_secret_value()` now correctly extracts key names from vault path for KV v2 nested `data` envelopes
-- All clippy lints in `mcp.rs` resolved
+- All clippy lints in `mcp.rs` resolved (proper refactoring, no `#[allow]` shortcuts)
 
 ## [0.1.0] - 2026-02-11
 

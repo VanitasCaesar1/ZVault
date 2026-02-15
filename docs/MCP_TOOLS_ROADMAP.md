@@ -56,15 +56,15 @@ Core vault operations + first proxy tools. Shipped in v0.1.0.
 
 ---
 
-## Tier 2: High Priority — Daily Dev Use (11–20) 🔜
+## Tier 2: Built (11–20) ✅
 
-These cover 95% of what developers need day-to-day. Build next.
+Daily dev tools. Shipped in v0.2.0.
 
 | # | Tool | Description | Tier |
 |---|------|-------------|------|
 | 11 | `zvault_query_redis` | Execute Redis commands (GET, SET, KEYS, INFO, etc.) via vault-stored Redis URL | Pro |
 | 12 | `zvault_query_mysql` | SQL queries via vault-stored MySQL/MariaDB credentials | Pro |
-| 13 | `zvault_query_mongodb` | MongoDB queries (find, aggregate, count) via vault-stored connection string | Pro |
+| 13 | `zvault_query_mongodb` | MongoDB queries (find, aggregate, count) via vault-stored Atlas Data API | Pro |
 | 14 | `zvault_run_command` | Execute a shell command with vault secrets injected as env vars | Pro |
 | 15 | `zvault_s3_list` | List objects in an S3/R2 bucket using vault-stored credentials | Pro |
 | 16 | `zvault_s3_read` | Read an object from S3/R2 (text files, configs, logs) | Pro |
@@ -167,12 +167,12 @@ Every proxy tool has a 30-second timeout. Long-running queries are killed.
 |------------|------------|
 | PostgreSQL | `tokio-postgres` + `postgres-native-tls` |
 | MySQL | `mysql_async` |
-| MongoDB | `mongodb` |
+| MongoDB | HTTP via `reqwest` (Atlas Data API — `mongodb` crate incompatible with Rust 2024 edition) |
 | Redis | `redis` (async) |
-| S3/R2 | `aws-sdk-s3` or `rusoto_s3` |
-| ClickHouse | `clickhouse-rs` |
-| MeiliSearch | `meilisearch-sdk` |
-| RabbitMQ | `lapin` or HTTP management API via `reqwest` |
+| S3/R2 | `aws-sdk-s3` + `aws-config` + `aws-credential-types` |
+| ClickHouse | `clickhouse` (official crate) |
+| MeiliSearch | HTTP via `reqwest` (lightweight, no SDK dependency) |
+| RabbitMQ | HTTP management API via `reqwest` |
 | SSH | `russh` |
 | gRPC | `tonic` |
 | Docker | HTTP API via `reqwest` |
@@ -184,7 +184,7 @@ Every proxy tool has a 30-second timeout. Long-running queries are killed.
 
 ```
 v0.1.0  ✅  Tools 1–10   (core + postgres/http/health)
-v0.2.0  🔜  Tools 11–20  (redis, mysql, mongo, s3, clickhouse, meilisearch, rabbitmq)
+v0.2.0  ✅  Tools 11–20  (redis, mysql, mongo, s3, clickhouse, meilisearch, rabbitmq, run_command)
 v0.3.0  📋  Tools 31–36  (pg introspection, redis monitor, grpc, jwt)
 v0.4.0  📋  Tools 21–30  (ssh, smtp, graphql, docker, k8s)
 v0.5.0  📋  Tools 37–50  (vault management, audit, enterprise)
