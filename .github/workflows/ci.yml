@@ -21,6 +21,9 @@ jobs:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
 
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libclang-dev cmake llvm
+
       - name: Format check
         run: cargo fmt --all -- --check
 
@@ -38,6 +41,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
 
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libclang-dev cmake llvm
+
       - name: Run tests
         run: cargo test --workspace
 
@@ -46,9 +52,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: rustsec/audit-check@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          # sharks 0.5.0 has RUSTSEC-2024-0398 (polynomial bias) with no fix available.
-          # Tracked for replacement with a custom constant-time Shamir implementation.
-          ignore: RUSTSEC-2024-0398
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+      # sharks 0.5.0 has RUSTSEC-2024-0398 (polynomial bias) with no fix available.
+      # Tracked for replacement with a custom constant-time Shamir implementation.
+      - name: Run audit
+        run: cargo audit --ignore RUSTSEC-2024-0398
