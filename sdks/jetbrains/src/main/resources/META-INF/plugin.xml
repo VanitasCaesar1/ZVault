@@ -1,0 +1,30 @@
+<idea-plugin>
+    <id>cloud.zvault.jetbrains</id>
+    <name>ZVault</name>
+    <vendor email="support@zvault.cloud" url="https://zvault.cloud">ZVault</vendor>
+
+    <description><![CDATA[
+    Manage secrets from ZVault Cloud directly in your JetBrains IDE.
+    <ul>
+      <li>Hover over zvault:// URIs to peek at secret metadata</li>
+      <li>Autocomplete secret keys</li>
+      <li>Inject secrets into run configurations</li>
+      <li>Browse project secrets in a tool window</li>
+    </ul>
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow id="ZVault" anchor="right"
+                    factoryClass="cloud.zvault.jetbrains.ZVaultToolWindowFactory"
+                    icon="/icons/zvault-13.svg"/>
+        <applicationConfigurable
+                parentId="tools"
+                instance="cloud.zvault.jetbrains.ZVaultSettingsConfigurable"
+                id="cloud.zvault.settings"
+                displayName="ZVault"/>
+        <applicationService
+                serviceImplementation="cloud.zvault.jetbrains.ZVaultSettings"/>
+    </extensions>
+</idea-plugin>

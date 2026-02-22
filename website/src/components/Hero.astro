@@ -13,28 +13,28 @@
     <!-- Problem agitation — make the pain real -->
     <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-red/30 bg-red/5 text-xs text-red/90 mb-6 animate-fade-in">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      Your AI assistant can see every secret in your .env right now
+      Your secrets are scattered across .env files, AWS SM, and 5 dashboards
     </div>
 
     <!-- Headline -->
     <h1 class="text-4xl sm:text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.05] max-w-4xl mx-auto mb-6 animate-fade-in-up" style="animation-delay: 0.1s;">
-      Stop leaking secrets<br/>to <span class="gradient-text">LLMs</span>
+      One vault. Every environment.<br/><span class="gradient-text">AI-native.</span>
     </h1>
 
     <!-- Subtext -->
     <p class="text-lg md:text-xl text-muted max-w-2xl mx-auto mb-10 leading-relaxed animate-fade-in-up" style="animation-delay: 0.2s;">
-      ZVault encrypts your secrets and gives AI tools safe references instead. Cursor, Copilot, and Kiro see <code class="text-purple font-mono text-base">zvault://</code> URIs — never real values.
+      ZVault manages your secrets from local dev to production. Your AI sees <code class="text-purple font-mono text-base">zvault://</code> references — never real values. Your app fetches secrets at runtime from ZVault Cloud. No AWS Secrets Manager. No scattered env vars.
     </p>
 
     <!-- CTAs -->
     <div class="flex items-center justify-center gap-4 flex-wrap mb-8 animate-fade-in-up" style="animation-delay: 0.3s;">
       <a href="https://docs.zvault.cloud/getting-started/quickstart" class="group inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-accent text-bg font-semibold hover:bg-accent/90 transition-all hover:shadow-[0_0_30px_rgba(34,211,238,0.2)]">
-        Get Started Free
+        Start Free (Local)
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="transition-transform group-hover:translate-x-0.5"><path d="M3 8h10m0 0L9 4m4 4L9 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </a>
-      <a href="https://github.com/ArcadeLabsInc/zvault" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-bg-card border border-border text-white font-semibold hover:bg-bg-card-hover hover:border-muted/30 transition-all">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-        Star on GitHub
+      <a href="https://app.zvault.cloud" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-bg-card border border-accent/30 text-accent font-semibold hover:bg-accent/5 hover:border-accent/50 transition-all">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 15c6.667-6 13.333 0 20-6"/><path d="M9 22c1.798-4.56 3.1-8.272 6-12"/><path d="M15 2c-1.798 4.56-3.1 8.272-6 12"/></svg>
+        Try Cloud
       </a>
     </div>
 
@@ -58,7 +58,11 @@
       </span>
       <span class="flex items-center gap-1">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
-        Works offline
+        Dev to prod
+      </span>
+      <span class="flex items-center gap-1">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+        Replaces AWS SM
       </span>
       <span class="flex items-center gap-1">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>

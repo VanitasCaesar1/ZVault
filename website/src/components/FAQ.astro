@@ -2,7 +2,15 @@
 const faqs = [
   {
     q: 'Is ZVault really free?',
-    a: 'Yes. The CLI, local vault, all engines (KV, Transit, PKI), web dashboard, and Shamir seal are free forever under MIT. No credit card, no time limit. You only pay if you want AI Mode.',
+    a: 'Yes. The CLI, local vault, all engines (KV, Transit, PKI), web dashboard, and Shamir seal are free forever under MIT. No credit card, no account needed. You only pay if you want cloud vault + AI Mode.',
+  },
+  {
+    q: 'Can I use ZVault in production?',
+    a: 'Yes. With ZVault Cloud (Pro+), you manage secrets per environment (dev/staging/prod) from one dashboard. Your app fetches secrets at runtime via SDK or CLI using service tokens. No AWS Secrets Manager needed.',
+  },
+  {
+    q: 'Does this replace AWS Secrets Manager?',
+    a: 'For most teams, yes. ZVault Cloud gives you multi-environment secrets, service tokens for CI/CD and production, runtime SDKs (Node, Go, Python), and AI integration — all for $8/dev/mo flat instead of $0.40/secret/mo.',
   },
   {
     q: 'What is AI Mode?',
@@ -10,35 +18,27 @@ const faqs = [
   },
   {
     q: 'Where are my secrets stored?',
-    a: 'On your machine, encrypted with AES-256-GCM. ZVault is local-first — your secrets never leave your device unless you explicitly self-host a remote server. There is no cloud service holding your data.',
+    a: 'Free tier: on your machine, encrypted with AES-256-GCM. Cloud tier: encrypted in ZVault Cloud (AES-256-GCM, per-org encryption keys). Your secrets are always encrypted at rest — we never store plaintext.',
   },
   {
-    q: 'What does "per developer" mean?',
-    a: 'A "developer" is anyone who uses AI Mode (MCP server + IDE integration). Team members who only access the vault via CLI or API don\'t need a paid seat.',
+    q: 'What happens if ZVault Cloud goes down?',
+    a: 'SDKs cache secrets in memory at boot, so your running apps continue working. For new deployments, we maintain 99.9% uptime SLA (Team+) with multi-region infrastructure.',
   },
   {
     q: 'Can I self-host for free?',
-    a: 'Absolutely. Self-host the vault, CLI, and dashboard for free. AI Mode (MCP server) requires a Pro license key, validated locally via Ed25519 signatures — no phone-home.',
+    a: 'Absolutely. Self-host the vault, CLI, and dashboard for free. Cloud features (environments, service tokens, SDKs, AI Mode) require a Pro license key, validated locally via Ed25519 signatures — no phone-home.',
   },
   {
-    q: 'What if I lose my unseal keys?',
-    a: 'If you lose all unseal key shares and don\'t have a recovery key, your vault data is unrecoverable by design. This is a security feature. Store shares in separate secure locations.',
-  },
-  {
-    q: 'How does the MCP server work?',
-    a: 'The MCP server runs locally alongside your vault. Your IDE\'s AI connects to it and can list secret paths, check metadata, and understand your secret structure — but it never receives the actual secret values.',
-  },
-  {
-    q: 'Can I use ZVault in CI/CD?',
-    a: 'Yes. Use `zvault run` in your CI pipeline to inject secrets at runtime. No secrets in environment variables, no secrets in config files. Works with GitHub Actions, CircleCI, GitLab CI, and any other CI system.',
+    q: 'What does "per developer" mean?',
+    a: 'A "developer" is anyone who uses cloud vault or AI Mode. Service tokens for CI/CD and production don\'t count as seats.',
   },
   {
     q: 'How is this different from HashiCorp Vault?',
-    a: 'HashiCorp Vault requires significant setup and operational overhead. ZVault installs in 2 minutes, imports your .env, and has native AI integration that Vault doesn\'t offer. Plus it\'s MIT licensed, not BSL.',
+    a: 'HashiCorp Vault requires significant setup and operational overhead. ZVault installs in 2 minutes, imports your .env, has native AI integration, and includes a cloud platform — all MIT licensed, not BSL.',
   },
   {
     q: 'What if I cancel?',
-    a: 'Your vault and secrets remain intact. You just lose AI Mode features. The vault itself is always free and open source.',
+    a: 'Your local vault and secrets remain intact. Cloud secrets can be exported before cancellation. The local vault is always free and open source.',
   },
 ];
 ---

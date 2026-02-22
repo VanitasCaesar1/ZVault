@@ -1,0 +1,134 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "Total Secrets",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "sum(zvault_secrets_count)", "legendFormat": "Total" }
+      ],
+      "fieldConfig": {
+        "defaults": { "thresholds": { "steps": [{ "color": "green", "value": null }] } }
+      }
+    },
+    {
+      "title": "API Requests/min",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "targets": [
+        { "expr": "sum(rate(zvault_api_requests_total[1m])) * 60", "legendFormat": "req/min" }
+      ]
+    },
+    {
+      "title": "Error Rate",
+      "type": "gauge",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(zvault_api_requests_total{status=~\"5..\"}[5m])) / sum(rate(zvault_api_requests_total[5m])) * 100",
+          "legendFormat": "Error %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "P99 Latency",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(zvault_api_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P99"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "title": "Secret Reads Over Time",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [
+        {
+          "expr": "sum(rate(zvault_secret_reads_total[5m])) by (project) * 60",
+          "legendFormat": "{{project}}"
+        }
+      ]
+    },
+    {
+      "title": "Auth Failures",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        {
+          "expr": "sum(rate(zvault_token_auth_failures_total[5m])) * 60",
+          "legendFormat": "Failures/min"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "fixed", "fixedColor": "red" } }
+      }
+    },
+    {
+      "title": "Cache Hit Rate",
+      "type": "gauge",
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 12 },
+      "targets": [
+        {
+          "expr": "sum(rate(zvault_cache_hits_total[5m])) / (sum(rate(zvault_cache_hits_total[5m])) + sum(rate(zvault_cache_misses_total[5m]))) * 100",
+          "legendFormat": "Hit Rate"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent" } }
+    },
+    {
+      "title": "Secrets Due for Rotation",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 12 },
+      "targets": [
+        { "expr": "sum(zvault_rotation_due_count)", "legendFormat": "Overdue" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Active Service Tokens",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 12 },
+      "targets": [
+        { "expr": "sum(zvault_service_tokens_count)", "legendFormat": "Tokens" }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["zvault", "secrets"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "title": "ZVault Cloud",
+  "uid": "zvault-cloud"
+}

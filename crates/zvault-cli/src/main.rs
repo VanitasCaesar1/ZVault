@@ -5,6 +5,7 @@
 
 #![allow(clippy::print_stdout, clippy::print_stderr)]
 
+mod cloud;
 mod license;
 mod mcp;
 mod setup;
@@ -19,15 +20,15 @@ use serde_json::Value;
 
 // ── ANSI color helpers ───────────────────────────────────────────────
 
-const RESET: &str = "\x1b[0m";
-const BOLD: &str = "\x1b[1m";
-const DIM: &str = "\x1b[2m";
-const RED: &str = "\x1b[31m";
-const GREEN: &str = "\x1b[32m";
-const YELLOW: &str = "\x1b[33m";
-const MAGENTA: &str = "\x1b[35m";
-const CYAN: &str = "\x1b[36m";
-const WHITE: &str = "\x1b[37m";
+pub(crate) const RESET: &str = "\x1b[0m";
+pub(crate) const BOLD: &str = "\x1b[1m";
+pub(crate) const DIM: &str = "\x1b[2m";
+pub(crate) const RED: &str = "\x1b[31m";
+pub(crate) const GREEN: &str = "\x1b[32m";
+pub(crate) const YELLOW: &str = "\x1b[33m";
+pub(crate) const MAGENTA: &str = "\x1b[35m";
+pub(crate) const CYAN: &str = "\x1b[36m";
+pub(crate) const WHITE: &str = "\x1b[37m";
 const BG_RED: &str = "\x1b[41m";
 const BG_GREEN: &str = "\x1b[42m";
 
@@ -229,9 +230,9 @@ enum Commands {
         #[command(subcommand)]
         action: RotateCommands,
     },
-    /// Log in via OIDC (opens browser for Spring authentication).
+    /// Log in to `ZVault` Cloud (opens browser) or local vault via OIDC.
     Login {
-        /// Use OIDC authentication (opens browser).
+        /// Use OIDC authentication against local vault server (opens browser).
         #[arg(long)]
         oidc: bool,
     },
@@ -246,6 +247,94 @@ enum Commands {
         /// Path to the backup file.
         file: String,
     },
+    /// `ZVault` Cloud operations — manage secrets in the cloud.
+    Cloud {
+        #[command(subcommand)]
+        action: CloudCommands,
+    },
+    /// Log out of `ZVault` Cloud (remove saved token).
+    Logout,
+}
+
+#[derive(Subcommand)]
+enum CloudCommands {
+    /// Link current directory to a cloud project (writes .zvault.toml).
+    Init {
+        /// Organization slug.
+        #[arg(long)]
+        org: Option<String>,
+        /// Project name (default: current directory name).
+        #[arg(long)]
+        project: Option<String>,
+    },
+    /// Push local .env secrets to cloud project.
+    Push {
+        /// Path to .env file (default: ".env").
+        #[arg(long)]
+        file: Option<String>,
+        /// Target environment (default: from .zvault.toml).
+        #[arg(long)]
+        env: Option<String>,
+    },
+    /// Pull secrets from cloud to a local file.
+    Pull {
+        /// Environment to pull from (default: from .zvault.toml).
+        #[arg(long)]
+        env: Option<String>,
+        /// Output file path (default: stdout, or ".env" for env format).
+        #[arg(long)]
+        output: Option<String>,
+        /// Output format: env, json, or yaml.
+        #[arg(long, default_value = "env")]
+        format: String,
+    },
+    /// Show linked project, current env, and token status.
+    Status,
+    /// List environments for current project.
+    Envs,
+    /// List secret keys for an environment.
+    Secrets {
+        /// Environment (default: from .zvault.toml).
+        #[arg(long)]
+        env: Option<String>,
+    },
+    /// Service token management.
+    Token {
+        #[command(subcommand)]
+        action: CloudTokenCommands,
+    },
+    /// Run a command with secrets injected from cloud.
+    Run {
+        /// Environment to resolve secrets from.
+        #[arg(long)]
+        env: String,
+        /// The command and arguments to run.
+        #[arg(trailing_var_arg = true, required = true)]
+        command: Vec<String>,
+    },
+}
+
+#[derive(Subcommand)]
+enum CloudTokenCommands {
+    /// Create a service token scoped to project + environment.
+    Create {
+        /// Token name (e.g., "railway-deploy").
+        #[arg(long)]
+        name: String,
+        /// Environment scope (default: from .zvault.toml).
+        #[arg(long)]
+        env: Option<String>,
+        /// Time-to-live (e.g., "90d", "1y"). Default: no expiry.
+        #[arg(long)]
+        ttl: Option<String>,
+    },
+    /// Revoke a service token.
+    Revoke {
+        /// Token ID to revoke.
+        id: String,
+    },
+    /// List service tokens for current project.
+    List,
 }
 
 #[derive(Subcommand)]
@@ -529,20 +618,20 @@ enum RotateCommands {
 
 // ── Pretty output helpers ────────────────────────────────────────────
 
-fn header(icon: &str, title: &str) {
+pub(crate) fn header(icon: &str, title: &str) {
     println!("{BOLD}{CYAN}{icon} {title}{RESET}");
     println!("{DIM}─────────────────────────────────────────{RESET}");
 }
 
-fn kv_line(key: &str, value: &str) {
+pub(crate) fn kv_line(key: &str, value: &str) {
     println!("  {DIM}{key:<20}{RESET} {WHITE}{value}{RESET}");
 }
 
-fn success(msg: &str) {
+pub(crate) fn success(msg: &str) {
     println!("{GREEN}{BOLD}✓{RESET} {msg}");
 }
 
-fn warning(msg: &str) {
+pub(crate) fn warning(msg: &str) {
     println!("{YELLOW}{BOLD}⚠{RESET} {YELLOW}{msg}{RESET}");
 }
 
@@ -1084,6 +1173,8 @@ async fn run(client: Client, cmd: Commands) -> Result<()> {
         Commands::Notify { action } => cmd_notify(&client, action).await,
         Commands::Rotate { action } => cmd_rotate(&client, action).await,
         Commands::Login { oidc } => cmd_login(&client, oidc).await,
+        Commands::Logout => cloud::cmd_cloud_logout().await,
+        Commands::Cloud { action } => cmd_cloud(&client, action).await,
         Commands::Backup { output } => cmd_backup(&client, output.as_deref()).await,
         Commands::Restore { file } => cmd_restore(&client, &file).await,
     }
@@ -1577,7 +1668,7 @@ async fn cmd_approle(client: &Client, action: AppRoleCommands) -> Result<()> {
 /// - `KEY="quoted value"` and `KEY='single quoted'`
 /// - `# comments` and blank lines (skipped)
 /// - `export KEY=VALUE` (strips `export` prefix)
-fn parse_env_file(content: &str) -> Vec<(String, String)> {
+pub(crate) fn parse_env_file(content: &str) -> Vec<(String, String)> {
     let mut entries = Vec::new();
 
     for line in content.lines() {
@@ -1619,7 +1710,7 @@ fn parse_env_file(content: &str) -> Vec<(String, String)> {
 }
 
 /// Detect the project name from the current directory.
-fn detect_project_name() -> Result<String> {
+pub(crate) fn detect_project_name() -> Result<String> {
     let cwd = std::env::current_dir().context("failed to get current directory")?;
     let name = cwd
         .file_name()
@@ -2959,7 +3050,8 @@ async fn cmd_rotate(client: &Client, action: RotateCommands) -> Result<()> {
 
 async fn cmd_login(client: &Client, oidc: bool) -> Result<()> {
     if !oidc {
-        bail!("only --oidc login is supported — for token auth, set VAULT_TOKEN");
+        // Default: cloud login via browser OAuth (Clerk).
+        return cloud::cmd_cloud_login().await;
     }
 
     println!();
@@ -3161,4 +3253,35 @@ fn days_to_ymd(days: u64) -> (u64, u64, u64) {
     };
     let y = if m <= 2 { y.saturating_add(1) } else { y };
     (y, m, d)
+}
+
+// ── Cloud command dispatch ───────────────────────────────────────────
+
+async fn cmd_cloud(_client: &Client, action: CloudCommands) -> Result<()> {
+    match action {
+        CloudCommands::Init { org, project } => {
+            cloud::cmd_cloud_init(org.as_deref(), project.as_deref()).await
+        }
+        CloudCommands::Push { file, env } => {
+            cloud::cmd_cloud_push(file.as_deref(), env.as_deref()).await
+        }
+        CloudCommands::Pull { env, output, format } => {
+            cloud::cmd_cloud_pull(env.as_deref(), output.as_deref(), &format).await
+        }
+        CloudCommands::Status => cloud::cmd_cloud_status().await,
+        CloudCommands::Envs => cloud::cmd_cloud_envs().await,
+        CloudCommands::Secrets { env } => cloud::cmd_cloud_secrets(env.as_deref()).await,
+        CloudCommands::Token { action } => cmd_cloud_token(action).await,
+        CloudCommands::Run { env, command } => cloud::cmd_cloud_run(&env, &command).await,
+    }
+}
+
+async fn cmd_cloud_token(action: CloudTokenCommands) -> Result<()> {
+    match action {
+        CloudTokenCommands::Create { name, env, ttl } => {
+            cloud::cmd_cloud_token_create(&name, env.as_deref(), ttl.as_deref()).await
+        }
+        CloudTokenCommands::Revoke { id } => cloud::cmd_cloud_token_revoke(&id).await,
+        CloudTokenCommands::List => cloud::cmd_cloud_token_list().await,
+    }
 }

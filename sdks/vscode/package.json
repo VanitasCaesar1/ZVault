@@ -1,0 +1,84 @@
+{
+  "name": "zvault-vscode",
+  "displayName": "ZVault Secrets",
+  "description": "Inline secret peek, autocomplete, and management for ZVault",
+  "version": "0.1.0",
+  "publisher": "zvault",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "onLanguage:typescript",
+    "onLanguage:javascript",
+    "onLanguage:python",
+    "onLanguage:go",
+    "onLanguage:rust",
+    "onLanguage:yaml",
+    "onLanguage:json",
+    "onLanguage:dotenv"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "zvault.listSecrets",
+        "title": "ZVault: List Secrets"
+      },
+      {
+        "command": "zvault.peekSecret",
+        "title": "ZVault: Peek Secret Value"
+      },
+      {
+        "command": "zvault.refreshSecrets",
+        "title": "ZVault: Refresh Secret Cache"
+      },
+      {
+        "command": "zvault.switchEnv",
+        "title": "ZVault: Switch Environment"
+      }
+    ],
+    "configuration": {
+      "title": "ZVault",
+      "properties": {
+        "zvault.token": {
+          "type": "string",
+          "description": "ZVault service token (zvt_...)"
+        },
+        "zvault.orgId": {
+          "type": "string",
+          "description": "Organization ID"
+        },
+        "zvault.projectId": {
+          "type": "string",
+          "description": "Project ID"
+        },
+        "zvault.env": {
+          "type": "string",
+          "default": "development",
+          "description": "Default environment"
+        },
+        "zvault.url": {
+          "type": "string",
+          "default": "https://api.zvault.cloud",
+          "description": "ZVault API URL"
+        },
+        "zvault.showInlineHints": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inline hints for secret references"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
+    "watch": "npm run build -- --watch",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.7.0"
+  }
+}

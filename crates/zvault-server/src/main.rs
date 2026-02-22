@@ -32,6 +32,8 @@ use zvault_core::transit::TransitEngine;
 use zvault_storage::MemoryBackend;
 
 use zvault_server::config::{ServerConfig, StorageBackendType};
+#[cfg(feature = "cloud")]
+use zvault_server::cloud;
 use zvault_server::hardening;
 use zvault_server::middleware::auth_middleware;
 use zvault_server::routes;
@@ -298,6 +300,18 @@ async fn build_app_state(
         approle_store: Some(approle_store),
         spring_oauth: config.spring_oauth.clone(),
         audit_file_path: config.audit_file_path.clone(),
+        #[cfg(feature = "cloud")]
+        cloud_pg_pool: {
+            if let Some(ref db_url) = config.cloud_database_url {
+                let pool = sqlx::PgPool::connect(db_url)
+                    .await
+                    .context("failed to connect to cloud database")?;
+                info!("cloud PostgreSQL pool connected");
+                Some(pool)
+            } else {
+                None
+            }
+        },
     });
 
     Ok((state, lease_manager))
@@ -358,7 +372,12 @@ fn build_router(state: Arc<AppState>) -> Router {
     // Metrics endpoint (unauthenticated — Prometheus scrapes this).
     app = app.nest("/v1/sys/metrics", routes::metrics::router());
 
-    app.merge(routes::ui::router())
+    // Capture cloud pool before state is moved into with_state().
+    #[cfg(feature = "cloud")]
+    let cloud_pool = state.cloud_pg_pool.clone();
+
+    let mut final_app = app
+        .merge(routes::ui::router())
         .merge(routes::docs::router())
         .layer(TraceLayer::new_for_http())
         .layer(cors)
@@ -374,7 +393,18 @@ fn build_router(state: Arc<AppState>) -> Router {
             axum::http::header::CACHE_CONTROL,
             HeaderValue::from_static("no-store"),
         ))
-        .with_state(state)
+        .with_state(state);
+
+    // Cloud API routes (when cloud feature is enabled and database is configured).
+    #[cfg(feature = "cloud")]
+    {
+        if let Some(pool) = cloud_pool {
+            final_app = final_app.merge(cloud::routes::cloud_router(pool));
+            tracing::info!("cloud API enabled at /v1/cloud/*");
+        }
+    }
+
+    final_app
 }
 
 /// Maximum retries per tick when the storage backend is unreachable.

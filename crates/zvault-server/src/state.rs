@@ -54,6 +54,9 @@ pub struct AppState {
     pub spring_oauth: Option<SpringOAuthConfig>,
     /// Path to the audit log file (for reading audit entries via API).
     pub audit_file_path: Option<String>,
+    /// `PostgreSQL` pool for cloud API (None if cloud mode is not enabled).
+    #[cfg(feature = "cloud")]
+    pub cloud_pg_pool: Option<sqlx::PgPool>,
 }
 
 impl std::fmt::Debug for AppState {

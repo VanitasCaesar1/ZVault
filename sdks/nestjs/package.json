@@ -1,0 +1,33 @@
+{
+  "name": "@zvault/nestjs",
+  "version": "0.1.0",
+  "description": "ZVault module for NestJS — decorator-based secret injection",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["zvault", "nestjs", "secrets", "config"],
+  "license": "MIT",
+  "peerDependencies": {
+    "@nestjs/common": ">=10.0.0",
+    "@nestjs/core": ">=10.0.0"
+  },
+  "devDependencies": {
+    "@nestjs/common": "^10.0.0",
+    "@nestjs/core": "^10.0.0",
+    "reflect-metadata": "^0.2.0",
+    "typescript": "^5.7.0",
+    "tsup": "^8.0.0"
+  }
+}

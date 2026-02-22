@@ -6,6 +6,9 @@ members = [
     "crates/zvault-server",
     "crates/zvault-cli",
 ]
+exclude = [
+    "sdks/rust",
+]
 
 [workspace.package]
 version = "0.2.0"
@@ -48,7 +51,7 @@ axum = { version = "0.8", features = ["macros"] }
 tower = { version = "0.5", features = ["limit"] }
 tower-http = { version = "0.6", features = ["cors", "trace", "set-header", "fs"] }
 anyhow = "1"
-sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres"], default-features = false }
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "derive", "uuid", "chrono", "json"], default-features = false }
 
 [profile.release]
 opt-level = 3

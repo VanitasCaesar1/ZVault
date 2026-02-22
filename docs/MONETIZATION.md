@@ -1,6 +1,7 @@
 # ZVault — Monetization & Go-to-Market Plan
 
-> The AI-native secrets manager. Let LLMs build your app without leaking your keys.
+> The AI-native secrets manager — dev to prod, one tool. Replaces AWS Secrets Manager, Doppler, and scattered .env files.
+> Updated: 2026-02-20 (Cloud Platform Pivot)
 
 ---
 
@@ -22,8 +23,15 @@ Every developer using AI coding tools faces the same dilemma:
    - HashiCorp Vault: complex, no LLM awareness, $0.03/secret/month at scale
    - Infisical: SaaS, your secrets on their servers
    - Doppler: SaaS, same problem
+   - AWS Secrets Manager: $0.40/secret/month + API call costs, no AI awareness, deep vendor lock-in
    - 1Password: not designed for programmatic access
    - `.env` files: the root cause of the problem
+
+5. **The deployment gap is real:**
+   - Devs manage secrets in .env locally, then copy-paste into Vercel/Railway/AWS dashboards
+   - No single source of truth — secrets scattered across 5 platforms
+   - Rotating a key means updating it in 5 places manually
+   - AWS SM costs $0.40/secret/month — a team with 50 secrets pays $20/mo just for storage
 
 ---
 
@@ -145,152 +153,100 @@ For indie devs and small teams trying to hit $200/mo, you need volume at low pri
 | Tier | Price | Target | What They Get |
 |------|-------|--------|---------------|
 | **Open Source** | Free forever | Individual devs, OSS | Local vault, CLI, .env import, single project, community support |
-| **Pro** | $8/mo per developer | Freelancers, indie hackers | AI Mode (MCP server), team sharing, 5 projects, secret rotation, priority support |
-| **Team** | $19/mo per developer | Startups (5-50 eng) | Everything in Pro + OIDC SSO, audit log export, unlimited projects, Slack alerts |
-| **Enterprise** | $49/mo per developer | Mid-market | Everything in Team + HA clustering, K8s operator, namespaces, SLA, dedicated support |
+| **Pro** | $12/mo per developer | Freelancers, indie hackers | AI Mode (MCP server), cloud vault, 3 envs, 50K API req/mo, 5 projects, priority email |
+| **Team** | $27/mo per developer | Startups (5-50 eng) | Everything in Pro + 5 envs, 500K API req/mo, OIDC SSO, audit log export, unlimited projects, Slack alerts |
+| **Business** | $89/mo per developer | Scale-ups (50-200 eng) | Everything in Team + 15 envs, 5M API req/mo, audit log streaming, secret rotation, dynamic credentials, Terraform provider, 99.5% SLA |
+| **Enterprise** | $529/mo per developer | Mid-market (200+ eng) | Everything in Business + unlimited envs/API, HA clustering, K8s operator, SCIM, dedicated infra, custom SLA, dedicated support |
 
 ### Revenue Math to $200/mo
 
 You need just:
-- 25 Pro users ($8 × 25 = $200), OR
-- 11 Team users ($19 × 11 = $209), OR
-- 5 Enterprise users ($49 × 5 = $245), OR
-- Mix: 10 Pro + 5 Team = $80 + $95 = $175 + a couple more
+- 17 Pro users ($12 × 17 = $204), OR
+- 8 Team users ($27 × 8 = $216), OR
+- 3 Business users ($89 × 3 = $267), OR
+- 1 Enterprise user ($529 × 1 = $529), OR
+- Mix: 8 Pro + 2 Team + 1 Business = $96 + $54 + $89 = $239
 
 This is very achievable with the right positioning.
 
 ### What's Free vs Paid
 
-| Feature | Free | Pro ($8) | Team ($19) | Enterprise ($49) |
-|---------|------|----------|------------|-------------------|
-| Local encrypted vault | ✅ | ✅ | ✅ | ✅ |
-| CLI (init, import, run) | ✅ | ✅ | ✅ | ✅ |
-| .env import/export | ✅ | ✅ | ✅ | ✅ |
-| Web dashboard | ✅ | ✅ | ✅ | ✅ |
-| KV, Transit, PKI engines | ✅ | ✅ | ✅ | ✅ |
-| **AI Mode (MCP server)** | ❌ | ✅ | ✅ | ✅ |
-| **zvault:// references** | ❌ | ✅ | ✅ | ✅ |
-| **llms.txt generation** | ❌ | ✅ | ✅ | ✅ |
-| **Secret rotation** | ❌ | ✅ | ✅ | ✅ |
-| Projects | 1 | 5 | Unlimited | Unlimited |
-| Team sharing | ❌ | ❌ | ✅ | ✅ |
-| OIDC SSO | ❌ | ❌ | ✅ | ✅ |
-| Audit log export | ❌ | ❌ | ✅ | ✅ |
-| Slack/Discord alerts | ❌ | ❌ | ✅ | ✅ |
-| HA clustering | ❌ | ❌ | ❌ | ✅ |
-| K8s operator | ❌ | ❌ | ❌ | ✅ |
-| Namespaces | ❌ | ❌ | ❌ | ✅ |
-| SLA | ❌ | ❌ | ❌ | ✅ |
+| Feature | Free | Pro ($12/dev/mo) | Team ($27/dev/mo) | Business ($89/dev/mo) | Enterprise ($529/dev/mo) |
+|---------|------|------------------|-------------------|-----------------------|--------------------------|
+| Local encrypted vault | ✅ | ✅ | ✅ | ✅ | ✅ |
+| CLI (init, import, run) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| .env import/export | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Local web dashboard | ✅ | ✅ | ✅ | ✅ | ✅ |
+| KV + Transit + PKI engines | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Cloud vault (zvault.cloud)** | — | ✅ | ✅ | ✅ | ✅ |
+| **Environments per project** | — | 3 | 5 | 15 | Unlimited |
+| **API requests/mo** | — | 50K | 500K | 5M | Unlimited |
+| **Cloud dashboard** | — | ✅ | ✅ | ✅ | ✅ |
+| **Service tokens (CI/CD + prod)** | — | ✅ | ✅ | ✅ | ✅ |
+| **SDKs (13 languages)** | — | ✅ | ✅ | ✅ | ✅ |
+| **AI Mode (MCP server)** | — | ✅ | ✅ | ✅ | ✅ |
+| **zvault:// references** | — | ✅ | ✅ | ✅ | ✅ |
+| **IDE setup (Cursor, Kiro, Continue)** | — | ✅ | ✅ | ✅ | ✅ |
+| Projects | 1 local | 5 | Unlimited | Unlimited | Unlimited |
+| Team members | — | 1 | Unlimited | Unlimited | Unlimited |
+| RBAC + env-level permissions | — | — | ✅ | ✅ | ✅ |
+| SSO (OIDC/SAML) | — | — | ✅ | ✅ | ✅ |
+| Audit log export | — | — | ✅ | ✅ | ✅ |
+| Slack/Discord alerts | — | — | ✅ | ✅ | ✅ |
+| Audit log streaming | — | — | — | ✅ | ✅ |
+| Secret rotation | — | — | — | ✅ | ✅ |
+| Dynamic credentials | — | — | — | ✅ | ✅ |
+| Terraform provider | — | — | — | ✅ | ✅ |
+| SLA guarantee | — | — | — | 99.5% | 99.9% |
+| Dedicated infrastructure | — | — | — | — | ✅ |
+| SCIM provisioning | — | — | — | — | ✅ |
+| Custom SLA | — | — | — | — | ✅ |
+| Priority support | — | Email | Email | Priority email | Dedicated |
 
 ---
 
-## Implementation Plan (What to Build)
+## Implementation Plan (Cloud-First)
 
-### Phase 1: The Hook (Week 1-2) — FREE, gets users in the door
+### Phase 1: Local Hook (SHIPPED ✅)
 
-Build the frictionless onboarding that makes people go "oh shit, this is nice":
+The frictionless local experience is already live:
 
 ```bash
-# One command install
 curl -fsSL https://zvault.cloud/install.sh | sh
-
-# One command setup in any project
-zvault init
-
-# Import existing .env (the magic moment)
-zvault import .env
-# Output:
-# ✓ Imported 12 secrets from .env
-# ✓ Created .env.zvault (safe for git)
-# ✓ Original .env backed up to .env.backup
-# ✓ Added .env to .gitignore
-#
-# Your secrets are now encrypted at rest.
-# Run your app with: zvault run -- npm run dev
-
-# Run your app (secrets injected at runtime)
+zvault init && zvault import .env
 zvault run -- npm run dev
 ```
 
-What this does technically:
-1. `zvault init` — starts a local ZVault server in the background (or uses an existing one), creates a project namespace
-2. `zvault import .env` — reads each KEY=VALUE, stores in the vault, replaces .env with zvault:// references
-3. `zvault run -- <cmd>` — resolves all zvault:// references, sets real env vars, executes the command
+### Phase 2: AI Mode + MCP (SHIPPED ✅)
 
-### Phase 2: The AI Mode (Week 3-4) — PAID, this is the money maker
+MCP server, zvault:// references, IDE setup, llms.txt — all shipped in v0.2.0.
 
-The MCP server + zvault:// reference system:
+### Phase 3: ZVault Cloud (Week 1-4) — THE PLATFORM
 
-1. **MCP Server** — `zvault mcp-server` starts an MCP-compatible server
-   - Tools: list_secrets, describe_secret, check_env, generate_template, run_with_secrets
-   - LLMs can query what secrets exist without seeing values
-   - LLMs can trigger `zvault run` to test code with real secrets
+This is the big pivot. ZVault becomes a full secrets platform that replaces AWS Secrets Manager.
 
-2. **zvault:// URI scheme** — replaces actual values in all config files
-   - `.env` files: `STRIPE_KEY=zvault://payments/stripe-live`
-   - `docker-compose.yml`: environment variables reference zvault
-   - Any config file: zvault resolves at runtime
+1. **Cloud Backend** — PostgreSQL multi-tenant API (orgs → projects → environments → secrets)
+2. **Cloud Dashboard** — app.zvault.cloud (auth, project view, env tabs, secret editor, team management)
+3. **CLI Cloud Mode** — `zvault login`, `zvault cloud push`, `zvault run --env prod`
+4. **Service Tokens** — scoped to project + environment, for CI/CD and production runtime
+5. **SDKs** — Node.js, Go, Python thin HTTP clients for runtime secret fetching
+6. **CI/CD Integrations** — GitHub Actions, Docker entrypoint, Railway/Fly.io/Vercel docs
 
-3. **llms.txt** — `zvault llms-txt` generates a file that tells AI tools how to work with the project
-   ```
-   # llms.txt
-   This project uses ZVault for secrets management.
-   
-   ## Rules
-   - Never hardcode secret values in code or config files
-   - Use zvault:// references for all secrets
-   - To run the project: zvault run -- npm run dev
-   - To add a new secret: zvault set <path> <value>
-   
-   ## Available Secrets
-   - zvault://payments/stripe-live (Stripe API key, last rotated 2026-01-15)
-   - zvault://database/postgres-prod (PostgreSQL connection string)
-   - zvault://aws/main-access-key (AWS access key for S3)
-   - zvault://auth/jwt-secret (JWT signing secret)
-   
-   ## Environment Template
-   STRIPE_KEY=zvault://payments/stripe-live
-   DATABASE_URL=zvault://database/postgres-prod
-   AWS_ACCESS_KEY_ID=zvault://aws/main-access-key
-   JWT_SECRET=zvault://auth/jwt-secret
-   ```
+### Phase 4: Production Hardening (Week 5-8)
 
-4. **IDE Integration Setup Commands**
-   ```bash
-   # Cursor
-   zvault setup cursor
-   # → Creates .cursor/mcp.json with zvault MCP server config
-   # → Creates .cursorrules addition about zvault usage
-   
-   # Kiro
-   zvault setup kiro
-   # → Creates .kiro/settings/mcp.json with zvault MCP server config
-   # → Creates .kiro/steering/zvault.md with usage instructions
-   
-   # VS Code + Continue
-   zvault setup continue
-   # → Creates .continue/config.json with zvault MCP server
-   
-   # Generic
-   zvault setup generic
-   # → Creates llms.txt + .env.zvault
-   ```
+1. Multi-region deployment + 99.9% SLA
+2. SOC 2 Type I preparation
+3. Secret rotation with auto-propagation
+4. Import from AWS SM / Doppler migration tools
+5. Environment promotion (`promote staging → prod`)
 
-### Phase 3: Team Features (Week 5-6) — TEAM tier
+### Phase 5: Team & Enterprise (Week 9+)
 
-1. **Shared vault** — team members connect to a shared ZVault server
-2. **RBAC** — devs see dev secrets, ops sees prod secrets
-3. **Audit trail** — who accessed what, when, from which IDE
-4. **Secret rotation** — auto-rotate and notify team
-5. **Slack/Discord webhooks** — alerts on secret access, rotation, policy violations
-
-### Phase 4: Enterprise (Week 8+) — ENTERPRISE tier
-
-1. HA clustering (Raft)
-2. K8s operator
-3. Namespaces (dev/staging/prod isolation)
-4. OIDC SSO
-5. Compliance reports
+1. RBAC with environment-level permissions
+2. OIDC / SAML SSO, SCIM provisioning
+3. Slack/Discord notifications
+4. K8s operator, Terraform provider
+5. Dedicated infrastructure option
 
 ---
 
@@ -401,27 +357,41 @@ High intent, low competition:
 
 ---
 
-## Revenue Projections
+## Revenue Projections (Cloud Tier Math)
+
+The cloud platform changes the revenue math significantly — teams pay per seat, and the value prop (replace AWS SM + AI protection) justifies the price easily.
+
+### AWS SM Cost Comparison (Selling Point)
+
+A team with 50 secrets across 3 environments:
+- **AWS SM**: 150 secrets × $0.40 = $60/mo + API call costs (~$10/mo) = **$70/mo**
+- **ZVault Pro**: $12/dev/mo × 5 devs = **$60/mo** (unlimited secrets)
+- **ZVault Team**: $27/dev/mo × 5 devs = **$135/mo** (unlimited secrets + RBAC + SSO)
+
+For larger teams (20 devs, 200 secrets):
+- **AWS SM**: 600 secrets × $0.40 = $240/mo + API calls = **~$280/mo**
+- **ZVault Team**: $27 × 20 = **$540/mo** (but includes AI Mode, RBAC, SSO — AWS SM doesn't)
+- **ZVault Business**: $89 × 20 = **$1,780/mo** (adds rotation, dynamic creds, Terraform, 99.5% SLA)
 
 ### Month 1 (Launch)
 - 500 GitHub stars
 - 200 installs
-- 10 Pro signups = $80/mo
+- 15 Pro + 3 Team = $180 + $81 = **$261/mo**
 
 ### Month 2 (Content + Word of Mouth)
 - 1500 GitHub stars
 - 800 installs
-- 25 Pro + 3 Team = $200 + $57 = $257/mo ← **TARGET HIT**
+- 30 Pro + 8 Team = $360 + $216 = **$576/mo** ← exceeds $200 target
 
 ### Month 3 (Momentum)
 - 3000 GitHub stars
 - 2000 installs
-- 40 Pro + 8 Team + 1 Enterprise = $320 + $152 + $49 = $521/mo
+- 50 Pro + 15 Team + 1 Business + 1 Enterprise = $600 + $405 + $89 + $529 = **$1,623/mo**
 
 ### Month 6
 - 5000+ stars
 - 5000+ installs
-- 80 Pro + 20 Team + 5 Enterprise = $640 + $380 + $245 = $1,265/mo
+- 100 Pro + 30 Team + 5 Business + 3 Enterprise = $1,200 + $810 + $445 + $1,587 = **$4,042/mo**
 
 ---
 
@@ -444,18 +414,20 @@ Flow:
 
 ## Competitive Landscape
 
-| Product | AI Mode? | Self-Hosted? | Price | Complexity |
-|---------|----------|-------------|-------|------------|
-| **ZVault** | ✅ MCP + zvault:// | ✅ Single binary | $8-49/dev/mo | One command |
-| HashiCorp Vault | ❌ | ✅ (complex) | $0.03/secret/mo | Days to set up |
-| Infisical | ❌ | ⚠️ (Docker + Postgres) | $8/dev/mo | Medium |
-| Doppler | ❌ | ❌ (SaaS only) | $18/dev/mo | Easy but SaaS |
-| 1Password | ❌ | ❌ (SaaS only) | $8/user/mo | Not for devs |
-| dotenv-vault | ❌ | ❌ (SaaS only) | Free-$4/mo | Easy but limited |
+| Product | AI Mode? | Cloud Platform? | Self-Hosted? | Price | Complexity |
+|---------|----------|----------------|-------------|-------|------------|
+| **ZVault** | ✅ MCP + zvault:// | ✅ zvault.cloud | ✅ Single binary | $12-529/dev/mo | One command |
+| AWS Secrets Manager | ❌ | ✅ (AWS only) | ❌ | $0.40/secret/mo + API calls | Deep AWS lock-in |
+| HashiCorp Vault | ❌ | ✅ (HCP) | ✅ (complex) | $0.03/secret/mo | Days to set up |
+| Infisical | ❌ | ✅ | ⚠️ (Docker + Postgres) | $8/dev/mo | Medium |
+| Doppler | ❌ | ✅ (SaaS only) | ❌ | $18/dev/mo | Easy but SaaS |
+| 1Password | ❌ | ✅ (SaaS only) | ❌ | $8/user/mo | Not for devs |
+| dotenv-vault | ❌ | ❌ | ❌ | Free-$4/mo | Easy but limited |
 
-**ZVault's unique angle: the ONLY secrets manager with native AI/LLM integration.**
-
-Nobody else is doing the MCP server + zvault:// reference + llms.txt combo. This is blue ocean.
+**ZVault's unique angles:**
+1. **Only secrets manager with native AI/LLM integration** (MCP server + zvault:// references + llms.txt)
+2. **Full replacement for AWS SM** at a fraction of the cost ($12 flat vs $0.40/secret/mo)
+3. **Dev to prod in one tool** — local vault for free, cloud vault for paid, same CLI
 
 ---
 

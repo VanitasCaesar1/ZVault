@@ -1,0 +1,5 @@
+name: zvault-secrets
+inputs:
+  - name: env
+    description: ZVault environment slug
+    default: production

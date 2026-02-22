@@ -1,0 +1,36 @@
+{
+  "name": "@zvault/hono",
+  "version": "0.1.0",
+  "description": "ZVault middleware for Hono — auto-inject secrets into context",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "peerDependencies": {
+    "hono": ">=4.0.0"
+  },
+  "devDependencies": {
+    "hono": "^4.7.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.0"
+  },
+  "keywords": ["zvault", "hono", "secrets", "middleware", "env"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nicosalm/zvault",
+    "directory": "sdks/hono"
+  }
+}

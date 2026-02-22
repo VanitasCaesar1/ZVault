@@ -1,0 +1,53 @@
+# ZVault Docker Compose integration
+# Add this to your docker-compose.yml or use: docker compose -f docker-compose.yml -f docker-compose.zvault.yml up
+#
+# Usage:
+#   1. Set ZVAULT_TOKEN, ZVAULT_ORG_ID, ZVAULT_PROJECT_ID in your .env
+#   2. Add zvault-init as a dependency to your services
+#   3. Secrets are written to /run/secrets/zvault.env
+
+services:
+  zvault-init:
+    image: alpine:3.20
+    environment:
+      - ZVAULT_TOKEN=${ZVAULT_TOKEN}
+      - ZVAULT_ORG_ID=${ZVAULT_ORG_ID}
+      - ZVAULT_PROJECT_ID=${ZVAULT_PROJECT_ID}
+      - ZVAULT_ENV=${ZVAULT_ENV:-production}
+      - ZVAULT_URL=${ZVAULT_URL:-https://api.zvault.cloud}
+    volumes:
+      - zvault-secrets:/run/secrets
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        apk add --no-cache curl jq > /dev/null 2>&1
+        BASE="$${ZVAULT_URL}/v1/cloud/orgs/$${ZVAULT_ORG_ID}/projects/$${ZVAULT_PROJECT_ID}/envs/$${ZVAULT_ENV}/secrets"
+        
+        echo "🔐 ZVault: Fetching secrets for '$${ZVAULT_ENV}'..."
+        
+        KEYS=$$(curl -sf -H "Authorization: Bearer $${ZVAULT_TOKEN}" "$${BASE}" | jq -r '.keys[].key')
+        
+        : > /run/secrets/zvault.env
+        COUNT=0
+        
+        for KEY in $$KEYS; do
+          VALUE=$$(curl -sf -H "Authorization: Bearer $${ZVAULT_TOKEN}" "$${BASE}/$$(printf '%s' "$$KEY" | jq -sRr @uri)" | jq -r '.secret.value')
+          echo "$${KEY}=$${VALUE}" >> /run/secrets/zvault.env
+          COUNT=$$((COUNT + 1))
+        done
+        
+        echo "✅ ZVault: Wrote $$COUNT secrets to /run/secrets/zvault.env"
+
+  # Example: your app service
+  # app:
+  #   build: .
+  #   depends_on:
+  #     zvault-init:
+  #       condition: service_completed_successfully
+  #   env_file:
+  #     - /run/secrets/zvault.env  # or mount the volume
+  #   volumes:
+  #     - zvault-secrets:/run/secrets:ro
+
+volumes:
+  zvault-secrets:

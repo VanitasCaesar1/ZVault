@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>ZVault.SDK</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>ZVault</Authors>
+    <Description>Official .NET SDK for ZVault Cloud secrets management</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/nicosalm/zvault</RepositoryUrl>
+    <RootNamespace>ZVault</RootNamespace>
+  </PropertyGroup>
+
+</Project>

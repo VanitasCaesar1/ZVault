@@ -1,0 +1,46 @@
+name: 'ZVault Secrets'
+description: 'Inject secrets from ZVault Cloud into your GitHub Actions workflow'
+author: 'ZVault <hello@zvault.cloud>'
+
+branding:
+  icon: 'lock'
+  color: 'orange'
+
+inputs:
+  token:
+    description: 'ZVault service token (zvt_...)'
+    required: true
+  org-id:
+    description: 'ZVault organization ID'
+    required: true
+  project-id:
+    description: 'ZVault project ID'
+    required: true
+  env:
+    description: 'Environment slug (e.g. staging, production)'
+    required: false
+    default: 'production'
+  url:
+    description: 'ZVault Cloud API URL'
+    required: false
+    default: 'https://api.zvault.cloud'
+  keys:
+    description: 'Comma-separated list of specific secret keys to fetch. If empty, fetches all.'
+    required: false
+    default: ''
+  export-env:
+    description: 'Export secrets as environment variables'
+    required: false
+    default: 'true'
+  mask:
+    description: 'Mask secret values in logs'
+    required: false
+    default: 'true'
+
+outputs:
+  count:
+    description: 'Number of secrets injected'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

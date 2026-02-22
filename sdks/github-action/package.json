@@ -1,0 +1,17 @@
+{
+  "name": "zvault-setup-action",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GitHub Action to inject ZVault secrets into workflows",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "ncc build src/index.ts -o dist --minify",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@actions/core": "^1.11.0",
+    "@vercel/ncc": "^0.38.0",
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0"
+  }
+}

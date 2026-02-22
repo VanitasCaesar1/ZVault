@@ -1,0 +1,15 @@
+# pre-commit framework hook definition
+# Usage in .pre-commit-config.yaml:
+#   repos:
+#     - repo: https://github.com/zvault/zvault
+#       rev: v0.3.0
+#       hooks:
+#         - id: zvault-scan
+
+- id: zvault-scan
+  name: ZVault Secret Scanner
+  description: Scan for hardcoded secrets and suggest ZVault references
+  entry: sdks/pre-commit/zvault-scan.sh
+  language: script
+  types: [text]
+  stages: [pre-commit]

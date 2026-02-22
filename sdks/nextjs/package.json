@@ -1,0 +1,35 @@
+{
+  "name": "@zvault/next",
+  "version": "0.1.0",
+  "description": "ZVault SDK for Next.js — build-time and runtime secret injection",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./plugin": {
+      "import": "./dist/plugin.mjs",
+      "require": "./dist/plugin.js",
+      "types": "./dist/plugin.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["zvault", "nextjs", "secrets", "env"],
+  "license": "MIT",
+  "peerDependencies": {
+    "next": ">=14.0.0"
+  },
+  "devDependencies": {
+    "next": "^15.0.0",
+    "typescript": "^5.7.0",
+    "tsup": "^8.0.0"
+  }
+}

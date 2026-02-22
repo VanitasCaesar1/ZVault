@@ -24,6 +24,8 @@ pub struct ServerConfig {
     pub disable_mlock: bool,
     /// Spring OAuth configuration (optional — enables "Sign in with Spring").
     pub spring_oauth: Option<SpringOAuthConfig>,
+    /// Cloud `PostgreSQL` URL (optional — enables cloud API at `/v1/cloud/*`).
+    pub cloud_database_url: Option<String>,
 }
 
 /// Configuration for Spring OAuth 2.0 / OIDC integration.
@@ -135,6 +137,9 @@ impl ServerConfig {
                         .unwrap_or_else(|_| "root".to_owned()),
                 });
 
+        // Cloud API — enabled when CLOUD_DATABASE_URL is set.
+        let cloud_database_url = std::env::var("CLOUD_DATABASE_URL").ok();
+
         Self {
             bind_addr,
             storage_backend,
@@ -144,6 +149,7 @@ impl ServerConfig {
             lease_scan_interval_secs,
             disable_mlock,
             spring_oauth,
+            cloud_database_url,
         }
     }
 }

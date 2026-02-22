@@ -1,0 +1,50 @@
+# ZVault GitLab CI/CD Component Template
+# Include this in your .gitlab-ci.yml:
+#   include:
+#     - remote: 'https://raw.githubusercontent.com/ArcadeLabsInc/zvault/main/sdks/gitlab-ci/template.yml'
+
+.zvault-inject:
+  before_script:
+    - |
+      # ZVault Secret Injection
+      if [ -z "${ZVAULT_TOKEN:-}" ]; then
+        echo "ERROR: ZVAULT_TOKEN is required" >&2
+        exit 1
+      fi
+      if [ -z "${ZVAULT_ORG_ID:-}" ]; then
+        echo "ERROR: ZVAULT_ORG_ID is required" >&2
+        exit 1
+      fi
+      if [ -z "${ZVAULT_PROJECT_ID:-}" ]; then
+        echo "ERROR: ZVAULT_PROJECT_ID is required" >&2
+        exit 1
+      fi
+
+      ZVAULT_URL="${ZVAULT_URL:-https://api.zvault.cloud}"
+      ZVAULT_URL="${ZVAULT_URL%/}"
+      ZVAULT_ENV="${ZVAULT_ENV:-production}"
+      BASE_PATH="/v1/cloud/orgs/${ZVAULT_ORG_ID}/projects/${ZVAULT_PROJECT_ID}/envs/${ZVAULT_ENV}/secrets"
+
+      echo "Fetching secrets from ZVault Cloud (env: ${ZVAULT_ENV})..."
+
+      KEYS_JSON=$(curl -fsSL \
+        -H "Authorization: Bearer ${ZVAULT_TOKEN}" \
+        -H "User-Agent: zvault-gitlab-ci/0.1.0" \
+        "${ZVAULT_URL}${BASE_PATH}")
+
+      COUNT=0
+      for key in $(echo "$KEYS_JSON" | grep -o '"key":"[^"]*"' | sed 's/"key":"//;s/"//'); do
+        SECRET_JSON=$(curl -fsSL \
+          -H "Authorization: Bearer ${ZVAULT_TOKEN}" \
+          -H "User-Agent: zvault-gitlab-ci/0.1.0" \
+          "${ZVAULT_URL}${BASE_PATH}/${key}")
+
+        VALUE=$(echo "$SECRET_JSON" | grep -o '"value":"[^"]*"' | head -1 | sed 's/"value":"//;s/"//')
+
+        if [ -n "$VALUE" ]; then
+          export "${key}=${VALUE}"
+          COUNT=$((COUNT + 1))
+        fi
+      done
+
+      echo "ZVault: injected ${COUNT} secrets"

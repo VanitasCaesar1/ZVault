@@ -1,14 +1,25 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
+import { SignInButton } from "@clerk/clerk-react";
 import { setToken } from "../lib/api";
+import { CLERK_ENABLED } from "../lib/clerk";
+import { useAuth } from "../hooks/useAuth";
 
 export function LoginPage() {
   const navigate = useNavigate();
   const [token, setTokenValue] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
   const [springAuthUrl, setSpringAuthUrl] = useState<string | null>(null);
+
+  const { isCloudAuthenticated, isCloudLoading } = useAuth();
+
+  // If user is already authenticated via Clerk, redirect to dashboard.
+  useEffect(() => {
+    if (isCloudAuthenticated && !isCloudLoading) {
+      navigate("/", { replace: true });
+    }
+  }, [isCloudAuthenticated, isCloudLoading, navigate]);
 
   // Discover Spring OAuth URL from the server's OIDC config endpoint.
   useEffect(() => {
@@ -17,7 +28,6 @@ export function LoginPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.enabled && data?.login_url) {
-          // login_url is relative to the API server
           setSpringAuthUrl(`${apiBase}${data.login_url}`);
         }
       })
@@ -29,16 +39,14 @@ export function LoginPage() {
     const params = new URLSearchParams(window.location.search);
     const callbackToken = params.get("token") ?? params.get("oidc_token");
     const callbackError = params.get("error");
-
     if (callbackError) {
       setError(decodeURIComponent(callbackError));
-      window.history.replaceState({}, "", "/login");
+      window.history.replaceState({}, "", "/app/login");
       return;
     }
-
     if (callbackToken) {
       setToken(callbackToken);
-      window.history.replaceState({}, "", "/");
+      window.history.replaceState({}, "", "/app");
       navigate("/", { replace: true });
     }
   }, [navigate]);
@@ -68,12 +76,6 @@ export function LoginPage() {
     }
   }
 
-  function handleSpringLogin() {
-    if (springAuthUrl) {
-      window.location.href = springAuthUrl;
-    }
-  }
-
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="w-full max-w-[440px] px-5">
@@ -92,15 +94,40 @@ export function LoginPage() {
             Sign in to ZVault
           </h1>
           <p className="text-sm text-stone-500">
-            Enter your vault token or sign in with Spring.
+            {CLERK_ENABLED
+              ? "Sign in with your account or use a vault token."
+              : "Enter your vault token to continue."}
           </p>
         </div>
 
         <div className="bg-glass backdrop-blur-[16px] border border-glass-border rounded-[20px] p-8 shadow-[0_8px_32px_rgba(0,0,0,.06)]">
-          {springAuthUrl && (
+          {/* Clerk Cloud Sign In */}
+          {CLERK_ENABLED && (
+            <>
+              <SignInButton mode="modal">
+                <button
+                  disabled={isCloudLoading}
+                  className="w-full flex items-center justify-center gap-2.5 py-3 rounded-full bg-amber-500 text-amber-900 font-semibold text-sm hover:bg-amber-600 hover:shadow-[0_4px_20px_rgba(0,0,0,.12)] hover:-translate-y-px transition-all cursor-pointer disabled:opacity-50 mb-5"
+                >
+                  <svg viewBox="0 0 20 20" fill="none" className="w-5 h-5">
+                    <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 3a2.5 2.5 0 110 5 2.5 2.5 0 010-5zm0 10.5c-2.03 0-3.82-.98-4.94-2.5a6.98 6.98 0 019.88 0A5.98 5.98 0 0110 15.5z" fill="currentColor" />
+                  </svg>
+                  {isCloudLoading ? "Loading…" : "Sign in to ZVault Cloud"}
+                </button>
+              </SignInButton>
+              <div className="flex items-center gap-3 mb-5">
+                <div className="flex-1 h-px bg-stone-300/40" />
+                <span className="text-xs text-stone-400 font-medium">or use a vault token</span>
+                <div className="flex-1 h-px bg-stone-300/40" />
+              </div>
+            </>
+          )}
+
+          {/* Spring OAuth (only when Clerk is not configured) */}
+          {springAuthUrl && !CLERK_ENABLED && (
             <>
               <button
-                onClick={handleSpringLogin}
+                onClick={() => { window.location.href = springAuthUrl; }}
                 className="w-full flex items-center justify-center gap-2.5 py-3 rounded-full bg-stone-800 text-stone-100 font-semibold text-sm hover:bg-stone-700 transition-colors cursor-pointer mb-5"
               >
                 <svg viewBox="0 0 20 20" fill="none" className="w-5 h-5">
@@ -144,15 +171,15 @@ export function LoginPage() {
           <button
             onClick={handleLogin}
             disabled={loading}
-            className="w-full py-3 rounded-full bg-amber-500 text-amber-900 font-semibold text-sm hover:bg-amber-600 hover:shadow-[0_4px_20px_rgba(0,0,0,.12)] hover:-translate-y-px transition-all disabled:opacity-50 cursor-pointer"
+            className="w-full py-3 rounded-full bg-stone-800 text-stone-100 font-semibold text-sm hover:bg-stone-700 transition-colors cursor-pointer disabled:opacity-50"
           >
-            {loading ? "Verifying…" : "Sign In"}
+            {loading ? "Verifying…" : "Sign In with Token"}
           </button>
         </div>
 
         <p className="text-center mt-5 text-[13px] text-stone-400">
           Don't have a token?{" "}
-          <a href="/init" className="text-amber-500 font-semibold hover:underline">
+          <a href="/app/init" className="text-amber-500 font-semibold hover:underline">
             Initialize the vault
           </a>
         </p>

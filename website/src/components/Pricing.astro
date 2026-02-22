@@ -5,14 +5,14 @@ const plans = [
     tagline: 'For Individual Developers',
     price: '$0',
     period: '',
-    billing: 'Free forever',
+    billing: 'Free forever · No account needed',
     features: [
       'Local encrypted vault (AES-256-GCM)',
       'CLI — init, import, run, seal/unseal',
       '.env import → encrypted vault',
       'KV + Transit + PKI engines',
       "Shamir's Secret Sharing",
-      'Web dashboard',
+      'Local web dashboard',
       'Audit logging',
       '1 project',
     ],
@@ -23,18 +23,20 @@ const plans = [
   {
     tier: 'Pro',
     tagline: 'For AI-First Developers',
-    price: '$8',
+    price: '$12',
     period: '/dev/mo',
     billing: 'Billed Monthly',
     badge: 'Most Popular',
     features: [
       'Everything in Free',
-      'MCP server (7 AI tools)',
+      'Cloud vault (zvault.cloud)',
+      '3 environments (dev/staging/prod)',
+      '50K API requests/mo',
+      'Service tokens for CI/CD + prod',
+      'SDKs — 13 languages + framework integrations',
+      'AI Mode (MCP server, 7 tools)',
       'zvault:// secret references',
       'IDE setup — Cursor, Kiro, Continue',
-      'llms.txt generation',
-      '.env.example AI generation',
-      'Secret search from IDE',
       '5 projects',
       'Priority email support',
     ],
@@ -45,21 +47,43 @@ const plans = [
   {
     tier: 'Team',
     tagline: 'For Engineering Teams',
-    price: '$19',
+    price: '$27',
     period: '/dev/mo',
     billing: 'Billed Monthly',
     features: [
       'Everything in Pro',
-      'Shared vaults',
+      '5 environments per project',
+      '500K API requests/mo',
+      'Unlimited team members',
+      'RBAC + env-level permissions',
       'OIDC / SSO',
-      'RBAC with path-based policies',
       'Audit log export (JSON, CSV)',
       'Slack / Discord alerts',
-      'Webhook notifications',
       'Unlimited projects',
     ],
     cta: 'Get Started Now',
     href: '/api/checkout?products=c42a3bec-5db8-4cf2-b9c6-48416604353e',
+    featured: false,
+  },
+  {
+    tier: 'Business',
+    tagline: 'For Scale-Ups',
+    price: '$89',
+    period: '/dev/mo',
+    billing: 'Billed Monthly',
+    features: [
+      'Everything in Team',
+      '15 environments per project',
+      '5M API requests/mo',
+      'Audit log streaming (S3, Splunk, Datadog)',
+      'Secret rotation with auto-propagation',
+      'Dynamic credentials (DB, cloud IAM)',
+      'Terraform provider',
+      '99.5% SLA guarantee',
+      'Priority email support',
+    ],
+    cta: 'Get Started Now',
+    href: '/api/checkout?products=business-tier',
     featured: false,
   },
 ];
@@ -79,7 +103,7 @@ const plans = [
         Flexible pricing to match<br class="hidden sm:block" /> your needs
       </h2>
       <p class="text-muted text-base max-w-lg mx-auto">
-        Pay per developer who uses AI Mode. The vault itself is always free and open source.
+        Free local vault forever. Cloud features start at $12/dev/mo — replaces AWS Secrets Manager.
       </p>
     </div>
 
@@ -131,8 +155,8 @@ const plans = [
     <div class="enterprise-bar">
       <div class="enterprise-inner">
         <div>
-          <h4 class="enterprise-title">Enterprise</h4>
-          <p class="enterprise-desc">HA clustering, K8s operator, namespaces, Terraform provider, SLA guarantee, dedicated support.</p>
+          <h4 class="enterprise-title">Enterprise — $529/dev/mo</h4>
+          <p class="enterprise-desc">Unlimited environments & API requests, HA clustering, K8s operator, SCIM provisioning, dedicated infrastructure, custom SLA, dedicated support.</p>
         </div>
         <a href="mailto:enterprise@zvault.cloud" class="enterprise-cta">Contact Sales →</a>
       </div>
@@ -143,7 +167,7 @@ const plans = [
       <span class="flex items-center gap-1.5"><svg class="w-3 h-3 text-green" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 8l3.5 3.5L13 5"/></svg> No credit card for free tier</span>
       <span class="flex items-center gap-1.5"><svg class="w-3 h-3 text-green" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 8l3.5 3.5L13 5"/></svg> MIT licensed — self-host free</span>
       <span class="flex items-center gap-1.5"><svg class="w-3 h-3 text-green" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 8l3.5 3.5L13 5"/></svg> Cancel anytime, keep your vault</span>
-      <span class="flex items-center gap-1.5"><svg class="w-3 h-3 text-green" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 8l3.5 3.5L13 5"/></svg> Secrets never leave your machine</span>
+      <span class="flex items-center gap-1.5"><svg class="w-3 h-3 text-green" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 8l3.5 3.5L13 5"/></svg> Your secrets, your infrastructure</span>
     </div>
   </div>
 </section>
@@ -153,7 +177,7 @@ const plans = [
     display: grid;
     grid-template-columns: 1fr;
     gap: 1px;
-    max-width: 960px;
+    max-width: 1200px;
     margin: 0 auto 2rem;
     background: #27272a;
     border-radius: 20px;
@@ -162,7 +186,7 @@ const plans = [
   }
   @media (min-width: 768px) {
     .pricing-grid {
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
     }
   }
 
@@ -262,7 +286,7 @@ const plans = [
   .featured .check-icon { color: #22d3ee; }
 
   .enterprise-bar {
-    max-width: 960px;
+    max-width: 1200px;
     margin: 0 auto;
   }
   .enterprise-inner {

@@ -1,0 +1,17 @@
+{
+  "name": "zvault/sdk",
+  "description": "Official PHP SDK for ZVault Cloud secrets management",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.1",
+    "ext-curl": "*",
+    "ext-json": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "ZVault\\": "src/"
+    }
+  },
+  "minimum-stability": "stable"
+}

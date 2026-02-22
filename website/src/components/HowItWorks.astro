@@ -3,7 +3,7 @@ const steps = [
   {
     num: '1',
     title: 'Import',
-    desc: 'zvault import .env encrypts your secrets and generates safe zvault:// references.',
+    desc: 'zvault import .env encrypts your secrets locally and generates safe zvault:// references.',
     icon: '<path d="M12 3v12m0 0l-4-4m4 4l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   },
   {
@@ -14,8 +14,14 @@ const steps = [
   },
   {
     num: '3',
-    title: 'Run',
-    desc: 'zvault run injects real values at runtime. Your app works normally. Nothing leaked.',
+    title: 'Push to Cloud',
+    desc: 'zvault cloud push syncs secrets to all environments — dev, staging, production. One source of truth.',
+    icon: '<path d="M12 16V3m0 0l-4 4m4-4l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 15c6.667-6 13.333 0 20-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  },
+  {
+    num: '4',
+    title: 'Deploy',
+    desc: 'Your app fetches secrets at runtime from ZVault Cloud via SDK or CLI. No AWS Secrets Manager needed.',
     icon: '<path d="M5 3l14 9-14 9V3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   },
 ];
@@ -24,13 +30,13 @@ const steps = [
 <section class="py-24">
   <div class="container">
     <div class="text-center mb-16">
-      <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">Three commands. Zero code changes.</h2>
-      <p class="text-muted text-lg max-w-xl mx-auto">ZVault works with any language, any framework. Your app reads normal env vars — no SDK needed.</p>
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">Dev to prod. Four commands.</h2>
+      <p class="text-muted text-lg max-w-xl mx-auto">From local .env to production deployment — one tool, every environment. No AWS Secrets Manager needed.</p>
     </div>
 
-    <div class="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto relative">
+    <div class="grid md:grid-cols-4 gap-8 max-w-5xl mx-auto relative">
       <!-- Connecting line (desktop) -->
-      <div class="hidden md:block absolute top-12 left-[16.67%] right-[16.67%] h-px bg-gradient-to-r from-accent/0 via-accent/30 to-accent/0"></div>
+      <div class="hidden md:block absolute top-12 left-[12.5%] right-[12.5%] h-px bg-gradient-to-r from-accent/0 via-accent/30 to-accent/0"></div>
 
       {steps.map((step, i) => (
         <div class="text-center relative" data-animate>

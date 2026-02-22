@@ -28,19 +28,24 @@ tracing-subscriber.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true
+thiserror.workspace = true
 chrono = { version = "0.4", features = ["serde"] }
-uuid = { version = "1", features = ["v4"] }
+uuid = { version = "1", features = ["v4", "serde"] }
 base64 = "0.22"
+hex = "0.4"
 reqwest = { version = "0.12", features = ["json"], default-features = false, optional = true }
-sha2 = { version = "0.10", optional = true }
+sha2 = "0.10"
+aes-gcm = { version = "0.10", optional = true }
+sqlx = { workspace = true, optional = true }
 urlencoding = "2"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
 [features]
-default = ["rocksdb-backend", "spring-oauth"]
+default = ["rocksdb-backend", "spring-oauth", "cloud"]
 rocksdb-backend = ["zvault-storage/rocksdb-backend"]
 redb-backend = ["zvault-storage/redb-backend"]
 postgres-backend = ["zvault-storage/postgres-backend"]
-spring-oauth = ["dep:reqwest", "dep:sha2"]
+spring-oauth = ["dep:reqwest"]
+cloud = ["dep:aes-gcm", "dep:sqlx"]

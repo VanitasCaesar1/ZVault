@@ -1,0 +1,5 @@
+/Volumes/Seagate/Code/treato/Z-vault/sdks/rust/target/debug/build/thiserror-e9f88bf1a36d6d65/build_script_build-e9f88bf1a36d6d65.d: /Users/vanitascaesar/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/build.rs
+
+/Volumes/Seagate/Code/treato/Z-vault/sdks/rust/target/debug/build/thiserror-e9f88bf1a36d6d65/build_script_build-e9f88bf1a36d6d65: /Users/vanitascaesar/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/build.rs
+
+/Users/vanitascaesar/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/build.rs:

@@ -1,20 +1,24 @@
 # ZVault — Production Roadmap
 
-> Last updated: 2026-02-11
+> Last updated: 2026-02-20
 > See also: [MONETIZATION.md](./MONETIZATION.md) for full go-to-market plan
 > See also: [AUDIT.md](./AUDIT.md) for security audit (all 9 findings fixed)
+> See also: [MCP_TOOLS_ROADMAP.md](./MCP_TOOLS_ROADMAP.md) for 50-tool MCP plan
 
 ---
 
 ## Vision
 
-**The AI-native secrets manager.** Let LLMs build your app without leaking your keys.
+**The AI-native secrets manager — dev to prod, one tool.**
 
-ZVault sits between your IDE's AI assistant and your secrets. The LLM sees `zvault://stripe-key` — never `sk_live_51J3...`. Full audit trail. Single binary. Zero dependencies.
+ZVault is the single source of truth for your secrets across every environment. Locally, your AI sees `zvault://stripe-key` — never real values. In staging and production, your app fetches secrets directly from ZVault Cloud. No AWS Secrets Manager. No Doppler. No scattered env vars across 5 dashboards.
+
+**Free tier**: Local encrypted vault, CLI, .env import, AI protection — no account needed.
+**Cloud tier**: Manage secrets for dev/staging/prod from one dashboard. Your app calls ZVault at runtime — everywhere.
 
 ---
 
-## Current State (What's Done)
+## Current State (v0.2.0 — Shipped)
 
 | Component | Status | Notes |
 |-----------|--------|-------|
@@ -32,261 +36,570 @@ ZVault sits between your IDE's AI assistant and your secrets. The LLM sees `zvau
 | AppRole Auth | ✅ 85% | Role CRUD, secret ID, login flow |
 | Storage Backends | ✅ 100% | RocksDB, redb, memory |
 | Security Hardening | ✅ 100% | mlock, core dump prevention, constant-time |
-| Web Dashboard | ✅ 95% | Login, init, unseal, secrets (CRUD modal), policies (CRUD modal), audit (real data), bento dashboard, sparkline |
-| CLI Client | ✅ 100% | Status, init, unseal, token, kv, transit, import, run, mcp-server, setup, activate, license, doctor, project-init, lease, audit-export, notify, rotate |
-| Deployment | ✅ 90% | Railway, Docker, binary |
+| Web Dashboard | ✅ 95% | Login, init, unseal, secrets CRUD, policies CRUD, audit, bento dashboard |
+| CLI Client | ✅ 100% | Full command set (30+ commands) |
+| MCP Server | ✅ 100% | 20 tools across 2 tiers |
+| IDE Integration | ✅ 100% | Cursor, Kiro, Continue, generic |
+| License System | ✅ 100% | Ed25519-signed, Polar.sh integration |
+| Landing Page | ✅ 100% | zvault.cloud (Astro) |
+| Docs Site | ✅ 100% | docs.zvault.cloud (18 pages) |
+| Deployment | ✅ 90% | Railway, Docker, binary, Homebrew, npm |
 
 ---
 
-## Phase 0: Dashboard UI/UX Overhaul (Now)
+## Phase 5: ZVault Cloud — The Platform (v0.3.0)
 
-Goal: Match the Crextio-style premium feel — desaturated cream background, airy glass cards, neutral shadows, amber used sparingly as accent only.
+Goal: Transform ZVault from a local dev tool into a full secrets platform that replaces AWS Secrets Manager, Doppler, and Infisical. Users manage secrets on zvault.cloud, pull them from anywhere — local dev to production.
 
-### 0.1 Design Token Refresh ✅
+### 5.1 Cloud Backend (Multi-Tenant API)
 
-- [x] Desaturate background gradient (sandy cream, not golden amber)
-- [x] Increase card opacity (`rgba(255,255,255,0.72)` — cards read as near-white)
-- [x] Replace white glow borders with subtle dark borders (`rgba(0,0,0,0.06)`)
-- [x] Neutralize shadows across all components (drop warm amber tint)
-- [x] Use amber only for accents (active nav, buttons, badges) — not text/borders
+The hosted ZVault service. One vault per organization, secrets scoped by project + environment.
 
-### 0.2 Component Updates ✅
+- [x] PostgreSQL-backed storage (replaces RocksDB for cloud — multi-tenant, queryable)
+- [x] Multi-tenant data model: `organizations → projects → environments → secrets`
+- [x] Environment scoping: `development`, `staging`, `production` (+ custom)
+- [x] Per-environment secret values (same key, different value per env)
+- [x] Organization management: create org, invite members, assign roles
+- [x] Service tokens: scoped to project + environment, for CI/CD and production
+- [x] API endpoints:
+  - `POST /v1/cloud/orgs` — create organization
+  - `GET /v1/cloud/projects` — list projects
+  - `POST /v1/cloud/projects` — create project
+  - `GET /v1/cloud/projects/:id/secrets?env=production` — list secrets for env
+  - `PUT /v1/cloud/projects/:id/secrets` — set secret (per env)
+  - `GET /v1/cloud/projects/:id/secrets/:key?env=production` — get single secret
+  - `DELETE /v1/cloud/projects/:id/secrets/:key` — delete secret
+  - `POST /v1/cloud/projects/:id/tokens` — create service token
+  - `GET /v1/cloud/projects/:id/audit` — audit log
+- [x] Encryption at rest: AES-256-GCM per-org encryption key (key hierarchy: master → org → secret)
+- [x] Rate limiting per org/token tier
+- [x] Auto-unseal (no Shamir for cloud — managed key, always available)
 
-- [x] StatCard: neutral shadow (`rgba(0,0,0,.06)`), stone text colors
-- [x] Table/Card: neutral borders (`border-stone-200/60`), `border-glass-border`
-- [x] Topbar: lighter glass, neutral text (`text-stone-800`, `text-stone-600`)
-- [x] Sidebar: softened section labels (`text-stone-500`)
-- [x] Login page: neutral glass, stone text, `bg-stone-800` Spring button
-- [x] Init/Unseal pages: neutral card style, stone labels/hints
-- [x] Secrets/Policies/Audit pages: neutral code blocks, hover states
-- [x] AuthMethods/Leases pages: neutral styling
-- [x] Badges: neutral `primary` variant (`bg-stone-100 text-stone-600`)
+### 5.2 Cloud Dashboard (Web App)
 
-### 0.3 Dashboard Content ✅
+The web UI at app.zvault.cloud where users manage everything.
 
-- [x] Wire stat cards to real data (secret count, policy count, mount count)
-- [x] Wire Secrets page to real `/v1/secret/list/` endpoint
-- [x] Wire Policies page to real `/v1/sys/policies` endpoint
-- [x] Wire Auth Methods page to real mount data
-- [x] Wire Leases page to real lookup/renew/revoke endpoints
-- [x] Wire Mounted Engines card to real `/v1/sys/mounts` data
-- [x] Add bento-style mixed card sizes (not uniform grid)
-- [x] Add simple activity sparkline or bar chart
-- [x] Dark contrast card for recent activity (like Crextio's onboarding card)
+- [x] Auth: email + password, GitHub OAuth, Google OAuth
+- [x] Onboarding flow: sign up → create org → create first project → add secrets
+- [x] Project view: list all secrets, toggle between environments (dev/staging/prod tabs)
+- [x] Secret editor: add/edit/delete secrets per environment, bulk import from .env
+- [x] Environment management: create custom environments, clone env → env
+- [x] Team management: invite by email, roles (admin / developer / viewer)
+- [x] Service tokens page: create/revoke tokens, scoped to project + env
+- [x] Audit log viewer: who accessed what, when, from where (CLI vs dashboard vs SDK)
+- [x] Billing page: current plan, usage, upgrade/downgrade
+- [x] Settings: org name, danger zone (delete org)
+
+### 5.3 CLI Cloud Mode
+
+The existing CLI gains a `--cloud` mode. Same commands, different backend.
+
+- [x] `zvault login` — authenticate CLI with cloud account (browser OAuth flow)
+- [x] `zvault cloud init` — link current directory to a cloud project (writes `.zvault.toml`)
+- [x] `zvault cloud push` — push local secrets to cloud project (with env selection)
+- [x] `zvault cloud pull --env dev` — pull secrets from cloud to local `.env`
+- [x] `zvault run --env staging -- npm start` — resolve from cloud, inject as env vars
+- [x] `zvault cloud status` — show linked project, current env, token status
+- [x] `zvault cloud envs` — list environments for current project
+- [x] `zvault cloud secrets --env prod` — list secret keys for an environment
+- [x] `zvault cloud token create --env prod --name "railway-deploy"` — create service token
+- [x] Service token auth: `ZVAULT_TOKEN=xxx zvault run --env prod -- node server.js`
+- [x] Fallback: if no cloud config, CLI works against local vault (existing behavior, unchanged)
+- [x] `.zvault.toml` gains `[cloud]` section:
+  ```toml
+  [cloud]
+  org = "my-company"
+  project = "my-saas"
+  default_env = "development"
+  ```
+
+### 5.4 SDKs & Client Libraries
+
+Official first-party SDKs for every major language and runtime. All SDKs share the same contract: fetch all secrets at boot in one HTTP call, cache in-memory, auto-refresh on TTL, graceful fallback if cloud is unreachable.
+
+#### Tier 1 — Launch (Week 3-4)
+These cover 80%+ of production workloads.
+
+- [x] **Node.js / TypeScript** (`@zvault/sdk`) — npm
+  ```typescript
+  import { ZVault } from '@zvault/sdk';
+  const vault = new ZVault({ token: process.env.ZVAULT_TOKEN });
+  const secrets = await vault.getAll({ env: 'production' });
+  ```
+- [x] **Go** (`github.com/ArcadeLabsInc/zvault-go`) — go get
+  ```go
+  client := zvault.New(os.Getenv("ZVAULT_TOKEN"))
+  secrets, err := client.GetAll(ctx, "production")
+  ```
+- [x] **Python** (`zvault`) — pip
+  ```python
+  from zvault import ZVault
+  vault = ZVault(token=os.environ["ZVAULT_TOKEN"])
+  secrets = vault.get_all(env="production")
+  ```
+- [x] **Rust** (`zvault-sdk`) — crates.io
+  ```rust
+  let client = ZVault::new(std::env::var("ZVAULT_TOKEN")?);
+  let secrets = client.get_all("production").await?;
+  ```
+
+#### Tier 2 — Enterprise Languages (Week 7-8)
+Enterprise shops run Java, C#, PHP, Ruby. Can't ignore them.
+
+- [x] **Java / Kotlin** (`com.zvault:zvault-sdk`) — Maven Central
+  ```java
+  ZVault vault = ZVault.builder().token(System.getenv("ZVAULT_TOKEN")).build();
+  Map<String, String> secrets = vault.getAll("production");
+  ```
+- [x] **C# / .NET** (`ZVault.SDK`) — NuGet
+  ```csharp
+  var vault = new ZVaultClient(Environment.GetEnvironmentVariable("ZVAULT_TOKEN"));
+  var secrets = await vault.GetAllAsync("production");
+  ```
+- [x] **Ruby** (`zvault`) — RubyGems
+  ```ruby
+  vault = ZVault::Client.new(token: ENV['ZVAULT_TOKEN'])
+  secrets = vault.get_all(env: 'production')
+  ```
+- [x] **PHP** (`zvault/sdk`) — Packagist
+  ```php
+  $vault = new ZVault\Client(getenv('ZVAULT_TOKEN'));
+  $secrets = $vault->getAll('production');
+  ```
+
+#### Tier 3 — Modern & Systems Languages (Week 10+)
+For teams running Elixir, Swift server-side, Dart backends, etc.
+
+- [x] **Elixir** (`zvault`) — Hex
+- [x] **Swift** (`ZVaultSDK`) — Swift Package Manager
+- [ ] **Dart** (`zvault`) — pub.dev
+- [ ] **Deno** (`@zvault/sdk`) — JSR / deno.land
+- [x] **Bun** — same `@zvault/sdk` npm package, Bun-compatible (Node SDK uses zero deps + native fetch)
+
+#### SDK Core Features (All Languages)
+
+Every SDK implements the same behavior:
+
+| Feature | Description |
+|---------|-------------|
+| **Single-call bootstrap** | `getAll(env)` fetches all secrets in one HTTP request at boot |
+| **In-memory cache** | Secrets cached in process memory, never written to disk |
+| **Auto-refresh** | Background refresh on configurable TTL (default: 5 min) |
+| **Graceful degradation** | If cloud unreachable, serves last-known cached values |
+| **Lazy single-secret fetch** | `get(key, env)` for on-demand single secret retrieval |
+| **Watch mode** | `watch(callback)` for real-time secret change notifications via SSE/WebSocket |
+| **Structured logging** | Debug logs for troubleshooting (opt-in, never logs secret values) |
+| **Retry with backoff** | Exponential backoff on transient failures (429, 503) |
+| **mTLS support** | Optional mutual TLS for zero-trust environments (Enterprise) |
+| **Proxy support** | HTTP/SOCKS5 proxy for corporate networks |
+| **Custom CA certs** | For self-hosted ZVault behind corporate PKI |
+| **Metrics export** | Prometheus-compatible metrics (fetch latency, cache hit rate, errors) |
+| **Health check** | `vault.healthy()` returns connection status for readiness probes |
+| **Secret references** | Resolve `zvault://project/key` URIs in config files programmatically |
+| **Env injection** | `vault.injectIntoEnv()` sets all secrets as process env vars |
+| **Type-safe config** | Generate typed config structs from secret schema (Go, Rust, TypeScript) |
+
+#### Framework Integrations
+
+First-class integrations that go beyond "just an HTTP client":
+
+- [x] **Spring Boot Starter** (`zvault-spring-boot-starter`) — auto-configure `@Value("${zvault.db.url}")`, PropertySource integration, actuator health indicator
+- [x] **Django** (`django-zvault`) — settings.py integration, `ZVAULT_SECRETS` dict, management commands
+- [x] **Flask** (`flask-zvault`) — `app.config.from_zvault(env='production')`
+- [x] **FastAPI** (`fastapi-zvault`) — dependency injection, `Depends(get_zvault_secret("db_url"))`
+- [x] **Hono middleware** (`@zvault/hono`) — `app.use(zvault.middleware())` auto-injects into `c.get('secrets')`
+- [x] **Next.js plugin** (`@zvault/next`) — build-time + runtime secret injection, `next.config.js` integration
+- [x] **NestJS module** (`@zvault/nestjs`) — `@InjectSecret('STRIPE_KEY')` decorator, ConfigModule integration
+- [x] **Rails** (`zvault-rails`) — `Rails.application.credentials` replacement, initializer integration
+- [x] **Laravel** (`zvault-laravel`) — config/zvault.php, `config('zvault.stripe_key')`, Artisan commands
+- [x] **ASP.NET Core** (`ZVault.Extensions.Configuration`) — IConfiguration provider, `builder.AddZVault()`
+- [x] **Gin** (`zvault-gin`) — middleware for Go Gin framework
+- [x] **Fiber** (`zvault-fiber`) — middleware for Go Fiber framework
+- [ ] **Phoenix** (`zvault_phoenix`) — config provider for Elixir Phoenix
+- [ ] **Ktor** (`zvault-ktor`) — plugin for Kotlin Ktor
+
+### 5.5 CI/CD & DevOps Integrations
+
+Not just "docs on how to use the CLI" — actual first-class plugins.
+
+#### CI/CD Platforms
+
+- [x] **GitHub Actions** (`zvault/setup-action@v1`)
+  ```yaml
+  - uses: zvault/setup-action@v1
+    with:
+      token: ${{ secrets.ZVAULT_TOKEN }}
+      env: staging
+  - run: npm test  # All secrets available as env vars
+  ```
+- [x] **GitLab CI** (`zvault/gitlab-ci-component`) — CI/CD component, `include: zvault/secrets`
+- [x] **CircleCI Orb** (`zvault/secrets`) — orb with `zvault/inject-secrets` job step
+- [x] **Bitbucket Pipes** (`zvault/inject-secrets-pipe`) — pipe for Bitbucket Pipelines
+- [x] **Jenkins Plugin** (`zvault-credentials`) — Credentials provider, pipeline step `withZVaultSecrets {}`
+- [x] **Azure DevOps** (`zvault-task`) — marketplace task for Azure Pipelines
+- [x] **AWS CodeBuild** — buildspec.yml integration guide + helper script
+- [x] **Buildkite Plugin** (`zvault/secrets-buildkite-plugin`) — auto-inject secrets into build steps
+- [x] **Drone CI** — `.drone.yml` plugin
+- [x] **Tekton** — Tekton Task for K8s-native CI/CD
+
+#### Infrastructure as Code
+
+- [x] **Terraform Provider** (`terraform-provider-zvault`)
+  ```hcl
+  resource "zvault_secret" "db_url" {
+    project     = "my-saas"
+    environment = "production"
+    key         = "DATABASE_URL"
+    value       = var.database_url
+  }
+
+  data "zvault_secret" "stripe_key" {
+    project     = "my-saas"
+    environment = "production"
+    key         = "STRIPE_KEY"
+  }
+  ```
+- [x] **Pulumi Provider** (`@zvault/pulumi`) — TypeScript/Go/Python/C# Pulumi resources
+- [x] **OpenTofu** — same Terraform provider, OpenTofu compatible
+- [ ] **Crossplane Provider** (`provider-zvault`) — Kubernetes-native IaC
+- [ ] **Ansible Module** (`zvault_secret`) — for Ansible playbooks
+- [ ] **Chef Cookbook** (`zvault`) — for Chef infrastructure
+- [ ] **Puppet Module** (`zvault-zvault`) — for Puppet manifests
+
+#### Container & Orchestration
+
+- [x] **Kubernetes Operator** (`zvault-operator`)
+  ```yaml
+  apiVersion: zvault.cloud/v1
+  kind: VaultSecret
+  metadata:
+    name: app-secrets
+  spec:
+    project: my-saas
+    environment: production
+    target:
+      name: app-secrets        # Creates this K8s Secret
+      type: Opaque
+    refreshInterval: 5m        # Auto-sync every 5 min
+  ```
+- [x] **K8s CSI Driver** — mount secrets as files in pods (alternative to env vars)
+- [x] **K8s Mutating Webhook** — auto-inject secrets into pods via annotations
+- [x] **Helm Chart** — `helm install zvault-operator zvault/operator`
+- [x] **Docker Init** — `zvault` as PID 1 entrypoint, injects secrets then exec's your app
+  ```dockerfile
+  ENTRYPOINT ["zvault", "run", "--env", "prod", "--"]
+  CMD ["node", "server.js"]
+  ```
+- [x] **Docker Compose** — `zvault` service + env_file generation
+- [ ] **Nomad Job Driver** — HashiCorp Nomad integration (ironic but useful)
+- [x] **ECS Task Definition** — AWS ECS integration via init container pattern
+- [x] **Cloud Run** — GCP Cloud Run sidecar pattern
+- [x] **Lambda Layer** — AWS Lambda extension that fetches secrets at cold start
+
+#### Platform Integrations (PaaS)
+
+- [x] **Vercel** — build-time injection via `vercel.json` + ZVAULT_TOKEN env var
+- [x] **Railway** — template + plugin, auto-inject at deploy
+- [x] **Fly.io** — `fly secrets` replacement, `fly.toml` integration
+- [x] **Render** — environment group sync
+- [x] **Coolify** — native integration
+- [x] **Heroku** — buildpack that injects secrets at dyno boot
+- [x] **Netlify** — build plugin for build-time secrets
+- [x] **Cloudflare Workers** — `wrangler.toml` integration, Workers KV sync
+- [x] **Deno Deploy** — environment variable injection
+- [x] **Supabase** — Edge Functions secret injection
+
+#### Secret Rotation & Dynamic Credentials
+
+- [x] **Database credential rotation** — auto-rotate PostgreSQL, MySQL, MongoDB passwords on schedule
+- [x] **AWS IAM** — generate short-lived AWS credentials (STS AssumeRole) from ZVault
+- [x] **GCP Service Account** — generate short-lived GCP tokens
+- [x] **Azure AD** — generate short-lived Azure tokens
+- [x] **Stripe key rotation** — rotate API keys with zero-downtime (dual-key pattern)
+- [x] **Webhook on rotation** — fire webhooks when any secret rotates, so dependent services can refresh
+- [x] **Rotation policies** — configurable per-secret rotation schedule (30d, 90d, custom)
+
+#### Observability & Monitoring
+
+- [x] **Prometheus exporter** — `/metrics` endpoint on cloud API (secret access counts, latency, error rates)
+- [x] **Grafana dashboard** — pre-built dashboard JSON for ZVault Cloud monitoring
+- [x] **Datadog integration** — custom metrics + events for secret access
+- [x] **PagerDuty** — alert on unauthorized access attempts, rotation failures
+- [x] **Slack/Discord/Teams** — real-time notifications per channel (secret changed, accessed, rotated)
+- [x] **OpsGenie** — incident creation on security events
+- [x] **Audit log streaming** — stream audit events to S3, CloudWatch, Elasticsearch, Splunk, Datadog Logs
+- [x] **SIEM integration** — CEF/LEEF format for Splunk, QRadar, Sentinel
+
+#### IDE & Developer Tools
+
+- [x] **VS Code Extension** — inline secret peek (hover to see metadata, not value), go-to-definition for `zvault://` URIs, secret autocomplete
+- [x] **JetBrains Plugin** — IntelliJ, WebStorm, GoLand, PyCharm — same features as VS Code extension
+- [x] **Neovim Plugin** (`zvault.nvim`) — Telescope picker for secrets, inline virtual text
+- [x] **Cursor/Kiro/Continue** — already shipped via MCP server
+- [x] **GitHub App** — PR checks (detect hardcoded secrets, suggest zvault:// references), secret scanning integration
+- [ ] **GitLab Integration** — merge request checks, secret detection
+- [x] **pre-commit hook** — `zvault scan` to catch leaked secrets before commit
+
+#### Migration Tools
+
+- [x] **Import from AWS Secrets Manager** — `zvault migrate aws-sm --region us-east-1`
+- [x] **Import from Doppler** — `zvault migrate doppler --project my-app`
+- [x] **Import from Infisical** — `zvault migrate infisical --workspace my-ws`
+- [x] **Import from HashiCorp Vault** — `zvault migrate hcv --addr https://vault.example.com`
+- [x] **Import from 1Password** — `zvault migrate 1password --vault Development`
+- [x] **Import from Vercel env vars** — `zvault migrate vercel --project my-app`
+- [x] **Import from Railway** — `zvault migrate railway --project my-app`
+- [x] **Import from .env files** — already shipped (`zvault import .env`)
+- [x] **Export to .env** — `zvault cloud pull --env prod --format env > .env.prod`
+- [x] **Export to JSON** — `zvault cloud pull --env prod --format json`
+- [x] **Export to YAML** — `zvault cloud pull --env prod --format yaml`
 
 ---
 
-## Phase 1: The Free Hook (Week 1-2)
+## Phase 6: Production Hardening (v0.4.0)
 
-Goal: Frictionless onboarding that makes devs go "oh, this is nice."
+Goal: Make ZVault Cloud production-grade for teams that need reliability guarantees.
 
-### 1.1 `zvault import .env` — The Magic Moment ✅
+### 6.1 Infrastructure
 
-```bash
-zvault import .env
-# ✓ Imported 12 secrets from .env
-# ✓ Created .env.zvault (safe for git, has zvault:// references)
-# ✓ Backed up original to .env.backup
-# ✓ Added .env to .gitignore
-```
+- [ ] Multi-region deployment (primary: US-East, replicas: EU-West, AP-Southeast)
+- [ ] Read replica routing — SDK reads from nearest region, writes go to primary
+- [ ] 99.9% uptime SLA (Team+), 99.95% (Business+), 99.99% (Enterprise)
+- [ ] Automated backups: hourly → R2 (7-day retention), daily → cold storage (90-day retention)
+- [ ] Point-in-time recovery (PITR) for PostgreSQL — restore to any second within retention window
+- [ ] Health monitoring + PagerDuty alerting (latency p99 > 500ms, error rate > 1%, disk > 80%)
+- [ ] CDN edge caching for secret reads (encrypted payload, 30s TTL, cache-busted on write)
+- [ ] Blue-green deployments with zero-downtime migrations
+- [ ] Connection pooling: PgBouncer per region, max 200 connections per pool
+- [ ] Auto-scaling: horizontal pod scaling based on request rate (K8s HPA)
 
-- [x] Parse .env files (KEY=VALUE, comments, multiline, quoted, export prefix)
-- [x] Store each secret in local vault under `env/<project>/<key>`
-- [x] Generate `.env.zvault` with `KEY=zvault://<project>/<key>` references
-- [x] Backup original .env
-- [x] Auto-add .env to .gitignore if not already there
+### 6.2 Security Hardening
 
-### 1.2 `zvault run -- <command>` — Secret Injection ✅
+- [ ] SOC 2 Type I preparation (audit trail, access controls, encryption docs, vendor review)
+- [ ] SOC 2 Type II audit engagement (6-month observation period)
+- [ ] Secret value encryption: per-org AES-256-GCM keys, org key rotation support
+- [ ] Key hierarchy: master key (HSM-backed) → org key → project key → secret value
+- [ ] IP allowlisting for service tokens (Team+) — CIDR range support
+- [ ] Mandatory 2FA for org admins (TOTP + WebAuthn/passkeys)
+- [ ] Secret access alerts (Slack/email when prod secrets are read by new IP/token)
+- [ ] Anomaly detection: alert on unusual access patterns (time, volume, geography)
+- [ ] Penetration testing: annual third-party pentest, results published to customers
+- [ ] Vulnerability disclosure program (security@zvault.cloud + HackerOne)
+- [ ] TLS 1.3 only — no TLS 1.2 fallback on cloud API
+- [ ] Certificate pinning documentation for SDK users in high-security environments
 
-```bash
-zvault run -- npm run dev
-# Resolves all zvault:// references → injects real env vars → runs command
-```
+### 6.3 Advanced Features
 
-- [x] Read .env.zvault (or .env with zvault:// values)
-- [x] Resolve each zvault:// URI against local vault
-- [x] Set as environment variables
-- [x] Exec the child process with injected env
-- [x] Auto-detect .env.zvault → .env fallback
-
-### 1.3 `zvault project-init` — Project Setup ✅
-
-```bash
-zvault project-init
-# ✓ Created .zvault.toml for project "my-app"
-```
-
-- [ ] Auto-start local vault daemon if not running (post-launch)
-- [x] Create project namespace via `.zvault.toml` config
-- [x] Generate `.zvault.toml` project config file
-
-### 1.4 Dashboard Polish
-
-- [x] Wire Auth Methods page to real mount data
-- [x] Wire Leases page to real lease lookup/renew/revoke
-- [x] Wire Secrets page to correct list endpoint
-- [x] Wire Audit page to real `GET /v1/sys/audit-log` endpoint (needs backend)
-- [x] Add secret create/edit modal
-- [x] Add policy editor with JSON validation
-
-### 1.5 Lease Expiry Worker ✅
-
-- [x] Wire `find_expired()` → `revoke()` loop in main.rs (background worker with configurable interval)
-- [x] Add `GET /v1/sys/leases` list endpoint (auth-gated, requires `sys/leases` read)
-- [ ] Engine-specific revocation callbacks (post-launch — currently revokes lease storage only)
+- [ ] Secret rotation with auto-propagation (rotate → all envs updated → webhooks fired → SDKs refresh)
+- [ ] Secret references across projects (`zvault://other-project/shared-db-url`) with cross-project ACLs
+- [ ] Environment promotion: `zvault cloud promote staging → production` (copy all secrets, diff preview)
+- [ ] Diff view: compare secrets between environments (key presence + metadata, never values)
+- [ ] Secret comments/descriptions (visible in dashboard + MCP `describe_secret` tool)
+- [ ] Secret tagging: arbitrary key-value tags for organization (`team:payments`, `service:api`)
+- [ ] Secret search: full-text search across key names, descriptions, and tags
+- [ ] Bulk operations: update/delete multiple secrets in one API call (atomic transaction)
+- [ ] Secret pinning: lock a secret version in an environment (prevent accidental rotation)
+- [ ] Rollback: one-click revert to previous secret version per environment
 
 ---
 
-## Phase 2: AI Mode — The Money Maker (Week 3-4)
+## Phase 7: Team & Enterprise (v0.5.0)
 
-Goal: MCP server + IDE integration that makes the Pro tier irresistible.
+### 7.1 Team Features
 
-### 2.1 MCP Server ✅
+- [ ] RBAC: admin / developer / viewer per project
+- [ ] Environment-level permissions (dev can read dev, only ops reads prod)
+- [ ] Invite flow with email + role assignment
+- [ ] Activity feed: real-time org activity stream
+- [ ] Slack/Discord integration: secret change notifications per channel
 
-```bash
-zvault mcp-server
-# Starts MCP-compatible server for AI coding tools
-```
+### 7.2 Enterprise
 
-Tools exposed:
-- [x] `zvault_list_secrets` — List secret names/paths (never values)
-- [x] `zvault_describe_secret` — Metadata: version, created_at, key names (never values)
-- [x] `zvault_check_env` — Verify all required secrets exist for a project
-- [x] `zvault_generate_env_template` — Generate .env.zvault from vault contents
-- [x] `zvault_set_secret` — Store a new secret
-- [x] `zvault_delete_secret` — Delete a secret
-- [x] `zvault_vault_status` — Check vault health (sealed/unsealed/initialized)
-
-### 2.2 IDE Setup Commands ✅
-
-```bash
-zvault setup cursor    # → .cursor/mcp.json + .cursor/rules/zvault.mdc
-zvault setup kiro      # → .kiro/settings/mcp.json + .kiro/steering/zvault.md
-zvault setup continue  # → .continue/config.json
-zvault setup generic   # → llms.txt
-```
-
-- [x] Detect existing IDE config, merge (don't overwrite)
-- [x] Generate IDE-specific steering/rules files
-- [x] Cursor: MCP config + .mdc rules file
-- [x] Kiro: MCP config (with auto-approve for read-only tools) + steering file
-- [x] Continue: MCP config
-- [x] Generic: llms.txt with project secret inventory
-
-### 2.3 llms.txt Generation ✅
-
-```bash
-zvault setup generic
-# → Generates llms.txt (also available via `zvault setup generic`)
-```
-
-- [x] List all secret paths with descriptions (no values)
-- [x] Include usage instructions for AI tools
-- [x] Include zvault:// reference format docs
-- [x] Include `zvault run` instructions
-
-### 2.4 License System ✅
-
-- [x] Ed25519-signed license keys (verify locally, no phone-home)
-- [x] `zvault activate <license-key>` command
-- [x] `zvault license` status command
-- [x] License tiers: Free, Pro, Team, Enterprise
-- [x] Feature gating: MCP server, `zvault setup` require Pro+
-- [x] `GET /v1/sys/license` endpoint for dashboard
-- [x] Lemon Squeezy / Polar.sh webhook integration
-
-### 2.5 Landing Page (zvault.cloud) ✅
-
-- [x] Hero: "Stop leaking secrets to LLMs"
-- [x] Demo video/GIF: import → run → MCP in action
-- [x] Pricing table
-- [x] Install command front and center
-- [x] Comparison table vs Vault/Infisical/Doppler
-- [x] Blog section
+- [ ] OIDC / SAML SSO
+- [ ] SCIM user provisioning
+- [ ] Namespaces (org-level isolation for large companies)
+- [ ] Compliance reports (who accessed what, exportable)
+- [ ] Dedicated infrastructure option
+- [ ] Custom SLA
 
 ---
 
-## Phase 3: Team Features (Week 5-6)
+## Phase 8: MCP Tier 3-5 + Advanced Platform (v0.6.0+)
 
-### 3.1 Shared Vault (Post-Launch)
+### MCP Expansion
+- [ ] MCP Tools 21-50 (see [MCP_TOOLS_ROADMAP.md](./MCP_TOOLS_ROADMAP.md))
+- [ ] MCP cloud-aware tools (list environments, switch env, deploy secrets from IDE)
 
-- [ ] Team members connect to shared ZVault server
-- [ ] Project-scoped access (dev sees dev secrets, not prod)
-- [ ] Invite flow: `zvault team invite user@email.com`
+### Dynamic Secrets Engine
+- [ ] **PostgreSQL** — generate short-lived database credentials with auto-revocation
+- [ ] **MySQL / MariaDB** — same pattern
+- [ ] **MongoDB** — scoped database users with TTL
+- [ ] **Redis / Dragonfly** — ACL-based credential generation
+- [ ] **RabbitMQ** — vhost-scoped credentials
+- [ ] **Elasticsearch** — API key generation with role mapping
+- [ ] **AWS STS** — AssumeRole for short-lived AWS credentials
+- [ ] **GCP Service Account Keys** — short-lived OAuth2 tokens
+- [ ] **Azure AD** — short-lived service principal tokens
+- [ ] **Consul** — ACL token generation
+- [ ] **Nomad** — ACL token generation
+- [ ] **LDAP** — dynamic credential generation
 
-### 3.2 Secret Rotation ✅
+### Secret Governance (Enterprise)
+- [ ] **Secret policies** — enforce naming conventions, rotation schedules, max TTL
+- [ ] **Approval workflows** — require manager approval for prod secret changes
+- [ ] **Break-glass access** — emergency access with full audit trail + auto-revocation
+- [ ] **Secret expiry alerts** — notify before certificates/keys expire
+- [ ] **Compliance dashboards** — SOC 2, HIPAA, PCI-DSS readiness views
+- [ ] **Data residency** — pin secrets to specific regions (EU, US, APAC)
+- [ ] **Secret classification** — tag secrets by sensitivity (public, internal, confidential, restricted)
+- [ ] **Dual-control** — require two admins to approve sensitive secret changes
 
-- [x] Rotation policies per secret path (`zvault rotate set-policy/get-policy/list-policies/remove-policy`)
-- [x] Manual trigger with status tracking (`zvault rotate trigger/status`)
-- [x] Webhook notifications on rotation (integrates with notify subsystem)
+### API & Protocol Support
+- [ ] **REST API** — already shipped
+- [ ] **gRPC API** — high-performance binary protocol for service mesh environments
+- [ ] **GraphQL API** — for dashboard and complex queries
+- [ ] **WebSocket / SSE** — real-time secret change streaming
+- [ ] **OpenAPI spec** — auto-generated, always up-to-date
+- [ ] **Client certificate auth (mTLS)** — zero-trust service identity
+- [ ] **OIDC JWT auth** — authenticate with any OIDC provider token (K8s service accounts, GitHub Actions OIDC)
+- [ ] **AWS IAM auth** — authenticate using AWS IAM roles (for Lambda, ECS, EC2)
+- [ ] **GCP IAM auth** — authenticate using GCP service accounts
+- [ ] **Azure Managed Identity auth** — authenticate using Azure MI
 
-### 3.3 Audit Log Export ✅
-
-- [x] Export audit logs as JSON/CSV (`zvault audit-export --format json|csv`)
-- [x] Filter by limit (`--limit N`)
-- [x] Output to file or stdout (`--output <path>`)
-- [x] Dashboard: audit log viewer with search (wired to `GET /v1/sys/audit-log`)
-
-### 3.4 Notifications ✅
-
-- [x] Slack/Discord/generic webhook support (`zvault notify set-webhook <url>`)
-- [x] Event filtering (secret.accessed, secret.rotated, lease.expired, policy.violated)
-- [x] Test notification command (`zvault notify test`)
-- [ ] Email digest (daily/weekly) — post-launch
+### Multi-Cloud & Hybrid
+- [ ] **Secret sync to AWS SM** — optional one-way sync for teams migrating gradually
+- [ ] **Secret sync to GCP Secret Manager** — same
+- [ ] **Secret sync to Azure Key Vault** — same
+- [ ] **Secret sync to K8s Secrets** — via operator (already planned)
+- [ ] **Secret sync to Vercel/Railway/Fly.io** — push secrets to PaaS env vars
+- [ ] **Hybrid mode** — some secrets in cloud, some local, unified CLI/SDK access
 
 ---
 
-## Phase 4: Enterprise (Week 8+)
+## Updated Pricing Model
 
-- [x] OIDC authentication (Spring OAuth2 + PKCE, auto-mint vault tokens with role-based policies)
-- [ ] Raft HA clustering
-- [ ] K8s operator (VaultSecret CRD)
-- [ ] Namespaces (dev/staging/prod)
-- [x] Prometheus metrics endpoint (`/v1/sys/metrics` — seal status, lease counts, mount counts, build info)
-- [x] Backup/restore (`GET /v1/sys/backup`, `POST /v1/sys/restore` + CLI `zvault backup`/`zvault restore`)
-- [ ] Real database credential execution (PostgreSQL, MySQL)
-- [ ] Compliance reports
+| Feature | Free | Pro ($12/dev/mo) | Team ($27/dev/mo) | Business ($89/dev/mo) | Enterprise ($529/dev/mo) |
+|---------|------|------------------|-------------------|-----------------------|--------------------------|
+| Local encrypted vault | ✅ | ✅ | ✅ | ✅ | ✅ |
+| CLI (init, import, run) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| .env import/export | ✅ | ✅ | ✅ | ✅ | ✅ |
+| KV + Transit + PKI engines | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Local web dashboard | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Cloud vault** | — | ✅ | ✅ | ✅ | ✅ |
+| **Environments per project** | — | 3 | 5 | 15 | Unlimited |
+| **API requests/mo** | — | 50K | 500K | 5M | Unlimited |
+| **Cloud dashboard** | — | ✅ | ✅ | ✅ | ✅ |
+| **Service tokens (CI/CD + prod)** | — | ✅ | ✅ | ✅ | ✅ |
+| **SDKs (13 languages)** | — | ✅ | ✅ | ✅ | ✅ |
+| **AI Mode (MCP server)** | — | ✅ | ✅ | ✅ | ✅ |
+| **zvault:// references** | — | ✅ | ✅ | ✅ | ✅ |
+| **IDE setup (Cursor, Kiro, Continue)** | — | ✅ | ✅ | ✅ | ✅ |
+| Projects | 1 local | 5 | Unlimited | Unlimited | Unlimited |
+| Team members | — | 1 | Unlimited | Unlimited | Unlimited |
+| RBAC + env-level permissions | — | — | ✅ | ✅ | ✅ |
+| SSO (OIDC/SAML) | — | — | ✅ | ✅ | ✅ |
+| Audit log export | — | — | ✅ | ✅ | ✅ |
+| Slack/Discord alerts | — | — | ✅ | ✅ | ✅ |
+| Audit log streaming | — | — | — | ✅ | ✅ |
+| Secret rotation | — | — | — | ✅ | ✅ |
+| Dynamic credentials | — | — | — | ✅ | ✅ |
+| Terraform provider | — | — | — | ✅ | ✅ |
+| SLA guarantee | — | — | — | 99.5% | 99.9% |
+| Dedicated infrastructure | — | — | — | — | ✅ |
+| SCIM provisioning | — | — | — | — | ✅ |
+| Custom SLA | — | — | — | — | ✅ |
+| Priority support | — | Email | Email | Priority email | Dedicated |
 
 ---
 
-## Launch Timeline
+## Website Updates (zvault.cloud)
+
+The landing page needs to reflect the cloud platform story, not just "local dev tool."
+
+### Hero Section
+- [x] Update headline: "Stop leaking secrets to LLMs" → **"One vault. Every environment. AI-native."**
+- [x] Update subtext to mention dev-to-prod story, not just AI protection
+- [x] Add second CTA: "Start Free" (local) + "Try Cloud" (sign up)
+- [x] Update trust signals: add "Dev to prod" and "Replaces AWS SM"
+
+### HowItWorks Section
+- [x] Change from 3 steps (import → code → run) to 4 steps:
+  1. **Import** — `zvault import .env` encrypts locally
+  2. **Code with AI** — LLM sees references, not values
+  3. **Push to Cloud** — `zvault cloud push` syncs to all environments
+  4. **Deploy** — App fetches secrets at runtime from ZVault Cloud
+- [x] Add "No AWS Secrets Manager needed" callout
+
+### Pricing Section
+- [x] Update Free tier: emphasize "local vault, no account needed"
+- [x] Update Pro tier: add cloud vault, environments, service tokens, SDKs
+- [x] Update Team tier: add RBAC, env-level permissions, unlimited members
+- [x] Update Enterprise: add SLA, dedicated infra, SCIM
+- [x] Change trust row: "Secrets never leave your machine" → "Your secrets, your infrastructure"
+
+### ComparisonTable Section
+- [x] Add "AWS Secrets Manager" as 5th column (replace Doppler or add alongside)
+- [x] Add rows: "Multi-environment", "Service tokens", "CI/CD integration", "Runtime SDKs"
+- [x] Update "Local-first" row to show ZVault has both local AND cloud
+
+### New Sections
+- [ ] **"Dev to Prod" section** — visual flow showing local dev → CI/CD → staging → production, all from one vault
+- [ ] **"Replace AWS SM" section** — side-by-side cost comparison ($0.40/secret/mo vs $8 flat), feature comparison
+- [ ] **SDK code samples section** — show Node/Go/Python snippets for runtime fetching
+
+### FAQ Updates
+- [x] Add: "Can I use ZVault in production?" → Yes, cloud vault + service tokens
+- [x] Add: "Does this replace AWS Secrets Manager?" → Yes, for most teams
+- [x] Add: "Where are my secrets stored?" → Encrypted in ZVault Cloud (AES-256-GCM), or locally if using free tier
+- [x] Add: "What happens if ZVault goes down?" → SDKs cache secrets in memory, graceful degradation
+
+---
+
+## Implementation Priority
+
+### Now (Week 1-2): Cloud Backend MVP
+1. PostgreSQL schema for multi-tenant secrets (orgs, projects, envs, secrets)
+2. Cloud API endpoints (CRUD secrets per environment)
+3. Service token creation + auth
+4. `zvault login` + `zvault cloud init` + `zvault run --env` CLI commands
+
+### Week 3-4: Cloud Dashboard + SDKs (Tier 1)
+5. Cloud dashboard (app.zvault.cloud) — auth, project view, secret editor, env tabs
+6. Tier 1 SDKs: Node.js, Go, Python, Rust
+7. GitHub Actions integration
+8. Team invites + basic RBAC
+
+### Week 5-6: Website + Launch
+9. Update zvault.cloud landing page (hero, how-it-works, pricing, comparison, new sections)
+10. Update docs site with cloud documentation
+11. Terraform provider + K8s operator
+12. Launch: HN post "ZVault Cloud — the AI-native secrets manager, dev to prod"
+
+### Week 7-8: Tier 2 SDKs + Polish
+13. Tier 2 SDKs: Java, C#, Ruby, PHP
+14. Framework integrations: Spring Boot, Django, Next.js, Rails, Laravel
+15. GitLab CI, CircleCI Orb, Bitbucket Pipes
+16. Import from AWS SM / Doppler migration tools
+17. Secret rotation with auto-propagation
+18. VS Code extension + JetBrains plugin
+
+### Week 9-10: Enterprise + Growth
+19. Environment promotion (`promote staging → prod`)
+20. Slack/Discord/Teams notifications
+21. Audit log streaming (S3, Splunk, Datadog)
+22. Dynamic database credentials (PostgreSQL, MySQL)
+23. gRPC API
+24. Tier 3 SDKs: Elixir, Swift, Dart, Deno
+
+---
+
+## Revenue Target
 
 ```
-Week 1-2:  Phase 1 — Free tier (import, run, init, dashboard polish)
-Week 3-4:  Phase 2 — AI Mode (MCP server, IDE setup, license system, landing page)
-Week 5:    LAUNCH — HN, Reddit, Twitter, Product Hunt
-Week 5-6:  Phase 3 — Team features (shared vault, rotation, notifications)
-Week 8+:   Phase 4 — Enterprise features
-
-Target: $200/mo by end of Month 2 (~25 Pro users)
+Month 1: 15 Pro ($180) + 3 Team ($81) = $261/mo
+Month 2: 30 Pro ($360) + 8 Team ($216) + 1 Business ($89) = $665/mo
+Month 3: 50 Pro ($600) + 15 Team ($405) + 3 Business ($267) + 1 Enterprise ($529) = $1,801/mo
+Month 6: 100 Pro + 30 Team + 8 Business + 3 Enterprise = $1,200 + $810 + $712 + $1,587 = $4,309/mo
 ```
 
----
-
-## Immediate Next Steps (This Week)
-
-1. ~~Build `zvault import .env` CLI command~~ ✅
-2. ~~Build `zvault run -- <cmd>` secret injection~~ ✅
-3. ~~Wire dashboard pages to real API endpoints~~ ✅
-4. ~~Complete lease expiry worker~~ ✅ (already in server main.rs)
-5. ~~Build MCP server (Phase 2.1)~~ ✅
-6. ~~Build `zvault project-init` project setup command~~ ✅
-7. ~~Build IDE setup commands (`zvault setup cursor/kiro/continue`)~~ ✅
-8. ~~Build `zvault llms-txt` generation~~ ✅
-9. ~~Build license system (Ed25519-signed keys)~~ ✅
-10. ~~Landing page (zvault.cloud)~~ ✅
-11. ~~Polar.sh webhook integration~~ ✅
-12. ~~Dashboard bento layout + sparkline~~ ✅
-13. ~~Secret create/edit modal + policy editor~~ ✅
-14. ~~Audit page wired to real endpoint~~ ✅
-15. ~~Lease CLI (list/lookup/revoke)~~ ✅
-16. ~~Audit export (JSON/CSV)~~ ✅
-17. ~~Webhook notifications (Slack/Discord)~~ ✅
-18. ~~Secret rotation policies~~ ✅
-
-### Remaining (Post-Launch)
-- Shared vault (team connect, project-scoped access, invite flow) — Phase 3.1
-- Auto-start local vault daemon — Phase 1.3
-- Engine-specific lease revocation callbacks — Phase 1.5
-- Email digest notifications — Phase 3.4
-- Phase 4 enterprise features
+The cloud tier changes the revenue math significantly — teams pay per seat, and the value prop (replace AWS SM + AI protection) justifies the price easily.

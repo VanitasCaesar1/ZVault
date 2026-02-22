@@ -1,0 +1,23 @@
+[package]
+name = "zvault-sdk"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+description = "Official ZVault SDK for Rust — fetch secrets at runtime from ZVault Cloud"
+license = "MIT"
+repository = "https://github.com/ArcadeLabsInc/zvault"
+homepage = "https://zvault.cloud"
+documentation = "https://docs.zvault.cloud"
+keywords = ["zvault", "secrets", "secrets-manager", "cloud"]
+categories = ["authentication", "config", "web-programming"]
+
+[dependencies]
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["sync", "time"] }
+urlencoding = "2"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }

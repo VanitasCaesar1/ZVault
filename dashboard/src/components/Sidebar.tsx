@@ -17,6 +17,16 @@ const navSections = [
       { to: "/leases", icon: "clock", label: "Leases" },
       { to: "/audit", icon: "file-text", label: "Audit Log" },
       { to: "/auth", icon: "users", label: "Auth Methods" },
+      { to: "/billing", icon: "credit-card", label: "Billing" },
+    ],
+  },
+  {
+    label: "Cloud",
+    items: [
+      { to: "/cloud/projects", icon: "cloud", label: "Projects" },
+      { to: "/cloud/team", icon: "users", label: "Team" },
+      { to: "/cloud/tokens", icon: "key", label: "Service Tokens" },
+      { to: "/cloud/audit", icon: "file-text", label: "Cloud Audit" },
     ],
   },
 ];
@@ -63,6 +73,16 @@ const icons: Record<string, React.ReactNode> = {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-[18px] h-[18px] shrink-0 opacity-60 group-[.active]:opacity-100">
       <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" />
       <path d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+    </svg>
+  ),
+  "credit-card": (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-[18px] h-[18px] shrink-0 opacity-60 group-[.active]:opacity-100">
+      <rect x="1" y="4" width="22" height="16" rx="2" /><path d="M1 10h22" />
+    </svg>
+  ),
+  cloud: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-[18px] h-[18px] shrink-0 opacity-60 group-[.active]:opacity-100">
+      <path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z" />
     </svg>
   ),
 };

@@ -2,6 +2,7 @@
 interface Row {
   feature: string;
   zvault: boolean | string;
+  awssm: boolean | string;
   hashicorp: boolean | string;
   infisical: boolean | string;
   doppler: boolean | string;
@@ -16,62 +17,72 @@ const categories: Category[] = [
   {
     name: 'Pricing',
     rows: [
-      { feature: 'License', zvault: 'MIT', hashicorp: 'BSL 1.1', infisical: 'MIT Expat', doppler: 'Proprietary' },
-      { feature: 'Free tier', zvault: true, hashicorp: false, infisical: true, doppler: true },
-      { feature: 'Starting price', zvault: '$8/dev/mo', hashicorp: '$1.58/hr', infisical: '$9/user/mo', doppler: '$7/user/mo' },
-      { feature: 'Self-host free', zvault: true, hashicorp: 'BSL limits', infisical: true, doppler: false },
-      { feature: 'Truly open source', zvault: true, hashicorp: false, infisical: true, doppler: false },
+      { feature: 'License', zvault: 'MIT', awssm: 'Proprietary', hashicorp: 'BSL 1.1', infisical: 'MIT Expat', doppler: 'Proprietary' },
+      { feature: 'Free tier', zvault: true, awssm: false, hashicorp: false, infisical: true, doppler: true },
+      { feature: 'Starting price', zvault: '$12/dev/mo', awssm: '$0.40/secret/mo', hashicorp: '$1.58/hr', infisical: '$9/user/mo', doppler: '$7/user/mo' },
+      { feature: 'Self-host free', zvault: true, awssm: false, hashicorp: 'BSL limits', infisical: true, doppler: false },
+      { feature: 'Truly open source', zvault: true, awssm: false, hashicorp: false, infisical: true, doppler: false },
+    ],
+  },
+  {
+    name: 'Cloud & Environments',
+    rows: [
+      { feature: 'Cloud-hosted vault', zvault: true, awssm: true, hashicorp: true, infisical: true, doppler: true },
+      { feature: 'Multi-environment (dev/staging/prod)', zvault: true, awssm: 'Manual', hashicorp: 'Namespaces', infisical: true, doppler: true },
+      { feature: 'Service tokens (CI/CD + prod)', zvault: true, awssm: 'IAM roles', hashicorp: true, infisical: true, doppler: true },
+      { feature: 'Runtime SDKs', zvault: '13 languages', awssm: '9 languages', hashicorp: '7 languages', infisical: '8 languages', doppler: '6 languages' },
+      { feature: 'CI/CD integration (GitHub Actions)', zvault: true, awssm: true, hashicorp: true, infisical: true, doppler: true },
+      { feature: 'Local-first (no cloud required)', zvault: true, awssm: false, hashicorp: false, infisical: false, doppler: false },
+      { feature: 'No vendor lock-in', zvault: true, awssm: false, hashicorp: false, infisical: true, doppler: false },
     ],
   },
   {
     name: 'AI & Developer Experience',
     rows: [
-      { feature: 'AI Mode (MCP server)', zvault: true, hashicorp: false, infisical: false, doppler: false },
-      { feature: 'zvault:// secret references', zvault: true, hashicorp: false, infisical: false, doppler: false },
-      { feature: 'IDE setup (Cursor, Kiro, Continue)', zvault: '1 cmd', hashicorp: false, infisical: false, doppler: false },
-      { feature: 'llms.txt generation', zvault: true, hashicorp: false, infisical: false, doppler: false },
-      { feature: '.env import → encrypted vault', zvault: true, hashicorp: false, infisical: true, doppler: true },
-      { feature: 'Inject secrets at runtime', zvault: true, hashicorp: false, infisical: true, doppler: true },
-      { feature: 'Setup time', zvault: '2 min', hashicorp: 'Hours', infisical: '~15 min', doppler: '~5 min' },
-      { feature: '.env.example AI generation', zvault: true, hashicorp: false, infisical: false, doppler: false },
-      { feature: 'Secret search from IDE', zvault: true, hashicorp: false, infisical: false, doppler: false },
+      { feature: 'AI Mode (MCP server)', zvault: true, awssm: false, hashicorp: false, infisical: false, doppler: false },
+      { feature: 'zvault:// secret references', zvault: true, awssm: false, hashicorp: false, infisical: false, doppler: false },
+      { feature: 'IDE setup (Cursor, Kiro, Continue)', zvault: '1 cmd', awssm: false, hashicorp: false, infisical: false, doppler: false },
+      { feature: 'llms.txt generation', zvault: true, awssm: false, hashicorp: false, infisical: false, doppler: false },
+      { feature: '.env import → encrypted vault', zvault: true, awssm: false, hashicorp: false, infisical: true, doppler: true },
+      { feature: 'Inject secrets at runtime', zvault: true, awssm: true, hashicorp: false, infisical: true, doppler: true },
+      { feature: 'Setup time', zvault: '2 min', awssm: '~30 min', hashicorp: 'Hours', infisical: '~15 min', doppler: '~5 min' },
+      { feature: 'Secret search from IDE', zvault: true, awssm: false, hashicorp: false, infisical: false, doppler: false },
     ],
   },
   {
     name: 'Security & Encryption',
     rows: [
-      { feature: 'Encryption at rest', zvault: 'AES-256-GCM', hashicorp: 'AES-256-GCM', infisical: 'AES-256-GCM', doppler: 'AES-256' },
-      { feature: "Shamir's Secret Sharing", zvault: true, hashicorp: true, infisical: false, doppler: false },
-      { feature: 'Key zeroization (memory wipe)', zvault: true, hashicorp: false, infisical: false, doppler: 'N/A' },
-      { feature: 'Constant-time token comparison', zvault: true, hashicorp: true, infisical: false, doppler: 'N/A' },
-      { feature: 'Core dump prevention', zvault: true, hashicorp: false, infisical: false, doppler: 'N/A' },
-      { feature: 'Memory locking (mlockall)', zvault: true, hashicorp: true, infisical: false, doppler: 'N/A' },
-      { feature: 'Pure Rust crypto (no OpenSSL)', zvault: true, hashicorp: false, infisical: false, doppler: false },
-      { feature: 'Seal/unseal lifecycle', zvault: true, hashicorp: true, infisical: false, doppler: false },
+      { feature: 'Encryption at rest', zvault: 'AES-256-GCM', awssm: 'AWS KMS', hashicorp: 'AES-256-GCM', infisical: 'AES-256-GCM', doppler: 'AES-256' },
+      { feature: "Shamir's Secret Sharing", zvault: true, awssm: false, hashicorp: true, infisical: false, doppler: false },
+      { feature: 'Key zeroization (memory wipe)', zvault: true, awssm: 'N/A', hashicorp: false, infisical: false, doppler: 'N/A' },
+      { feature: 'Constant-time token comparison', zvault: true, awssm: 'N/A', hashicorp: true, infisical: false, doppler: 'N/A' },
+      { feature: 'Core dump prevention', zvault: true, awssm: 'N/A', hashicorp: false, infisical: false, doppler: 'N/A' },
+      { feature: 'Memory locking (mlockall)', zvault: true, awssm: 'N/A', hashicorp: true, infisical: false, doppler: 'N/A' },
+      { feature: 'Pure Rust crypto (no OpenSSL)', zvault: true, awssm: false, hashicorp: false, infisical: false, doppler: false },
+      { feature: 'Seal/unseal lifecycle', zvault: true, awssm: false, hashicorp: true, infisical: false, doppler: false },
     ],
   },
   {
     name: 'Architecture',
     rows: [
-      { feature: 'Single binary', zvault: true, hashicorp: true, infisical: false, doppler: false },
-      { feature: 'Self-hosted option', zvault: true, hashicorp: true, infisical: true, doppler: false },
-      { feature: 'Local-first (no cloud)', zvault: true, hashicorp: false, infisical: false, doppler: false },
-      { feature: 'Docker required', zvault: false, hashicorp: false, infisical: true, doppler: 'N/A' },
-      { feature: 'Runtime dependencies', zvault: 'None', hashicorp: 'None', infisical: 'Node+DB+Redis', doppler: 'N/A' },
-      { feature: 'Binary size', zvault: '~15 MB', hashicorp: '~200 MB', infisical: '~500 MB+', doppler: 'N/A' },
+      { feature: 'Single binary', zvault: true, awssm: false, hashicorp: true, infisical: false, doppler: false },
+      { feature: 'Self-hosted option', zvault: true, awssm: false, hashicorp: true, infisical: true, doppler: false },
+      { feature: 'Docker required', zvault: false, awssm: 'N/A', hashicorp: false, infisical: true, doppler: 'N/A' },
+      { feature: 'Runtime dependencies', zvault: 'None', awssm: 'AWS SDK', hashicorp: 'None', infisical: 'Node+DB+Redis', doppler: 'N/A' },
+      { feature: 'Binary size', zvault: '~15 MB', awssm: 'N/A', hashicorp: '~200 MB', infisical: '~500 MB+', doppler: 'N/A' },
     ],
   },
   {
     name: 'Engines & Features',
     rows: [
-      { feature: 'KV secrets engine', zvault: true, hashicorp: true, infisical: true, doppler: true },
-      { feature: 'Transit encryption', zvault: true, hashicorp: true, infisical: false, doppler: false },
-      { feature: 'PKI / certificate authority', zvault: true, hashicorp: true, infisical: true, doppler: false },
-      { feature: 'Secret versioning', zvault: true, hashicorp: true, infisical: true, doppler: true },
-      { feature: 'Web dashboard', zvault: true, hashicorp: true, infisical: true, doppler: true },
-      { feature: 'REST API', zvault: true, hashicorp: true, infisical: true, doppler: true },
-      { feature: 'Dynamic credentials', zvault: 'Planned', hashicorp: true, infisical: true, doppler: 'Limited' },
-      { feature: 'K8s operator', zvault: 'Planned', hashicorp: true, infisical: true, doppler: true },
+      { feature: 'KV secrets engine', zvault: true, awssm: true, hashicorp: true, infisical: true, doppler: true },
+      { feature: 'Transit encryption', zvault: true, awssm: false, hashicorp: true, infisical: false, doppler: false },
+      { feature: 'PKI / certificate authority', zvault: true, awssm: 'ACM', hashicorp: true, infisical: true, doppler: false },
+      { feature: 'Secret versioning', zvault: true, awssm: true, hashicorp: true, infisical: true, doppler: true },
+      { feature: 'Web dashboard', zvault: true, awssm: true, hashicorp: true, infisical: true, doppler: true },
+      { feature: 'REST API', zvault: true, awssm: true, hashicorp: true, infisical: true, doppler: true },
+      { feature: 'Dynamic credentials', zvault: 'Planned', awssm: false, hashicorp: true, infisical: true, doppler: 'Limited' },
+      { feature: 'K8s operator', zvault: 'Planned', awssm: false, hashicorp: true, infisical: true, doppler: true },
     ],
   },
 ];
@@ -108,7 +119,7 @@ function cellHtml(value: boolean | string, isZvault: boolean): string {
       </div>
       <h2 class="text-3xl md:text-5xl font-bold tracking-tight mb-4">How ZVault stacks up</h2>
       <p class="text-muted text-base max-w-lg mx-auto">
-        The only secrets manager built for the AI coding era. Compare across {totalFeatures}+ features.
+        The only secrets manager built for the AI coding era. Compare across {totalFeatures}+ features — including AWS Secrets Manager.
       </p>
     </div>
 
@@ -127,6 +138,12 @@ function cellHtml(value: boolean | string, isZvault: boolean): string {
                   </div>
                   <span class="bname zv-name">ZVault</span>
                   <a href="https://docs.zvault.cloud/getting-started/installation" class="zv-btn">Get Started</a>
+                </div>
+              </th>
+              <th class="col-brand">
+                <div class="brand-cell">
+                  <div class="brand-icon ot-icon"><span style="font-size:16px">☁️</span></div>
+                  <span class="bname">AWS SM</span>
                 </div>
               </th>
               <th class="col-brand">
@@ -153,12 +170,13 @@ function cellHtml(value: boolean | string, isZvault: boolean): string {
             {categories.map((cat) => (
               <>
                 <tr class="cat-row">
-                  <td colspan="5" class="cat-cell">{cat.name}</td>
+                  <td colspan="6" class="cat-cell">{cat.name}</td>
                 </tr>
                 {cat.rows.map((row) => (
                   <tr class="feat-row">
                     <td class="feat-name">{row.feature}</td>
                     <td class="feat-val zv-col" set:html={cellHtml(row.zvault, true)} />
+                    <td class="feat-val" set:html={cellHtml(row.awssm, false)} />
                     <td class="feat-val" set:html={cellHtml(row.hashicorp, false)} />
                     <td class="feat-val" set:html={cellHtml(row.infisical, false)} />
                     <td class="feat-val" set:html={cellHtml(row.doppler, false)} />
@@ -188,16 +206,16 @@ function cellHtml(value: boolean | string, isZvault: boolean): string {
   }
   .comp-table {
     width: 100%;
-    min-width: 700px;
+    min-width: 820px;
     border-collapse: collapse;
     font-size: 13px;
   }
 
   thead tr { border-bottom: 1px solid #27272a; }
-  .col-feature { width: 220px; padding: 20px 20px 16px; }
+  .col-feature { width: 200px; padding: 20px 20px 16px; }
   .col-brand {
-    width: calc((100% - 220px) / 4);
-    padding: 20px 12px 16px;
+    width: calc((100% - 200px) / 5);
+    padding: 20px 10px 16px;
     text-align: center;
     vertical-align: bottom;
   }

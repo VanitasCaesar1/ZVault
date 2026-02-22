@@ -1,0 +1,48 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Microsoft/azure-pipelines-task-lib/master/tasks.schema.json",
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "name": "ZVaultSecrets",
+  "friendlyName": "ZVault Inject Secrets",
+  "description": "Fetch secrets from ZVault Cloud and inject as pipeline variables",
+  "category": "Utility",
+  "author": "ZVault",
+  "version": {
+    "Major": 0,
+    "Minor": 1,
+    "Patch": 0
+  },
+  "instanceNameFormat": "ZVault: Inject secrets from $(env)",
+  "inputs": [
+    {
+      "name": "token",
+      "type": "string",
+      "label": "ZVault Service Token",
+      "required": true,
+      "helpMarkDown": "Service token for ZVault Cloud (use a secret variable)"
+    },
+    {
+      "name": "orgId",
+      "type": "string",
+      "label": "Organization ID",
+      "required": true
+    },
+    {
+      "name": "projectId",
+      "type": "string",
+      "label": "Project ID",
+      "required": true
+    },
+    {
+      "name": "env",
+      "type": "string",
+      "label": "Environment",
+      "defaultValue": "production",
+      "required": false
+    }
+  ],
+  "execution": {
+    "Node16": {
+      "target": "index.js"
+    }
+  }
+}

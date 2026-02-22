@@ -1,0 +1,43 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: zvault-inject-secrets
+  labels:
+    app.kubernetes.io/version: "0.1"
+    app.kubernetes.io/component: secrets
+spec:
+  description: >-
+    Fetches secrets from ZVault Cloud and writes them to a shared workspace
+    as a .env file for downstream tasks.
+  params:
+    - name: environment
+      type: string
+      default: staging
+      description: ZVault environment to pull secrets from
+    - name: format
+      type: string
+      default: env
+      description: Output format (env, json, yaml)
+  workspaces:
+    - name: secrets
+      description: Workspace to write secrets file to
+  steps:
+    - name: fetch-secrets
+      image: alpine:3.20
+      env:
+        - name: ZVAULT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: zvault-credentials
+              key: token
+      script: |
+        #!/usr/bin/env sh
+        set -eu
+        apk add --no-cache curl bash >/dev/null 2>&1
+        curl -fsSL https://zvault.cloud/install.sh | bash
+        export PATH="$HOME/.zvault/bin:$PATH"
+        zvault cloud pull \
+          --env "$(params.environment)" \
+          --format "$(params.format)" \
+          --output "$(workspaces.secrets.path)/.env"
+        echo "✅ Secrets written to workspace"

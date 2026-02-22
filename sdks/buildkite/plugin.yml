@@ -1,0 +1,26 @@
+name: ZVault Secrets
+description: Inject ZVault secrets into Buildkite build steps
+author: https://github.com/zvault
+requirements: ["curl", "jq"]
+configuration:
+  properties:
+    env:
+      type: string
+      default: production
+    token-env:
+      type: string
+      default: ZVAULT_TOKEN
+      description: Name of the env var holding the ZVault token
+    org-id:
+      type: string
+    project-id:
+      type: string
+    url:
+      type: string
+      default: https://api.zvault.cloud
+    mask:
+      type: boolean
+      default: true
+  required:
+    - org-id
+    - project-id

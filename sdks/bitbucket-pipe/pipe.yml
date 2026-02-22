@@ -1,0 +1,27 @@
+name: ZVault Inject Secrets
+image: python:3.12-slim
+variables:
+  ZVAULT_TOKEN:
+    type: string
+    required: true
+    description: "ZVault service token (zvt_...)"
+  ZVAULT_ORG_ID:
+    type: string
+    required: true
+    description: "Organization ID"
+  ZVAULT_PROJECT_ID:
+    type: string
+    required: true
+    description: "Project ID"
+  ZVAULT_ENV:
+    type: string
+    default: "production"
+    description: "Environment slug"
+  ZVAULT_URL:
+    type: string
+    default: "https://api.zvault.cloud"
+    description: "ZVault API URL"
+  ZVAULT_MASK:
+    type: string
+    default: "true"
+    description: "Mask secret values in logs"

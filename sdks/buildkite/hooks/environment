@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# ZVault Buildkite Plugin — environment hook
+# Fetches secrets and exports them as environment variables
+
+set -euo pipefail
+
+ZVAULT_ENV="${BUILDKITE_PLUGIN_ZVAULT_SECRETS_ENV:-production}"
+TOKEN_ENV="${BUILDKITE_PLUGIN_ZVAULT_SECRETS_TOKEN_ENV:-ZVAULT_TOKEN}"
+ZVAULT_TOKEN="${!TOKEN_ENV:-}"
+ZVAULT_ORG_ID="${BUILDKITE_PLUGIN_ZVAULT_SECRETS_ORG_ID:-}"
+ZVAULT_PROJECT_ID="${BUILDKITE_PLUGIN_ZVAULT_SECRETS_PROJECT_ID:-}"
+ZVAULT_URL="${BUILDKITE_PLUGIN_ZVAULT_SECRETS_URL:-https://api.zvault.cloud}"
+ZVAULT_MASK="${BUILDKITE_PLUGIN_ZVAULT_SECRETS_MASK:-true}"
+
+if [ -z "${ZVAULT_TOKEN}" ]; then
+  echo "❌ ZVault: ${TOKEN_ENV} is not set"
+  exit 1
+fi
+
+if [ -z "${ZVAULT_ORG_ID}" ] || [ -z "${ZVAULT_PROJECT_ID}" ]; then
+  echo "❌ ZVault: org-id and project-id are required"
+  exit 1
+fi
+
+BASE="${ZVAULT_URL}/v1/cloud/orgs/${ZVAULT_ORG_ID}/projects/${ZVAULT_PROJECT_ID}/envs/${ZVAULT_ENV}/secrets"
+
+echo "🔐 ZVault: Fetching secrets for '${ZVAULT_ENV}'..."
+
+KEYS=$(curl -sf \
+  -H "Authorization: Bearer ${ZVAULT_TOKEN}" \
+  -H "User-Agent: zvault-buildkite/0.1.0" \
+  "${BASE}" | jq -r '.keys[].key' 2>/dev/null) || {
+  echo "❌ ZVault: Failed to fetch secret keys"
+  exit 1
+}
+
+COUNT=0
+
+while IFS= read -r KEY; do
+  [ -z "${KEY}" ] && continue
+
+  ENCODED_KEY=$(printf '%s' "${KEY}" | jq -sRr @uri)
+  VALUE=$(curl -sf \
+    -H "Authorization: Bearer ${ZVAULT_TOKEN}" \
+    -H "User-Agent: zvault-buildkite/0.1.0" \
+    "${BASE}/${ENCODED_KEY}" | jq -r '.secret.value' 2>/dev/null) || continue
+
+  export "${KEY}=${VALUE}"
+  COUNT=$((COUNT + 1))
+
+  if [ "${ZVAULT_MASK}" = "true" ]; then
+    echo "~~~ :lock: Masking ${KEY}"
+    # Buildkite redaction
+    echo "^^^ +++"
+  fi
+done <<< "${KEYS}"
+
+echo "✅ ZVault: Exported ${COUNT} secrets from '${ZVAULT_ENV}'"

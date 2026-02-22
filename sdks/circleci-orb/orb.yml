@@ -1,0 +1,140 @@
+version: 2.1
+
+description: |
+  Inject secrets from ZVault Cloud into your CircleCI pipelines.
+  Fetches secrets at build time and exports them as environment variables.
+
+display:
+  home_url: https://zvault.cloud
+  source_url: https://github.com/ArcadeLabsInc/zvault/tree/main/sdks/circleci-orb
+
+commands:
+  inject-secrets:
+    description: Fetch secrets from ZVault Cloud and export as environment variables
+    parameters:
+      env:
+        type: string
+        default: production
+        description: Environment slug (e.g. staging, production)
+      url:
+        type: string
+        default: https://api.zvault.cloud
+        description: ZVault Cloud API URL
+      keys:
+        type: string
+        default: ""
+        description: Comma-separated list of specific keys to fetch (empty = all)
+    steps:
+      - run:
+          name: Inject ZVault Secrets
+          command: |
+            set -euo pipefail
+
+            ZVAULT_URL="<< parameters.url >>"
+            ZVAULT_URL="${ZVAULT_URL%/}"
+            ZVAULT_ENV="<< parameters.env >>"
+            ZVAULT_KEYS="<< parameters.keys >>"
+
+            if [ -z "${ZVAULT_TOKEN:-}" ]; then
+              echo "ERROR: ZVAULT_TOKEN environment variable is required"
+              exit 1
+            fi
+            if [ -z "${ZVAULT_ORG_ID:-}" ]; then
+              echo "ERROR: ZVAULT_ORG_ID environment variable is required"
+              exit 1
+            fi
+            if [ -z "${ZVAULT_PROJECT_ID:-}" ]; then
+              echo "ERROR: ZVAULT_PROJECT_ID environment variable is required"
+              exit 1
+            fi
+
+            BASE_PATH="/v1/cloud/orgs/${ZVAULT_ORG_ID}/projects/${ZVAULT_PROJECT_ID}/envs/${ZVAULT_ENV}/secrets"
+
+            echo "Fetching secrets from ZVault Cloud (env: ${ZVAULT_ENV})..."
+
+            # Fetch key list
+            KEYS_JSON=$(curl -fsSL \
+              -H "Authorization: Bearer ${ZVAULT_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -H "User-Agent: zvault-circleci-orb/0.1.0" \
+              "${ZVAULT_URL}${BASE_PATH}")
+
+            # Parse keys
+            ALL_KEYS=$(echo "$KEYS_JSON" | grep -o '"key":"[^"]*"' | sed 's/"key":"//;s/"//')
+
+            # Filter if needed
+            if [ -n "$ZVAULT_KEYS" ]; then
+              FILTERED=""
+              IFS=',' read -ra WANTED <<< "$ZVAULT_KEYS"
+              for key in $ALL_KEYS; do
+                for wanted in "${WANTED[@]}"; do
+                  wanted=$(echo "$wanted" | xargs)
+                  if [ "$key" = "$wanted" ]; then
+                    FILTERED="${FILTERED} ${key}"
+                  fi
+                done
+              done
+              ALL_KEYS="$FILTERED"
+            fi
+
+            COUNT=0
+            for key in $ALL_KEYS; do
+              [ -z "$key" ] && continue
+
+              SECRET_JSON=$(curl -fsSL \
+                -H "Authorization: Bearer ${ZVAULT_TOKEN}" \
+                -H "Content-Type: application/json" \
+                -H "User-Agent: zvault-circleci-orb/0.1.0" \
+                "${ZVAULT_URL}${BASE_PATH}/${key}" 2>/dev/null || true)
+
+              VALUE=$(echo "$SECRET_JSON" | grep -o '"value":"[^"]*"' | head -1 | sed 's/"value":"//;s/"//')
+
+              if [ -n "$VALUE" ]; then
+                # Export to BASH_ENV so subsequent steps can access it
+                echo "export ${key}='${VALUE}'" >> "$BASH_ENV"
+                COUNT=$((COUNT + 1))
+              fi
+            done
+
+            echo "ZVault: injected ${COUNT} secrets into environment"
+
+examples:
+  basic:
+    description: Basic usage — inject all production secrets
+    usage:
+      version: 2.1
+      orbs:
+        zvault: zvault/secrets@1.0
+      jobs:
+        test:
+          docker:
+            - image: cimg/node:20.0
+          steps:
+            - checkout
+            - zvault/inject-secrets
+            - run: npm test
+      workflows:
+        main:
+          jobs:
+            - test
+
+  staging:
+    description: Inject staging secrets with specific keys
+    usage:
+      version: 2.1
+      orbs:
+        zvault: zvault/secrets@1.0
+      jobs:
+        test:
+          docker:
+            - image: cimg/node:20.0
+          steps:
+            - checkout
+            - zvault/inject-secrets:
+                env: staging
+                keys: DATABASE_URL,REDIS_URL,API_KEY
+            - run: npm test
+      workflows:
+        main:
+          jobs:
+            - test
