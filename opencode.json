@@ -1,0 +1,35 @@
+{
+  "model": "anthropic/claude-sonnet-4-20250514",
+  "small_model": "anthropic/claude-haiku-4-20250514",
+  "autoupdate": true,
+  "instructions": [
+    ".kiro/steering/rust-code-standards.md"
+  ],
+  "formatter": {
+    "rustfmt": {
+      "command": ["rustfmt", "$FILE"],
+      "extensions": [".rs"]
+    }
+  },
+  "permission": {
+    "edit": "allow",
+    "bash": {
+      "*": "ask",
+      "cargo build*": "allow",
+      "cargo test*": "allow",
+      "cargo check*": "allow",
+      "cargo clippy*": "allow",
+      "cargo fmt*": "allow",
+      "cargo run*": "allow",
+      "cargo deny*": "allow",
+      "cargo audit*": "allow",
+      "grep *": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "git status*": "allow"
+    }
+  },
+  "watcher": {
+    "ignore": ["target/**", ".git/**", "node_modules/**"]
+  }
+}
